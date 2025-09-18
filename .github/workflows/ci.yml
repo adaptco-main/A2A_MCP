@@ -190,7 +190,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           path: audit-log
 
-      - name: Commit workflow event log
+      - name: Commit event log to ledger
         if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         env:
           RUN_ID: ${{ github.run_id }}
@@ -205,19 +205,22 @@ jobs:
           fi
 
           AUDIT_REPO="audit-log"
-          RELATIVE_DEST="data/events/events-${RUN_ID}-${COMMIT_SHA}.ndjson"
-          mkdir -p "$AUDIT_REPO/data/events"
-          mv "$SOURCE_FILE" "$AUDIT_REPO/$RELATIVE_DEST"
+          DATE="$(date -u +%Y/%m/%d)"
+          TARGET_DIR="$AUDIT_REPO/data/events/$DATE"
+          TARGET_FILE="events.${RUN_ID}.${COMMIT_SHA}.ndjson"
+
+          mkdir -p "$TARGET_DIR"
+          mv "$SOURCE_FILE" "$TARGET_DIR/$TARGET_FILE"
 
           cd "$AUDIT_REPO"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$RELATIVE_DEST"
+          git config user.name "CI Ledger Bot"
+          git config user.email "ci-ledger@yourdomain.com"
+          git add "data/events/$DATE/$TARGET_FILE"
 
           if git diff --cached --quiet; then
-            echo "No changes detected for audit log commit."
+            echo "No ledger updates detected; skipping commit."
             exit 0
           fi
 
-          git commit -m "chore: record CI events [skip ci]"
+          git commit -m "ci: ledger commit for run $RUN_ID [skip ci]"
           git push origin main
