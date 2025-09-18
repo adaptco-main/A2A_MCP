@@ -1,0 +1,39 @@
+openapi: 3.0.3
+info:
+  title: Core Orchestrator API
+  version: 1.0.0
+  description: >-
+    HTTP interface for the Core Orchestrator capsule. Provides service health
+    introspection consumed by smoke tests in continuous delivery.
+  contact:
+    name: Protocol Automation Team
+    url: https://example.com/core-orchestrator
+    email: ops@example.com
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: health
+    description: Liveness and readiness status endpoints.
+paths:
+  /health:
+    get:
+      summary: Service health probe
+      operationId: getHealth
+      description: Retrieve the live readiness state of the orchestrator capsule.
+      tags:
+        - health
+      responses:
+        '200':
+          description: Service status information.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    description: Service status indicator.
+                    enum:
+                      - ok
