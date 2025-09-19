@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8">
+<title>Capsule Cockpit</title>
+<style>
+  body{font:14px/1.4 system-ui, sans-serif; margin:24px; color:#0f172a}
+  .row{display:flex; gap:24px; align-items:flex-start}
+  pre{background:#0b1020; color:#cbd5e1; padding:12px; border-radius:8px; overflow:auto}
+  .leaf{padding:6px 8px; background:#f1f5f9; margin:4px 0; border-radius:6px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
+  .root{font-weight:700;color:#0ea5e9}
+</style>
+<h1>Capsule Cockpit</h1>
+<p>Drop a <code>manifest.json</code> from <code>data/capsules/&lt;YYYY/MM/DD/&gt;/&lt;batch&gt;/</code> to visualize.</p>
+<input type="file" id="file" accept="application/json">
+<div id="out"></div>
+<script>
+const $=s=>document.querySelector(s);
+$("#file").addEventListener("change", async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const m=JSON.parse(await f.text());
+  const leaves=m.inputs.map(x=>x.sha256);
+  const root=m.merkle_root;
+  const out=document.getElementById("out");
+  out.innerHTML=`<p class=root>Merkle root: <code>${root}</code></p>
+  <details open><summary>${leaves.length} leaves</summary>${leaves.map(h=>`<div class=leaf>${h}</div>`).join("")}</details>
+  <h3>Manifest</h3><pre>${JSON.stringify(m,null,2)}</pre>`;
+});
+</script>
