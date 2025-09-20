@@ -44,11 +44,14 @@ jobs:
       - name: Install workflow toolchain
         run: npm ci
 
+      - name: Install API-diff and Spectral
+        run: npm install -g @stoplight/spectral-cli openapi-diff
+
       - name: Prepare artifact workspace
         run: mkdir -p "${{ env.ARTIFACTS_DIR }}"
 
       - name: Lint OpenAPI specification
-        run: npx spectral lint "${{ env.OPENAPI_SPEC }}"
+        run: spectral lint "${{ env.OPENAPI_SPEC }}"
 
       - name: Determine OpenAPI baseline
         id: openapi_base
@@ -74,7 +77,7 @@ jobs:
         if: steps.openapi_base.outputs.path != ''
         run: |
           set -o pipefail
-          npx openapi-diff "${{ steps.openapi_base.outputs.path }}" "${{ env.OPENAPI_SPEC }}" | tee "${{ env.DIFF_REPORT }}"
+          openapi-diff "${{ steps.openapi_base.outputs.path }}" "${{ env.OPENAPI_SPEC }}" | tee "${{ env.DIFF_REPORT }}"
 
       - name: Document absent OpenAPI baseline
         if: steps.openapi_base.outputs.path == ''
