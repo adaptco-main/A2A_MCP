@@ -1,1 +1,1 @@
-# core-orchestrator
+# Core Orchestrator
