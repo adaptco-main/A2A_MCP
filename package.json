@@ -1,0 +1,13 @@
+{
+  "name": "core-orchestrator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "lint:openapi": "spectral lint openapi/openapi.yaml"
+  },
+  "devDependencies": {
+    "ajv-cli": "^5.0.0",
+    "@stoplight/spectral-cli": "^6.15.0",
+    "openapi-diff": "^0.24.1"
+  }
+}

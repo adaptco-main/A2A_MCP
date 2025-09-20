@@ -1,0 +1,52 @@
+name: Commit ledger data
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  commit_ledger_data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Ensure ledger file exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f events.ndjson || { echo "::error::missing events.ndjson"; exit 1; }
+
+      - name: Prepare paths (UTC) and move file
+        shell: bash
+        run: |
+          set -euo pipefail
+          DATE_PATH=$(date -u +'%Y/%m/%d')
+          SHA7=${GITHUB_SHA::7}
+          mkdir -p "data/events/${DATE_PATH}"
+          DEST="data/events/${DATE_PATH}/events-${GITHUB_RUN_ID}-${SHA7}.ndjson"
+          mv events.ndjson "$DEST"
+          echo "DEST=$DEST" >> "$GITHUB_ENV"
+
+      - name: Commit and push (skip loops)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$DEST"
+          git diff --cached --quiet || {
+            git commit -m "feat(ledger): add events ${GITHUB_RUN_ID} ${GITHUB_SHA::7} [skip ci]"
+            git push origin HEAD:main
+          }
