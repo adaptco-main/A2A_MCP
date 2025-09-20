@@ -1,0 +1,262 @@
+'use strict';
+
+const path = require('path');
+const express = require('express');
+const qbusGateGuard = require('../lib/qbusGates');
+const { loadManifest, buildHudState, getManifestHealth } = require('../lib/bindings');
+
+const MANIFEST_PATH = path.join(__dirname, '..', 'governance', 'authority_map.v1.json');
+const DEFAULT_POLICY_TAG = 'pilot-alpha';
+const MANIFEST_CACHE_TTL_MS = 30 * 1000;
+
+function createManifestManager(manifestPath, options = {}) {
+  let cache = null;
+  let lastLoaded = 0;
+  const ttl = options.ttlMs || MANIFEST_CACHE_TTL_MS;
+
+  async function load(force = false) {
+    const now = Date.now();
+    if (!cache || force || (now - lastLoaded > ttl)) {
+      cache = await loadManifest(manifestPath, options);
+      lastLoaded = now;
+    }
+    return cache;
+  }
+
+  return {
+    getAuthorityMap(force = false) {
+      return load(force);
+    },
+    getCached() {
+      return cache;
+    },
+    getLastLoaded() {
+      return lastLoaded;
+    }
+  };
+}
+
+function createLedgerClient(manifestManager, policyTag = DEFAULT_POLICY_TAG) {
+  const gateEvents = [];
+  const freezeArtifacts = new Map();
+  const maxEvents = 50;
+
+  const client = {
+    async recordGateCheck(event) {
+      const enriched = {
+        ...event,
+        recorded_at: new Date().toISOString()
+      };
+      gateEvents.push(enriched);
+      if (gateEvents.length > maxEvents) {
+        gateEvents.shift();
+      }
+      return { recorded: true };
+    },
+    async getLatestProof(manifestInfo) {
+      const info = manifestInfo || (await manifestManager.getAuthorityMap());
+      return {
+        manifest_hash: info.hash,
+        expected_hash: info.expectedHash || null,
+        hash_matches: info.hashMatches,
+        duo: {
+          maker: info.duo && info.duo.maker ? info.duo.maker.verified : false,
+          checker: info.duo && info.duo.checker ? info.duo.checker.verified : false,
+          ok: info.duo ? info.duo.ok : false
+        },
+        signature_artifact_present: Boolean(info.hasSignatureFile),
+        policy_tag: policyTag,
+        generated_at: new Date().toISOString(),
+        events: gateEvents.slice(-10)
+      };
+    },
+    getEvents() {
+      return gateEvents.slice(-10);
+    },
+    async storeFreezeArtifact(artifact) {
+      const payload = {
+        name: artifact.name || 'unknown',
+        hash: artifact.hash || null,
+        signature: artifact.signature || null,
+        canonical: artifact.canonical || null,
+        stored_at: new Date().toISOString()
+      };
+      freezeArtifacts.set(payload.name, payload);
+      return payload;
+    },
+    getFreezeArtifacts() {
+      return Array.from(freezeArtifacts.values());
+    },
+    async getSnapshot(manifestInfo) {
+      const proof = await client.getLatestProof(manifestInfo);
+      return {
+        proof,
+        freeze_artifacts: client.getFreezeArtifacts()
+      };
+    }
+  };
+
+  return client;
+}
+
+const manifestManager = createManifestManager(MANIFEST_PATH);
+const ledgerClient = createLedgerClient(manifestManager, process.env.HUD_POLICY_TAG || DEFAULT_POLICY_TAG);
+
+const app = express();
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+const manifestProvider = () => manifestManager.getAuthorityMap();
+
+const gateMiddleware = qbusGateGuard(manifestProvider, ledgerClient, {
+  logger: console,
+  skew_seconds: Number(process.env.QBUS_SKEW_SECONDS || 30)
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    const manifestInfo = await manifestManager.getAuthorityMap();
+    const health = getManifestHealth();
+    res.json({
+      status: manifestInfo.verified ? 'ok' : 'warning',
+      manifest: {
+        hash: manifestInfo.hash,
+        expected_hash: manifestInfo.expectedHash,
+        hash_matches: manifestInfo.hashMatches,
+        signature_file_present: manifestInfo.hasSignatureFile,
+        duo: manifestInfo.duo,
+        loaded_at: manifestInfo.loadedAt
+      },
+      ledger: {
+        recent_events: ledgerClient.getEvents()
+      },
+      manifest_health_snapshot: health
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message
+    });
+  }
+});
+
+app.get('/hud/state.json', async (req, res) => {
+  try {
+    if (req.query && req.query.force === 'true') {
+      await manifestManager.getAuthorityMap(true);
+    }
+    const state = await buildHudState(ledgerClient, {
+      force: req.query && req.query.force,
+      cacheTTL: req.query && req.query.ttl,
+      query: req.query
+    });
+    res.json(state);
+  } catch (err) {
+    res.status(500).json({
+      error_code: 'HUD_STATE_ERROR',
+      message: err.message
+    });
+  }
+});
+
+app.get('/qbit/proof.latest.v1', async (req, res) => {
+  try {
+    const forceReload = req.query && req.query.force === 'true';
+    const manifestInfo = await manifestManager.getAuthorityMap(forceReload);
+    const proof = await ledgerClient.getLatestProof(manifestInfo);
+    proof.canonical_endpoint = '/governance/authority_map.v1.canonical.json';
+    res.json(proof);
+  } catch (err) {
+    res.status(500).json({
+      error_code: 'PROOF_FETCH_ERROR',
+      message: err.message
+    });
+  }
+});
+
+app.get('/governance/authority_map.v1.canonical.json', async (req, res) => {
+  try {
+    const manifestInfo = await manifestManager.getAuthorityMap(req.query && req.query.force === 'true');
+    res.type('application/json').send(manifestInfo.canonical);
+  } catch (err) {
+    res.status(500).json({
+      error_code: 'CANONICAL_FETCH_ERROR',
+      message: err.message
+    });
+  }
+});
+
+app.post('/ledger/freeze', async (req, res) => {
+  const payload = req.body || {};
+  if (!payload.name || !payload.hash || !payload.signature || !payload.canonical) {
+    res.status(400).json({
+      error_code: 'INVALID_FREEZE_ARTIFACT',
+      message: 'name, hash, signature, and canonical fields are required'
+    });
+    return;
+  }
+  try {
+    const stored = await ledgerClient.storeFreezeArtifact(payload);
+    res.status(201).json({ stored });
+  } catch (err) {
+    res.status(500).json({
+      error_code: 'LEDGER_STORE_ERROR',
+      message: err.message
+    });
+  }
+});
+
+app.get('/ledger/snapshot', async (req, res) => {
+  try {
+    const manifestInfo = await manifestManager.getAuthorityMap(req.query && req.query.force === 'true');
+    const snapshot = await ledgerClient.getSnapshot(manifestInfo);
+    res.json(snapshot);
+  } catch (err) {
+    res.status(500).json({
+      error_code: 'LEDGER_SNAPSHOT_ERROR',
+      message: err.message
+    });
+  }
+});
+
+app.post('/capsule/execute', gateMiddleware, async (req, res) => {
+  const binding = req.qbus && req.qbus.binding ? req.qbus.binding.normalized : null;
+  const manifestInfo = req.qbus ? req.qbus.manifest : null;
+  res.json({
+    status: 'ok',
+    binding,
+    manifest_hash: manifestInfo ? manifestInfo.hash : null
+  });
+});
+
+app.use((req, res) => {
+  res.status(404).json({
+    error_code: 'NOT_FOUND',
+    message: 'Resource not found'
+  });
+});
+
+async function start(port = Number(process.env.PORT || 3000)) {
+  try {
+    await manifestManager.getAuthorityMap(true);
+  } catch (err) {
+    console.error('Initial manifest load failed:', err);
+  }
+  return new Promise((resolve) => {
+    const server = app.listen(port, () => {
+      console.log(`core orchestrator listening on port ${port}`);
+      resolve(server);
+    });
+  });
+}
+
+if (require.main === module) {
+  start();
+}
+
+module.exports = {
+  app,
+  start,
+  manifestManager,
+  ledgerClient
+};
