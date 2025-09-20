@@ -45,12 +45,14 @@ jobs:
           EOS
           chmod +x scripts/emit_event.sh
 
+      - name: Install API-diff and Spectral
+        run: npm install -g @stoplight/spectral-cli openapi-diff
+
       - name: Spectral lint (logged)
         shell: bash
         run: |
           source scripts/emit_event.sh
           emit ci.step.start spectral
-          npm install -g @stoplight/spectral-cli
           spectral lint .well-known/openapi.yaml
           emit ci.step.end spectral
 
@@ -69,7 +71,6 @@ jobs:
         run: |
           source scripts/emit_event.sh
           emit ci.step.start openapi-diff
-          npm install -g openapi-diff
           git show ${{ github.event.pull_request.base.sha }}:.well-known/openapi.yaml > old.yaml
           git show ${{ github.event.pull_request.head.sha }}:.well-known/openapi.yaml > new.yaml
           openapi-diff old.yaml new.yaml --fail-on incompatible,major \
