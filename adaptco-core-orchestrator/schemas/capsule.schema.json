@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.adaptco.io/capsule.schema.json",
+  "title": "CapsuleRegistration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "capsule_id",
+    "version",
+    "issued_at",
+    "author",
+    "payload",
+    "provenance"
+  ],
+  "properties": {
+    "capsule_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "author": {
+      "type": "string",
+      "format": "email"
+    },
+    "payload": {
+      "description": "Arbitrary payload describing the capsule contents.",
+      "type": [
+        "object",
+        "array",
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
