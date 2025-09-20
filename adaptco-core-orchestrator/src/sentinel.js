@@ -195,9 +195,7 @@ function createDescriptorWriter(baseDir) {
     const targetPath = explicitPath ? path.resolve(explicitPath) : await createDescriptorPath(baseDir, descriptor);
     const payload = JSON.stringify(descriptor, null, 2);
 
-    if (!explicitPath) {
-      await fsp.mkdir(path.dirname(targetPath), { recursive: true });
-    }
+    await fsp.mkdir(path.dirname(targetPath), { recursive: true });
 
     await fsp.writeFile(targetPath, payload, 'utf8');
     return targetPath;
