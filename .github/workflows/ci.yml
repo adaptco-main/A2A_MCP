@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -19,13 +20,72 @@ jobs:
           persist-credentials: true
           fetch-depth: 0
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install tooling dependencies
+        run: npm ci
+
       - name: Ensure ledger file exists
         shell: bash
         run: |
           set -euo pipefail
           test -f events.ndjson || { echo "::error::missing events.ndjson"; exit 1; }
 
-      - name: Prepare paths (UTC) and move file
+      - name: Canonicalize event log
+        id: canonicalize
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+import json
+import os
+from pathlib import Path
+
+source = Path("events.ndjson")
+if not source.exists():
+    raise SystemExit("events.ndjson not found")
+
+canonical = Path("events.canonical.ndjson")
+array_json = Path("events.array.json")
+
+events = []
+with source.open("r", encoding="utf-8") as input_fp, canonical.open("w", encoding="utf-8") as canon_fp:
+    for line_number, line in enumerate(input_fp, 1):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        try:
+            payload = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"Invalid JSON on line {line_number}: {exc}") from exc
+        events.append(payload)
+        canon_fp.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
+
+array_json.write_text(json.dumps(events, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+    output.write(f"canonical={canonical}\n")
+    output.write(f"json_array={array_json}\n")
+PY
+
+      - name: Validate event schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx ajv validate \
+            -s specs/events.schema.json \
+            -d "${{ steps.canonicalize.outputs.json_array }}" \
+            --strict=true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Prepare ledger artifact paths
+        id: ledger_paths
         shell: bash
         run: |
           set -euo pipefail
@@ -33,8 +93,57 @@ jobs:
           SHA7=${GITHUB_SHA::7}
           mkdir -p "data/events/${DATE_PATH}"
           DEST="data/events/${DATE_PATH}/events-${GITHUB_RUN_ID}-${SHA7}.ndjson"
-          mv events.ndjson "$DEST"
-          echo "DEST=$DEST" >> "$GITHUB_ENV"
+          SIG="${DEST}.sig"
+          CERT="${DEST}.pem"
+          mv "${{ steps.canonicalize.outputs.canonical }}" "$DEST"
+          rm -f events.ndjson "${{ steps.canonicalize.outputs.json_array }}"
+          {
+            echo "dest=$DEST"
+            echo "signature=$SIG"
+            echo "certificate=$CERT"
+            echo "manifest=data/events/hashes.txt"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Record hash manifest entry
+        id: hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEST="${{ steps.ledger_paths.outputs.dest }}"
+          MANIFEST="${{ steps.ledger_paths.outputs.manifest }}"
+          mkdir -p "$(dirname "$MANIFEST")"
+          HASH=$(sha256sum "$DEST" | awk '{print $1}')
+          ENTRY="${GITHUB_RUN_ID}-${GITHUB_SHA::7} sha256:${HASH}"
+          if [ -f "$MANIFEST" ] && grep -qxF "$ENTRY" "$MANIFEST"; then
+            echo "Hash entry already present"
+          else
+            echo "$ENTRY" >> "$MANIFEST"
+          fi
+          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Sign ledger artifact
+        shell: bash
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          set -euo pipefail
+          cosign sign-blob --yes \
+            --output-signature "${{ steps.ledger_paths.outputs.signature }}" \
+            --output-certificate "${{ steps.ledger_paths.outputs.certificate }}" \
+            "${{ steps.ledger_paths.outputs.dest }}"
+
+      - name: Verify ledger signature
+        shell: bash
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          set -euo pipefail
+          cosign verify-blob \
+            --certificate "${{ steps.ledger_paths.outputs.certificate }}" \
+            --signature "${{ steps.ledger_paths.outputs.signature }}" \
+            --certificate-identity "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${{ steps.ledger_paths.outputs.dest }}"
 
       - name: Commit and push (skip loops)
         if: github.ref == 'refs/heads/main'
@@ -45,7 +154,11 @@ jobs:
           set -euo pipefail
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$DEST"
+          git add \
+            "${{ steps.ledger_paths.outputs.dest }}" \
+            "${{ steps.ledger_paths.outputs.signature }}" \
+            "${{ steps.ledger_paths.outputs.certificate }}" \
+            "${{ steps.ledger_paths.outputs.manifest }}"
           git diff --cached --quiet || {
             git commit -m "feat(ledger): add events ${GITHUB_RUN_ID} ${GITHUB_SHA::7} [skip ci]"
             git push origin HEAD:main
