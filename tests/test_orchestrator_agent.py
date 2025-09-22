@@ -1,102 +1,91 @@
 from __future__ import annotations
 
-import subprocess
-import tempfile
 import unittest
-from pathlib import Path
 
-from app.orchestrator_agent import CoreOrchestratorMergeAgent
-
-
-def run_git(args: list[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        text=True,
-        capture_output=True,
-        check=True,
-    )
+from app.orchestrator_agent import (
+    DependencyError,
+    InvalidTransitionError,
+    QubeWorkflowAgent,
+    TaskStatus,
+    WorkflowEvent,
+    WorkflowTask,
+)
 
 
-def configure_repo(repo: Path) -> None:
-    run_git(["config", "user.name", "Test Agent"], cwd=repo)
-    run_git(["config", "user.email", "agent@example.com"], cwd=repo)
-
-
-class CoreOrchestratorMergeAgentTests(unittest.TestCase):
+class QubeWorkflowAgentTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
-        base = Path(self._tmp.name)
-        self.remote = base / "remote.git"
-        self.upstream = base / "upstream"
-        self.agent_repo = base / "agent"
+        self.tasks = [
+            WorkflowTask(id="alpha", title="Alpha"),
+            WorkflowTask(id="beta", title="Beta", depends_on=("alpha",)),
+            WorkflowTask(id="gamma", title="Gamma", depends_on=("beta",)),
+        ]
+        self.agent = QubeWorkflowAgent(self.tasks, name="Qube Integration")
 
-        self.upstream.mkdir()
-        run_git(["init"], cwd=self.upstream)
-        configure_repo(self.upstream)
+    def test_ready_tasks_progress_with_dependency_completion(self) -> None:
+        ready_ids = [task.id for task in self.agent.ready_tasks()]
+        self.assertEqual(ready_ids, ["alpha"])
 
-        (self.upstream / "README.md").write_text("core orchestrator\n")
-        run_git(["add", "README.md"], cwd=self.upstream)
-        run_git(["commit", "-m", "initial"], cwd=self.upstream)
-        run_git(["branch", "-M", "main"], cwd=self.upstream)
+        self.agent.start_task("alpha", actor="ops")
+        self.agent.complete_task("alpha", actor="ops")
 
-        run_git(["init", "--bare", str(self.remote)], cwd=base)
-        run_git(["remote", "add", "origin", str(self.remote)], cwd=self.upstream)
-        run_git(["push", "-u", "origin", "main"], cwd=self.upstream)
+        ready_ids = [task.id for task in self.agent.ready_tasks()]
+        self.assertEqual(ready_ids, ["beta"])
 
-        subprocess.run(
-            ["git", "--git-dir", str(self.remote), "symbolic-ref", "HEAD", "refs/heads/main"],
-            check=True,
-            text=True,
-            capture_output=True,
+    def test_start_requires_dependencies(self) -> None:
+        with self.assertRaises(DependencyError):
+            self.agent.start_task("beta", actor="ops")
+
+    def test_start_and_complete_record_events(self) -> None:
+        start_event = self.agent.start_task("alpha", actor="ops", notes="kickoff", assignee="ops")
+        self.assertEqual(start_event.action, "start")
+
+        complete_event = self.agent.complete_task(
+            "alpha",
+            actor="ops",
+            notes="delivered",
+            deliverables=("report.md",),
         )
 
-        run_git(["checkout", "-b", "feature/alpha"], cwd=self.upstream)
-        (self.upstream / "feature.txt").write_text("alpha\n")
-        run_git(["add", "feature.txt"], cwd=self.upstream)
-        run_git(["commit", "-m", "feature alpha"], cwd=self.upstream)
-        run_git(["push", "-u", "origin", "feature/alpha"], cwd=self.upstream)
+        history = self.agent.history("alpha")
+        self.assertEqual([event.action for event in history], ["start", "complete"])
+        self.assertEqual(history[0].details.get("assignee"), "ops")
+        self.assertEqual(history[1].details.get("deliverables"), ("report.md",))
+        self.assertEqual(self.agent.task_status("alpha"), TaskStatus.COMPLETED)
 
-        run_git(["checkout", "main"], cwd=self.upstream)
-        run_git(["checkout", "-b", "chore/docs"], cwd=self.upstream)
-        (self.upstream / "docs.md").write_text("docs\n")
-        run_git(["add", "docs.md"], cwd=self.upstream)
-        run_git(["commit", "-m", "docs"], cwd=self.upstream)
-        run_git(["push", "-u", "origin", "chore/docs"], cwd=self.upstream)
-        run_git(["checkout", "main"], cwd=self.upstream)
+    def test_block_and_unblock(self) -> None:
+        block_event = self.agent.block_task("beta", actor="ops", reason="waiting on dependency")
+        self.assertEqual(block_event.action, "block")
+        self.assertEqual(self.agent.task_status("beta"), TaskStatus.BLOCKED)
 
-        run_git(["clone", str(self.remote), str(self.agent_repo)], cwd=base)
-        configure_repo(self.agent_repo)
+        with self.assertRaises(InvalidTransitionError):
+            self.agent.start_task("beta", actor="ops")
 
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
+        unblock_event = self.agent.unblock_task("beta", actor="ops")
+        self.assertEqual(unblock_event.action, "unblock")
+        self.assertEqual(self.agent.task_status("beta"), TaskStatus.PENDING)
 
-    def test_dry_run_reports_feature_branches(self) -> None:
-        agent = CoreOrchestratorMergeAgent(self.agent_repo)
-        report = agent.pull_and_merge(target_branch="main", include_prefixes=("feature/",), dry_run=True)
+    def test_reset_returns_task_to_pending(self) -> None:
+        self.agent.start_task("alpha", actor="ops")
+        self.agent.complete_task("alpha", actor="ops")
+        reset_event = self.agent.reset_task("alpha", actor="ops", reason="spec update")
+        self.assertEqual(reset_event.action, "reset")
+        self.assertEqual(self.agent.task_status("alpha"), TaskStatus.PENDING)
 
-        self.assertEqual(report.inbound_branches, ["feature/alpha"])
-        self.assertEqual(len(report.outcomes), 1)
-        outcome = report.outcomes[0]
-        self.assertEqual(outcome.remote_ref, "origin/feature/alpha")
-        self.assertEqual(outcome.skipped_reason, "dry-run")
-        self.assertFalse(outcome.merged)
+    def test_status_summary(self) -> None:
+        summary = self.agent.status_summary()
+        self.assertEqual(summary["name"], "Qube Integration")
+        self.assertEqual(summary["counts"][TaskStatus.PENDING.value], 3)
+        self.assertEqual(summary["ready"], ["alpha"])
 
-    def test_merge_applies_feature_branch(self) -> None:
-        agent = CoreOrchestratorMergeAgent(self.agent_repo)
-        report = agent.pull_and_merge(target_branch="main", include_prefixes=("feature/",))
+    def test_generate_plan_respects_dependencies(self) -> None:
+        order = [task.id for task in self.agent.tasks()]
+        self.assertEqual(order, ["alpha", "beta", "gamma"])
 
-        self.assertEqual([o.branch for o in report.outcomes], ["feature/alpha"])
-        outcome = report.outcomes[0]
-        self.assertTrue(outcome.merged)
-        self.assertIsNone(outcome.error)
-
-        status = run_git(["status", "--porcelain"], cwd=self.agent_repo)
-        self.assertEqual(status.stdout.strip(), "")
-
-        main_contents = (self.agent_repo / "feature.txt").read_text()
-        self.assertIn("alpha", main_contents)
-        self.assertFalse((self.agent_repo / "docs.md").exists())
+    def test_history_returns_copy(self) -> None:
+        self.agent.start_task("alpha", actor="ops")
+        log = self.agent.history("alpha")
+        self.assertIsInstance(log[0], WorkflowEvent)
+        self.assertEqual(log[0].task_id, "alpha")
 
 
 if __name__ == "__main__":  # pragma: no cover
