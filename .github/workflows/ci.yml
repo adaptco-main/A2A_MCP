@@ -18,7 +18,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   IMAGE_TAG: ${{ github.sha }}
   IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-  OPENAPI_SPEC: openapi/openapi.yaml
+  OPENAPI_PATH: openapi/openapi.yaml
   ARTIFACTS_DIR: artifacts
   DIFF_REPORT: artifacts/openapi-diff.json
   SBOM_FILE: artifacts/sbom.spdx.json
@@ -51,38 +51,66 @@ jobs:
         run: mkdir -p "${{ env.ARTIFACTS_DIR }}"
 
       - name: Lint OpenAPI specification
-        run: spectral lint "${{ env.OPENAPI_SPEC }}"
+        run: spectral lint "${{ env.OPENAPI_PATH }}"
 
-      - name: Determine OpenAPI baseline
-        id: openapi_base
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BEFORE_SHA: ${{ github.event.before }}
+      - name: Resolve base and head commits
+        id: openapi_shas
         run: |
-          BASE_SPEC="${{ env.ARTIFACTS_DIR }}/openapi-base.yaml"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            git fetch origin main --depth=1
-            if git show origin/main:${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
-              echo "path=$BASE_SPEC" >> "$GITHUB_OUTPUT"
-            fi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
           else
-            if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
-              if git show "$BEFORE_SHA":${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
-                echo "path=$BASE_SPEC" >> "$GITHUB_OUTPUT"
+            echo "base_sha=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare OpenAPI specs for diff
+        id: openapi_prep
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ steps.openapi_shas.outputs.base_sha }}"
+          HEAD_SHA="${{ steps.openapi_shas.outputs.head_sha }}"
+          PATH_IN_REPO="${{ env.OPENAPI_PATH }}"
+          mkdir -p .openapi-diff
+
+          if [ ! -f "$PATH_IN_REPO" ]; then
+            echo "HEAD spec not found at $PATH_IN_REPO" >&2
+            exit 1
+          fi
+
+          cp "$PATH_IN_REPO" .openapi-diff/head.yaml
+
+          NO_BASE="false"
+          NULL_SHA="0000000000000000000000000000000000000000"
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "$NULL_SHA" ]; then
+            NO_BASE="true"
+          else
+            if git cat-file -e "${BASE_SHA}:${PATH_IN_REPO}" 2>/dev/null; then
+              git show "${BASE_SHA}:${PATH_IN_REPO}" > .openapi-diff/base.yaml
+            else
+              FOUND=$(git rev-list -n 1 "${BASE_SHA}" -- "${PATH_IN_REPO}" || true)
+              if [ -n "$FOUND" ]; then
+                echo "Base spec not at base sha; using nearest ancestor commit $FOUND"
+                git show "${FOUND}:${PATH_IN_REPO}" > .openapi-diff/base.yaml
+              else
+                NO_BASE="true"
               fi
             fi
           fi
 
+          echo "NO_BASE_SPEC=$NO_BASE" >> "$GITHUB_OUTPUT"
+
       - name: Compare OpenAPI against baseline
-        if: steps.openapi_base.outputs.path != ''
+        if: steps.openapi_prep.outputs.NO_BASE_SPEC == 'false'
         run: |
           set -o pipefail
-          openapi-diff "${{ steps.openapi_base.outputs.path }}" "${{ env.OPENAPI_SPEC }}" | tee "${{ env.DIFF_REPORT }}"
+          openapi-diff .openapi-diff/base.yaml .openapi-diff/head.yaml | tee "${{ env.DIFF_REPORT }}"
 
-      - name: Document absent OpenAPI baseline
-        if: steps.openapi_base.outputs.path == ''
+      - name: Skip OpenAPI diff (no base spec)
+        if: steps.openapi_prep.outputs.NO_BASE_SPEC == 'true'
         run: |
-          echo "No baseline OpenAPI specification available for comparison." | tee "${{ env.DIFF_REPORT }}"
+          echo "No base OpenAPI spec found; treating as new spec and skipping diff." | tee "${{ env.DIFF_REPORT }}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -154,7 +182,7 @@ jobs:
         with:
           name: governance-artifacts
           path: |
-            ${{ env.OPENAPI_SPEC }}
+            ${{ env.OPENAPI_PATH }}
             ${{ env.DIFF_REPORT }}
             ${{ env.SBOM_FILE }}
           if-no-files-found: warn
@@ -163,7 +191,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           mkdir -p release
-          cp "${{ env.OPENAPI_SPEC }}" release/openapi.yaml
+          cp "${{ env.OPENAPI_PATH }}" release/openapi.yaml
           cp "${{ env.DIFF_REPORT }}" release/openapi-diff.json
           cp "${{ env.SBOM_FILE }}" release/sbom.spdx.json
 
