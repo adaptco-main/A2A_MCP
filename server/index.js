@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const qbusGateGuard = require('../lib/qbusGates');
@@ -12,13 +13,40 @@ const MANIFEST_CACHE_TTL_MS = 30 * 1000;
 function createManifestManager(manifestPath, options = {}) {
   let cache = null;
   let lastLoaded = 0;
+  let lastArtifactSignature = '';
   const ttl = options.ttlMs || MANIFEST_CACHE_TTL_MS;
+
+  const parsed = path.parse(manifestPath);
+  const artifactPaths = [
+    manifestPath,
+    path.join(parsed.dir, `${parsed.name}.canonical.json`),
+    path.join(parsed.dir, `${parsed.name}.hash`),
+    path.join(parsed.dir, `${parsed.name}.sig`)
+  ];
+
+  const computeArtifactSignature = () => {
+    const segments = [];
+    for (const artifact of artifactPaths) {
+      try {
+        const stat = fs.statSync(artifact);
+        segments.push(`${artifact}:${stat.size}:${stat.mtimeMs}`);
+      } catch (err) {
+        segments.push(`${artifact}:missing`);
+      }
+    }
+    return segments.join('|');
+  };
 
   async function load(force = false) {
     const now = Date.now();
-    if (!cache || force || (now - lastLoaded > ttl)) {
+    const artifactSignature = computeArtifactSignature();
+    const cacheExpired = now - lastLoaded > ttl;
+    const artifactsChanged = artifactSignature !== lastArtifactSignature;
+
+    if (!cache || force || cacheExpired || artifactsChanged) {
       cache = await loadManifest(manifestPath, options);
       lastLoaded = now;
+      lastArtifactSignature = artifactSignature;
     }
     return cache;
   }
