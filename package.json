@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "lint:openapi": "spectral lint openapi/openapi.yaml"
+    "lint:openapi": "spectral lint openapi/openapi.yaml",
+    "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
   },
   "devDependencies": {
     "@stoplight/spectral-cli": "^6.15.0",
