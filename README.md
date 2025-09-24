@@ -1,71 +1,90 @@
 # Core Orchestrator
 
-The Core Orchestrator aligns human operators and automation so that artifact changes land on `main` with traceable intent and full mission context. This repository houses the merge automation, mission oversight contracts, and the governance scaffolding that keeps the system auditable.
+The Core Orchestrator keeps changes landing on `main` predictable, auditable, and fast to recover from. Operators and automation
+share the same merge automation so every branch headed toward production is fetched, validated, and merged with the same guardrail
+set.
 
-## Qube Workflow Orchestration
+## Core Merge Orchestrator Agent
 
-The Qube mission roadmap advances through deliberate, auditable workflow steps. The **Qube Workflow Agent** is the main agent model responsible for sequencing those steps, enforcing dependencies, and maintaining a ledger of every transition.
+`app/orchestrator_agent.py` provides the `CoreOrchestratorMergeAgent`, the main automation entrypoint for harvesting remote
+branches, rehearsing merges, and committing successful integrations.
 
-### 1. Load the roadmap
-Roadmaps can be sourced from YAML (install `pyyaml`) or from an in-memory payload. Example loading from the execution roadmap:
+### Capabilities
+- **Remote coordination** – fetch and prune the configured remote, fast-forward the base branch, and push results.
+- **Merge planning** – build deterministic merge queues with `plan_merges()` using include/exclude patterns that match remote
+  and branch suffixes.
+- **Dry-run rehearsals** – simulate merges with `dry_run=True` to surface conflicts without touching the working tree.
+- **Sequential execution** – `merge_all()` processes a queue of branches, halting on the first failure so operators can inspect
+  the audit trail before continuing.
+- **Failure visibility** – captured stdout/stderr for failing commands are returned in the `MergeResult` payload for quick
+  troubleshooting and `exit code 128` style errors.
 
+### Quick start
 ```python
-from app.orchestrator_agent import QubeWorkflowAgent
+from pathlib import Path
 
-# YAML support requires `pip install pyyaml`
-agent = QubeWorkflowAgent.from_dict({
-    "name": "Qube Integration",
-    "tasks": [
-        {"id": "phase0.authority_map_cutover", "title": "Authority Map Cutover"},
-        {"id": "phase0.capsule_remap_freeze", "title": "Capsule Remap Freeze", "depends_on": ["phase0.authority_map_cutover"]},
-    ],
-})
+from app.orchestrator_agent import CoreOrchestratorMergeAgent
+
+workspace = Path("/workspace/core-orchestrator")
+agent = CoreOrchestratorMergeAgent(workspace)
+agent.configure_identity(name="Merge Bot", email="merge@example.com")
+
+# Stay in sync with origin/main before merging new branches
+agent.fetch_remote()
+agent.pull_base()
+
+plan = agent.plan_merges(include_patterns=("feature/*",), exclude_patterns=("feature/wip/*",))
+results = agent.merge_all(plan)
+for result in results:
+    print(result.branch, result.success, result.commit)
 ```
 
-### 2. Inspect what is ready
-Call `ready_tasks()` to identify the next actionable work. Tasks return in dependency order to keep the mission synchronized.
-
+### Dry run and conflict handling
 ```python
-for task in agent.ready_tasks():
-    print(task.id, task.title)
+dry_run = agent.merge_branch("origin/feature/landing", dry_run=True)
+if dry_run.success:
+    print("Merge is clean")
+else:
+    print("Needs attention:", dry_run.message)
+
+# Execute the real merge once the branch is ready
+result = agent.merge_branch("origin/feature/landing")
+if not result.success:
+    print(result.message)
+    print(result.details.get("stderr"))
 ```
 
-### 3. Drive the workflow
-Transitions must honor dependencies. Each call records an event that can be replayed for audit or streamed into HUD surfaces.
+### Merge plan automation
+`plan_merges()` returns `MergeCommand` items that include the branch ref, commit SHA, and subject line. Feed them directly into
+`merge_all()` to merge them in commit-date order. The agent will stop at the first failure and leave the working tree clean by
+aborting partially applied merges.
 
 ```python
-agent.start_task("phase0.authority_map_cutover", actor="ops", assignee="Maker")
-agent.complete_task(
-    "phase0.authority_map_cutover",
-    actor="ops",
-    deliverables=("authority_map.vN.canonical.json", "authority_map.vN.sig"),
-)
-
-agent.start_task("phase0.capsule_remap_freeze", actor="ops")
+plan = agent.plan_merges(include_patterns=("feature/*",), exclude_patterns=("feature/wip/*",))
+results = agent.merge_all(plan, dry_run=False, fast_forward=False)
+for report in results:
+    if report.success:
+        print(f"Merged {report.branch} -> {report.commit}")
+    else:
+        print(f"Stopped on {report.branch}: {report.message}")
+        break
 ```
-
-### 4. Monitor status
-Dashboards can consume `status_summary()` or the structured payload from `serialize_state()` to surface counts, ready work, and the audit log.
-
-```python
-summary = agent.status_summary()
-print(summary["counts"])
-print(summary["ready"])
-```
-
-### 5. Handle exceptions deliberately
-- Use `block_task()` when external issues stall progress.
-- Call `unblock_task()` to return the task to the pending queue once the blocker clears.
-- Apply `reset_task()` with a reason to rewind work that needs re-verification.
-
-Every transition produces a timestamped `WorkflowEvent`. Feed these into ledger writers or mission HUD annotations so operators see the same ground truth that automation enforces.
 
 ## Repository Components
-- `app/orchestrator_agent.py` — Main workflow agent that sequences Qube roadmap tasks and records the audit log.
+- `app/orchestrator_agent.py` — Core merge agent used by automation and operators to pull, rehearse, and merge inbound branches.
 - `docs/mission_oversight_widgets.md` — Human-readable widget catalog and guardrail summary for the live mission HUD.
 - `specs/mission.oversight.hud.contract.v1.json` — Contract describing the HUD data streams, layout, and fail-closed alert wiring.
-- `specs/mission.meta.directive.v1.schema.json` — Protocol schema encoding the mission state machine, retarget logic, and rollback rules.
+- `specs/mission.meta.directive.v1.schema.json` — Protocol schema encoding the mission state machine, retarget logic, and rollback
+  rules.
 - `specs/fixtures/mission.solstice.directive.json` — Solstice Dawn directive fixture illustrating the schema in practice.
+
+## Mission Oversight Foundations
+- `specs/mission.oversight.hud.contract.v1.json` — Contract describing the data streams, widgets, and alerting that power the live
+  mission HUD.
+- `docs/mission_oversight_widgets.md` — Human-readable widget catalog and guardrail summary.
+- `specs/mission.meta.directive.v1.schema.json` — Protocol schema that encodes the mission state machine, retarget, and rollback
+  rules.
+- `specs/fixtures/mission.solstice.directive.json` — Sample directive fixture seeded for the Solstice Dawn mission.
 
 ## Control Surfaces (Human-Operated)
 - **Quick-Action Panel**: Freeze, Override, Flag
@@ -81,31 +100,6 @@ Every transition produces a timestamped `WorkflowEvent`. Feed these into ledger 
 - **Drift Detectors**: Compare SSOT vs deployed artifacts
 - **Rollback Validators**: Check readiness and compliance
 
-## Agent Models
-
-- **Qube Workflow Agent** — Main automation entrypoint that sequences roadmap tasks, enforces dependency ordering, and logs every transition for audit and HUD consumption.
-
-### Qube Workflow Agent
-
-The workflow agent lives in `app/orchestrator_agent.py` and exposes an intentionally small control surface:
-1. Instantiate from a roadmap definition (`from_dict` or `from_yaml`).
-2. Call `ready_tasks()` to understand the next safe operation.
-3. Drive progress with `start_task`, `complete_task`, `block_task`, `unblock_task`, and `reset_task`.
-4. Consume `history()` and `serialize_state()` for ledger sync, HUD rendering, or council reviews.
-
-## Mission Oversight Foundations
-- `specs/mission.oversight.hud.contract.v1.json` — Contract describing the data streams, widgets, and alerting that power the live mission HUD.
-- `docs/mission_oversight_widgets.md` — Human-readable widget catalog and guardrail summary.
-- `specs/mission.meta.directive.v1.schema.json` — Protocol schema that encodes the mission state machine, retarget, and rollback rules.
-- `specs/fixtures/mission.solstice.directive.json` — Sample directive fixture seeded for the Solstice Dawn mission.
-
-## How It Works
-1. Operator triggers an action in the cockpit (e.g., Freeze Artifact).
-2. Cockpit dispatches a GitHub event with payload (artifact ID, notes).
-3. GitHub Action runs the corresponding script (e.g., `freeze.py`).
-4. Script updates the artifact state, validates against SSOT, logs to ledger.
-5. Cockpit updates in real time via ledger feed + state tracker.
-
 ## Governance Principles
 - **SSOT Enforcement**: All artifacts hash-verified
 - **Audit-First**: Every action logged with timestamp, actor, and hash
@@ -114,7 +108,7 @@ The workflow agent lives in `app/orchestrator_agent.py` and exposes an intention
 
 ## Getting Started
 1. Clone repo and configure `.env` with GitHub token for dispatch events.
-2. Deploy cockpit overlay JSON to your Live Ops UI.
-3. Connect GitHub webhooks to cockpit event listener.
-4. Test with a Freeze Artifact quick-action.
-
+2. Run the merge agent from automation or locally to integrate feature branches into `main`.
+3. Deploy cockpit overlay JSON to your Live Ops UI.
+4. Connect GitHub webhooks to cockpit event listener.
+5. Test with a Freeze Artifact quick-action.

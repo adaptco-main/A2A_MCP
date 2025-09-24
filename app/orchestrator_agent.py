@@ -1,442 +1,371 @@
 from __future__ import annotations
 
+import fnmatch
+import os
+import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Dict, Iterable, List, Mapping, MutableMapping, Sequence
-
-try:  # pragma: no cover - optional dependency
-    import yaml  # type: ignore
-except ImportError:  # pragma: no cover - exercised when PyYAML is absent
-    yaml = None
+from pathlib import Path
+from typing import Dict, Mapping, Sequence, Tuple, Union, List
 
 
-class WorkflowAgentError(RuntimeError):
-    """Base exception for workflow orchestration failures."""
+class MergeAgentError(RuntimeError):
+    """Base exception for merge orchestration failures."""
 
 
-class TaskNotFoundError(WorkflowAgentError):
-    """Raised when a requested task is not part of the workflow."""
+class GitCommandError(MergeAgentError):
+    """Raised when an underlying git command fails."""
+
+    def __init__(self, cmd: Sequence[str], returncode: int, stdout: str, stderr: str) -> None:
+        detail = stderr.strip() or stdout.strip()
+        command_display = " ".join(cmd)
+        message = f"{command_display} failed with exit code {returncode}"
+        if detail:
+            message = f"{message}: {detail}"
+        super().__init__(message)
+        self.cmd = tuple(cmd)
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
 
 
-class DependencyError(WorkflowAgentError):
-    """Raised when a transition violates dependency requirements."""
+class DirtyWorktreeError(MergeAgentError):
+    """Raised when the repository contains staged or unstaged changes."""
 
-
-class InvalidTransitionError(WorkflowAgentError):
-    """Raised when an action is not valid for the task's current state."""
-
-
-class TaskCycleError(WorkflowAgentError):
-    """Raised when the workflow definition contains dependency cycles."""
-
-
-class TaskStatus(Enum):
-    """Operational state for a workflow task."""
-
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    BLOCKED = "blocked"
-
-
-def _normalize_sequence(values: Iterable[str] | None) -> tuple[str, ...]:
-    if not values:
-        return ()
-    return tuple(str(item) for item in values if item is not None)
+    def __init__(self, status: str) -> None:
+        super().__init__("working tree must be clean before running merges")
+        self.status = status
 
 
 @dataclass(frozen=True)
-class WorkflowTask:
-    """Immutable definition for an individual workflow task."""
+class MergeCommand:
+    """Instruction representing a single branch merge."""
 
-    id: str
-    title: str
-    description: str = ""
-    phase: str | None = None
-    owners: tuple[str, ...] = ()
-    depends_on: tuple[str, ...] = ()
-    acceptance: tuple[str, ...] = ()
-    deliverables: tuple[str, ...] = ()
-
-    @classmethod
-    def from_mapping(cls, payload: Mapping[str, Any]) -> "WorkflowTask":
-        """Create a task from a dictionary-like payload."""
-
-        owners: Iterable[str] | None
-        owner_field = payload.get("owners")
-        if owner_field is None:
-            single_owner = payload.get("owner")
-            if single_owner in (None, ""):
-                owners = ()
-            elif isinstance(single_owner, (list, tuple)):
-                owners = single_owner
-            else:
-                owners = (single_owner,)
-        elif isinstance(owner_field, str):
-            owners = (owner_field,)
-        else:
-            owners = owner_field  # type: ignore[assignment]
-
-        depends_on_field = payload.get("depends_on") or payload.get("dependencies")
-        depends_on: Iterable[str] | None
-        if depends_on_field is None:
-            depends_on = ()
-        elif isinstance(depends_on_field, str):
-            depends_on = (depends_on_field,)
-        else:
-            depends_on = depends_on_field  # type: ignore[assignment]
-
-        acceptance = payload.get("acceptance")
-        deliverables = payload.get("deliverables") or payload.get("outputs")
-
-        return cls(
-            id=str(payload["id"]),
-            title=str(payload.get("title", payload["id"])),
-            description=str(payload.get("description", "")),
-            phase=str(payload.get("phase")) if payload.get("phase") is not None else None,
-            owners=_normalize_sequence(owners),
-            depends_on=_normalize_sequence(depends_on),
-            acceptance=_normalize_sequence(acceptance if isinstance(acceptance, Iterable) else None),
-            deliverables=_normalize_sequence(
-                deliverables if isinstance(deliverables, Iterable) else None
-            ),
-        )
+    branch: str
+    sha: str
+    summary: str
 
 
-@dataclass(frozen=True)
-class WorkflowEvent:
-    """Audit log entry emitted for every workflow mutation."""
+@dataclass
+class MergeResult:
+    """Outcome of attempting to merge a branch into the base."""
 
-    timestamp: datetime
-    task_id: str
-    actor: str
-    action: str
-    notes: str = ""
-    details: Mapping[str, Any] = field(default_factory=dict)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Serialize the event into basic Python types."""
-
-        payload: Dict[str, Any] = {
-            "timestamp": self.timestamp.isoformat(),
-            "task_id": self.task_id,
-            "actor": self.actor,
-            "action": self.action,
-        }
-        if self.notes:
-            payload["notes"] = self.notes
-        if self.details:
-            payload["details"] = dict(self.details)
-        return payload
+    branch: str
+    success: bool
+    dry_run: bool
+    message: str
+    commit: str | None = None
+    details: Dict[str, str] = field(default_factory=dict)
 
 
-class QubeWorkflowAgent:
-    """Main agent model for orchestrating Qube mission workflows."""
+MergeItem = Union[str, MergeCommand]
 
-    def __init__(self, tasks: Sequence[WorkflowTask], *, name: str = "Qube Main Workflow") -> None:
-        if not tasks:
-            raise ValueError("at least one workflow task is required")
 
-        self.name = name
-        self._tasks: Dict[str, WorkflowTask] = {}
-        for task in tasks:
-            if task.id in self._tasks:
-                raise ValueError(f"duplicate task id detected: {task.id}")
-            self._tasks[task.id] = task
+class CoreOrchestratorMergeAgent:
+    """Agent that fetches, plans, and merges branches headed to the repository."""
 
-        self._validate_dependencies()
+    def __init__(
+        self,
+        repo_path: str | os.PathLike[str],
+        *,
+        base_branch: str = "main",
+        remote: str = "origin",
+        env: Mapping[str, str] | None = None,
+    ) -> None:
+        self._repo_path = Path(repo_path).resolve()
+        if not (self._repo_path / ".git").exists():
+            raise ValueError(f"{self._repo_path} is not a git repository")
 
-        self._status: Dict[str, TaskStatus] = {task_id: TaskStatus.PENDING for task_id in self._tasks}
-        self._assignees: Dict[str, str | None] = {task_id: None for task_id in self._tasks}
-        self._events: List[WorkflowEvent] = []
-        self._started_at: Dict[str, datetime] = {}
+        self.base_branch = base_branch
+        self.remote = remote
+        self._env = dict(env) if env is not None else None
 
-        # Validate the graph once so we fail fast if a cycle exists.
-        self._plan_cache: List[str] = self._topological_order()
-
-    # ------------------------------------------------------------------
-    # Construction helpers
-    # ------------------------------------------------------------------
-    @classmethod
-    def from_dict(cls, payload: Mapping[str, Any], *, name: str | None = None) -> "QubeWorkflowAgent":
-        tasks_payload = payload.get("tasks")
-        if not isinstance(tasks_payload, Sequence):
-            raise ValueError("payload must include a sequence of tasks")
-        tasks = [WorkflowTask.from_mapping(task) for task in tasks_payload]
-        workflow_name = name or str(payload.get("name") or payload.get("title") or "Qube Main Workflow")
-        return cls(tasks, name=workflow_name)
-
-    @classmethod
-    def from_yaml(cls, path: str | Sequence[str] | bytes | Mapping[str, Any], *, name: str | None = None) -> "QubeWorkflowAgent":
-        """Instantiate the agent from a YAML roadmap file."""
-
-        if yaml is None:
-            raise RuntimeError("PyYAML is required to load YAML workflow definitions")
-
-        if isinstance(path, Mapping):  # pragma: no cover - convenience path
-            payload = path
-        else:
-            with open(path, "r", encoding="utf-8") as handle:
-                payload = yaml.safe_load(handle)
-        if not isinstance(payload, Mapping):
-            raise ValueError("workflow YAML must define a mapping at the top level")
-        return cls.from_dict(payload, name=name)
+        self._validate_remote_exists(remote)
+        self._validate_branch_exists(base_branch)
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    def tasks(self) -> List[WorkflowTask]:
-        """Return the task catalog in topological order."""
+    @property
+    def repo_path(self) -> Path:
+        """Return the absolute repository path managed by the agent."""
 
-        return [self._tasks[task_id] for task_id in self._plan_cache]
+        return self._repo_path
 
-    def task_status(self, task_id: str) -> TaskStatus:
-        """Return the current status for a task."""
+    def configure_identity(self, *, name: str, email: str) -> None:
+        """Persist the git author identity used for merge commits."""
 
-        self._assert_task(task_id)
-        return self._status[task_id]
+        self._run_git("config", "user.name", name)
+        self._run_git("config", "user.email", email)
 
-    def assignee(self, task_id: str) -> str | None:
-        """Return the current assignee for a task, if any."""
+    def fetch_remote(self, *, prune: bool = True) -> str:
+        """Fetch the latest refs from the configured remote."""
 
-        self._assert_task(task_id)
-        return self._assignees[task_id]
+        args = ["fetch"]
+        if prune:
+            args.append("--prune")
+        args.append(self.remote)
+        result = self._run_git(*args)
+        return (result.stdout + result.stderr).strip()
 
-    def ready_tasks(self) -> List[WorkflowTask]:
-        """Return pending tasks whose dependencies are fully satisfied."""
+    def pull_base(self, *, fast_forward_only: bool = True) -> str:
+        """Fast-forward the local base branch to match the remote."""
 
-        ready: List[WorkflowTask] = []
-        for task in self._tasks.values():
-            status = self._status[task.id]
-            if status != TaskStatus.PENDING:
-                continue
-            if all(self._status[dep] == TaskStatus.COMPLETED for dep in task.depends_on):
-                ready.append(task)
-        ready.sort(key=lambda t: ((t.phase or ""), t.id))
-        return ready
+        self.checkout_base()
+        args = ["pull"]
+        if fast_forward_only:
+            args.append("--ff-only")
+        args.extend([self.remote, self.base_branch])
+        result = self._run_git(*args)
+        return (result.stdout + result.stderr).strip()
 
-    def start_task(self, task_id: str, *, actor: str, notes: str = "", assignee: str | None = None) -> WorkflowEvent:
-        """Transition a task into ``IN_PROGRESS`` once dependencies are satisfied."""
+    def push_base(self) -> str:
+        """Push the local base branch to the remote."""
 
-        task = self._assert_task(task_id)
-        status = self._status[task_id]
-        if status == TaskStatus.COMPLETED:
-            raise InvalidTransitionError(f"task {task_id} is already completed")
-        if status == TaskStatus.IN_PROGRESS:
-            raise InvalidTransitionError(f"task {task_id} is already in progress")
-        if status == TaskStatus.BLOCKED:
-            raise InvalidTransitionError(f"task {task_id} is blocked and must be unblocked first")
+        result = self._run_git("push", self.remote, self.base_branch)
+        return (result.stdout + result.stderr).strip()
 
-        missing = [dep for dep in task.depends_on if self._status[dep] != TaskStatus.COMPLETED]
-        if missing:
-            raise DependencyError(f"task {task_id} cannot start; waiting on {', '.join(missing)}")
+    def current_branch(self) -> str:
+        """Return the currently checked out branch."""
 
-        event = self._record_event(
-            task_id,
-            actor=actor,
-            action="start",
-            notes=notes,
-            details={"assignee": assignee} if assignee else {},
-        )
+        return self._run_git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
 
-        self._status[task_id] = TaskStatus.IN_PROGRESS
-        self._started_at[task_id] = event.timestamp
-        if assignee is not None:
-            self._assignees[task_id] = assignee
-        return event
+    def checkout_base(self) -> None:
+        """Switch the working tree to the base branch."""
 
-    def complete_task(
+        self._run_git("checkout", self.base_branch)
+
+    def plan_merges(
         self,
-        task_id: str,
         *,
-        actor: str,
-        notes: str = "",
-        deliverables: Iterable[str] | None = None,
-    ) -> WorkflowEvent:
-        """Mark an in-progress task as completed and capture deliverables."""
+        include_patterns: Sequence[str] | None = None,
+        exclude_patterns: Sequence[str] | None = None,
+        remote: str | None = None,
+    ) -> List[MergeCommand]:
+        """Collect remote branches that should be merged.
 
-        self._assert_task(task_id)
-        status = self._status[task_id]
-        if status == TaskStatus.PENDING:
-            raise InvalidTransitionError(f"task {task_id} has not started")
-        if status == TaskStatus.BLOCKED:
-            raise InvalidTransitionError(f"task {task_id} is blocked; unblock before completing")
-        if status != TaskStatus.IN_PROGRESS:
-            raise InvalidTransitionError(f"task {task_id} cannot transition to completed from {status.value}")
+        Branches are sorted by commit time (newest first). Patterns can match
+        either the fully-qualified ref (e.g. ``origin/feature/foo``) or the
+        branch suffix without the remote prefix (``feature/foo``).
+        """
 
-        deliverable_items = _normalize_sequence(deliverables)
-        event = self._record_event(
-            task_id,
-            actor=actor,
-            action="complete",
-            notes=notes,
-            details={"deliverables": deliverable_items},
+        remote_name = remote or self.remote
+        reference = f"refs/remotes/{remote_name}"
+        result = self._run_git(
+            "for-each-ref",
+            "--sort=-committerdate",
+            reference,
+            "--format=%(refname:short)|%(objectname)|%(contents:subject)",
         )
 
-        self._status[task_id] = TaskStatus.COMPLETED
-        return event
+        include = tuple(include_patterns or ())
+        exclude = tuple(exclude_patterns or ())
 
-    def block_task(self, task_id: str, *, actor: str, reason: str, notes: str = "") -> WorkflowEvent:
-        """Block a task from progressing until follow-up work clears the issue."""
+        commands: List[MergeCommand] = []
+        for line in result.stdout.splitlines():
+            if not line:
+                continue
+            try:
+                ref, sha, summary = line.split("|", 2)
+            except ValueError:
+                continue
+            if ref == f"{remote_name}/{self.base_branch}":
+                continue
 
-        self._assert_task(task_id)
-        if not reason:
-            raise ValueError("blocking a task requires a reason")
+            aliases = self._branch_aliases(ref, remote_name)
+            if include and not self._matches_patterns(aliases, include):
+                continue
+            if exclude and self._matches_patterns(aliases, exclude):
+                continue
 
-        event = self._record_event(
-            task_id,
-            actor=actor,
-            action="block",
-            notes=notes,
-            details={"reason": reason},
+            commands.append(MergeCommand(branch=ref, sha=sha, summary=summary.strip()))
+
+        return commands
+
+    def merge_branch(
+        self,
+        branch: str,
+        *,
+        dry_run: bool = False,
+        fast_forward: bool = False,
+    ) -> MergeResult:
+        """Attempt to merge ``branch`` into the base branch.
+
+        If ``dry_run`` is true the merge is simulated using ``--no-commit`` and
+        aborted immediately after checking for conflicts.
+        """
+
+        branch_ref = self._normalize_branch(branch)
+        self._ensure_clean_worktree()
+        self.checkout_base()
+
+        args = ["merge"]
+        if dry_run:
+            args.extend(["--no-ff", "--no-commit"])
+        elif not fast_forward:
+            args.append("--no-ff")
+        args.append(branch_ref)
+
+        try:
+            completed = self._run_git(*args)
+        except GitCommandError as exc:
+            self._run_git("merge", "--abort", check=False)
+            message = self._format_failure_message(branch_ref, exc)
+            details = {}
+            if exc.stdout.strip():
+                details["stdout"] = exc.stdout.strip()
+            if exc.stderr.strip():
+                details["stderr"] = exc.stderr.strip()
+            return MergeResult(
+                branch=branch_ref,
+                success=False,
+                dry_run=dry_run,
+                message=message,
+                details=details,
+            )
+
+        if dry_run:
+            self._run_git("merge", "--abort", check=False)
+            message = completed.stdout.strip() or completed.stderr.strip()
+            if not message:
+                message = f"{branch_ref} can merge cleanly into {self.base_branch}"
+            return MergeResult(
+                branch=branch_ref,
+                success=True,
+                dry_run=True,
+                message=message,
+            )
+
+        new_head = self._run_git("rev-parse", "HEAD").stdout.strip()
+        message = completed.stdout.strip() or completed.stderr.strip()
+        if not message:
+            message = f"Merged {branch_ref} into {self.base_branch}"
+        return MergeResult(
+            branch=branch_ref,
+            success=True,
+            dry_run=False,
+            message=message,
+            commit=new_head,
         )
 
-        self._status[task_id] = TaskStatus.BLOCKED
-        return event
+    def merge_all(
+        self,
+        branches: Sequence[MergeItem],
+        *,
+        dry_run: bool = False,
+        fetch: bool = True,
+        sync_base: bool = True,
+        fast_forward: bool = False,
+    ) -> List[MergeResult]:
+        """Merge all provided branches sequentially.
 
-    def unblock_task(self, task_id: str, *, actor: str, notes: str = "") -> WorkflowEvent:
-        """Return a blocked task to the ``PENDING`` queue."""
+        Processing stops on the first failure and the remaining branches are not
+        attempted. The list of ``branches`` may contain raw branch names or
+        :class:`MergeCommand` objects produced by :meth:`plan_merges`.
+        """
 
-        self._assert_task(task_id)
-        if self._status[task_id] != TaskStatus.BLOCKED:
-            raise InvalidTransitionError(f"task {task_id} is not blocked")
+        if not branches:
+            return []
 
-        event = self._record_event(task_id, actor=actor, action="unblock", notes=notes)
-        self._status[task_id] = TaskStatus.PENDING
-        return event
+        if fetch:
+            self.fetch_remote()
+        if sync_base:
+            self.pull_base()
 
-    def reset_task(self, task_id: str, *, actor: str, reason: str, notes: str = "") -> WorkflowEvent:
-        """Return a task to ``PENDING`` after auditing its work."""
+        results: List[MergeResult] = []
+        for item in branches:
+            branch_name = item.branch if isinstance(item, MergeCommand) else str(item)
+            result = self.merge_branch(branch_name, dry_run=dry_run, fast_forward=fast_forward)
 
-        self._assert_task(task_id)
-        if not reason:
-            raise ValueError("resetting a task requires a reason")
+            if isinstance(item, MergeCommand):
+                if item.sha:
+                    result.details.setdefault("source_sha", item.sha)
+                if item.summary:
+                    result.details.setdefault("summary", item.summary)
 
-        event = self._record_event(
-            task_id,
-            actor=actor,
-            action="reset",
-            notes=notes,
-            details={"reason": reason},
-        )
-
-        self._status[task_id] = TaskStatus.PENDING
-        self._assignees[task_id] = None
-        self._started_at.pop(task_id, None)
-        return event
-
-    def status_summary(self) -> Dict[str, Any]:
-        """Return a summary of workflow health suitable for dashboards."""
-
-        counts: Dict[str, int] = {status.value: 0 for status in TaskStatus}
-        for status in self._status.values():
-            counts[status.value] += 1
-
-        ready_ids = [task.id for task in self.ready_tasks()]
-        return {
-            "name": self.name,
-            "counts": counts,
-            "ready": ready_ids,
-        }
-
-    def history(self, task_id: str | None = None) -> List[WorkflowEvent]:
-        """Return the full event log or the log for a specific task."""
-
-        if task_id is None:
-            return list(self._events)
-        self._assert_task(task_id)
-        return [event for event in self._events if event.task_id == task_id]
-
-    def serialize_state(self) -> Dict[str, Any]:
-        """Serialize the workflow for persistence or telemetry."""
-
-        return {
-            "name": self.name,
-            "tasks": {
-                task_id: {
-                    "status": self._status[task_id].value,
-                    "assignee": self._assignees[task_id],
-                    "depends_on": list(self._tasks[task_id].depends_on),
-                }
-                for task_id in self._tasks
-            },
-            "ready": [task.id for task in self.ready_tasks()],
-            "events": [event.to_dict() for event in self._events],
-        }
+            results.append(result)
+            if not result.success:
+                break
+        return results
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-    def _assert_task(self, task_id: str) -> WorkflowTask:
-        try:
-            return self._tasks[task_id]
-        except KeyError as exc:  # pragma: no cover - defensive path
-            raise TaskNotFoundError(f"unknown task: {task_id}") from exc
+    def _validate_remote_exists(self, remote: str) -> None:
+        remotes = self._run_git("remote").stdout.split()
+        if remote not in remotes:
+            raise ValueError(f"remote '{remote}' not found in repository")
 
-    def _record_event(
-        self,
-        task_id: str,
-        *,
-        actor: str,
-        action: str,
-        notes: str = "",
-        details: Mapping[str, Any] | None = None,
-    ) -> WorkflowEvent:
-        event = WorkflowEvent(
-            timestamp=datetime.now(timezone.utc),
-            task_id=task_id,
-            actor=actor,
-            action=action,
-            notes=notes,
-            details=dict(details or {}),
+    def _validate_branch_exists(self, branch: str) -> None:
+        if not (self._local_branch_exists(branch) or self._remote_branch_exists(branch)):
+            raise ValueError(f"branch '{branch}' not found in repository")
+
+    def _normalize_branch(self, branch: str) -> str:
+        cleaned = branch.strip()
+        if not cleaned:
+            raise ValueError("branch name must be provided")
+        if cleaned.startswith("refs/") or cleaned.startswith(f"{self.remote}/"):
+            return cleaned
+
+        if self._local_branch_exists(cleaned):
+            return cleaned
+        if self._remote_branch_exists(cleaned):
+            return f"{self.remote}/{cleaned}"
+        return f"{self.remote}/{cleaned}"
+
+    def _local_branch_exists(self, branch: str) -> bool:
+        if branch.startswith("refs/heads/"):
+            ref = branch
+        else:
+            ref = f"refs/heads/{branch}"
+        return self._run_git("show-ref", ref, check=False).returncode == 0
+
+    def _remote_branch_exists(self, branch: str) -> bool:
+        if branch.startswith("refs/remotes/"):
+            ref = branch
+        elif branch.startswith(f"{self.remote}/"):
+            ref = f"refs/remotes/{branch}"
+        else:
+            ref = f"refs/remotes/{self.remote}/{branch}"
+        return self._run_git("show-ref", ref, check=False).returncode == 0
+
+    def _ensure_clean_worktree(self) -> None:
+        status = self._run_git("status", "--porcelain").stdout
+        if status.strip():
+            raise DirtyWorktreeError(status)
+
+    def _branch_aliases(self, ref: str, remote: str) -> Tuple[str, ...]:
+        if ref.startswith(f"{remote}/"):
+            return ref, ref[len(remote) + 1 :]
+        return (ref,)
+
+    @staticmethod
+    def _matches_patterns(values: Tuple[str, ...], patterns: Sequence[str]) -> bool:
+        for pattern in patterns:
+            for value in values:
+                if fnmatch.fnmatch(value, pattern):
+                    return True
+        return False
+
+    def _format_failure_message(self, branch: str, exc: GitCommandError) -> str:
+        detail = exc.stderr.strip() or exc.stdout.strip()
+        if detail:
+            return f"Failed to merge {branch}: {detail}"
+        return f"Failed to merge {branch}: exit code {exc.returncode}"
+
+    def _run_git(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        env.setdefault("GIT_TERMINAL_PROMPT", "0")
+        if self._env:
+            env.update(self._env)
+
+        cmd = ["git", *args]
+        result = subprocess.run(
+            cmd,
+            cwd=self.repo_path,
+            env=env,
+            text=True,
+            capture_output=True,
         )
-        self._events.append(event)
-        return event
-
-    def _validate_dependencies(self) -> None:
-        missing: Dict[str, List[str]] = {}
-        for task in self._tasks.values():
-            unresolved = [dep for dep in task.depends_on if dep not in self._tasks]
-            if unresolved:
-                missing[task.id] = unresolved
-        if missing:
-            problems = ", ".join(f"{task} -> {', '.join(deps)}" for task, deps in sorted(missing.items()))
-            raise DependencyError(f"workflow references unknown dependencies: {problems}")
-
-    def _topological_order(self) -> List[str]:
-        incoming: Dict[str, set[str]] = {
-            task_id: set(task.depends_on) for task_id, task in self._tasks.items()
-        }
-        available = sorted([task_id for task_id, deps in incoming.items() if not deps])
-        order: List[str] = []
-
-        while available:
-            task_id = available.pop(0)
-            order.append(task_id)
-            for candidate, deps in incoming.items():
-                if task_id in deps:
-                    deps.remove(task_id)
-                    if not deps and candidate not in order and candidate not in available:
-                        # Keep deterministic ordering by reinserting at the sorted position.
-                        index = 0
-                        while index < len(available) and available[index] < candidate:
-                            index += 1
-                        available.insert(index, candidate)
-
-        if len(order) != len(self._tasks):
-            raise TaskCycleError("workflow definition contains a dependency cycle")
-        return order
-
-
-__all__ = [
-    "DependencyError",
-    "InvalidTransitionError",
-    "QubeWorkflowAgent",
-    "TaskCycleError",
-    "TaskNotFoundError",
-    "TaskStatus",
-    "WorkflowAgentError",
-    "WorkflowEvent",
-    "WorkflowTask",
-]
+        if check and result.returncode != 0:
+            raise GitCommandError(cmd, result.returncode, result.stdout, result.stderr)
+        return result
