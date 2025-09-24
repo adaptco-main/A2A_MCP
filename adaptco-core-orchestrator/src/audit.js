@@ -5,6 +5,55 @@ const fs = require('fs');
 const { ledgerFile } = require('./ledger');
 
 const CAPSULE_PREFIX = 'capsule.';
+const CAPSULE_HYPHEN_PREFIX = 'capsule-';
+
+const ARTIFACT_ID_PATHS = [
+  ['payload', 'id'],
+  ['payload', 'artifact_id'],
+  ['payload', 'artifactId'],
+  ['payload', 'capsule', 'id'],
+  ['payload', 'capsule', 'capsule_id'],
+  ['payload', 'capsule', 'capsuleId'],
+  ['payload', 'capsule_ref'],
+  ['payload', 'capsuleId'],
+  ['payload', 'capsule_id'],
+  ['capsule', 'id'],
+  ['capsule', 'capsule_id'],
+  ['capsule', 'capsuleId'],
+  ['capsule_ref'],
+  ['capsuleId'],
+  ['capsule_id'],
+  ['id'],
+  ['artifact_id'],
+  ['artifactId']
+];
+
+const CAPSULE_ID_PATHS = [
+  ['payload', 'capsule', 'capsule_id'],
+  ['payload', 'capsule', 'capsuleId'],
+  ['payload', 'capsule', 'id'],
+  ['payload', 'capsule_id'],
+  ['payload', 'capsuleId'],
+  ['capsule', 'capsule_id'],
+  ['capsule', 'capsuleId'],
+  ['capsule', 'id'],
+  ['capsule_id'],
+  ['capsuleId'],
+  ['capsule_ref']
+];
+
+const VERSION_PATHS = [
+  ['payload', 'capsule', 'version'],
+  ['payload', 'version'],
+  ['payload', 'capsule_version'],
+  ['capsule', 'version'],
+  ['version'],
+  ['capsule_version']
+];
+
+function isObject(value) {
+  return Boolean(value) && typeof value === 'object';
+}
 
 function toCleanString(value) {
   if (value === undefined || value === null) {
@@ -20,11 +69,22 @@ function toCleanString(value) {
   return null;
 }
 
-function firstString(...values) {
-  for (const value of values) {
-    const cleaned = toCleanString(value);
-    if (cleaned) {
-      return cleaned;
+function getPathValue(entry, path) {
+  let current = entry;
+  for (const segment of path) {
+    if (!isObject(current)) {
+      return undefined;
+    }
+    current = current[segment];
+  }
+  return current;
+}
+
+function firstStringFromPaths(entry, paths) {
+  for (const path of paths) {
+    const value = toCleanString(getPathValue(entry, path));
+    if (value) {
+      return value;
     }
   }
   return null;
@@ -36,13 +96,10 @@ function normalizeCapsuleValue(value) {
     return null;
   }
   const lower = cleaned.toLowerCase();
-  const withoutPrefix = lower.startsWith(CAPSULE_PREFIX)
+  const normalized = lower.startsWith(CAPSULE_PREFIX)
     ? lower.slice(CAPSULE_PREFIX.length)
     : lower;
-  return {
-    raw: cleaned,
-    normalized: withoutPrefix
-  };
+  return { raw: cleaned, normalized };
 }
 
 function normalizeVersionValue(value) {
@@ -51,55 +108,42 @@ function normalizeVersionValue(value) {
     return null;
   }
   const lower = cleaned.toLowerCase();
-  const withoutPrefix = lower.startsWith('v') ? lower.slice(1) : lower;
-  return {
-    raw: cleaned,
-    normalized: withoutPrefix
-  };
+  const normalized = lower.startsWith('v') ? lower.slice(1) : lower;
+  return { raw: cleaned, normalized };
 }
 
 function versionsEqual(left, right) {
   const normalizedLeft = normalizeVersionValue(left);
   const normalizedRight = normalizeVersionValue(right);
-  if (!normalizedLeft || !normalizedRight) {
-    return false;
-  }
   return (
-    normalizedLeft.raw === normalizedRight.raw ||
-    normalizedLeft.normalized === normalizedRight.normalized
+    Boolean(normalizedLeft) &&
+    Boolean(normalizedRight) &&
+    (normalizedLeft.raw === normalizedRight.raw ||
+      normalizedLeft.normalized === normalizedRight.normalized)
   );
 }
 
 function capsuleIdsEqual(left, right) {
   const normalizedLeft = normalizeCapsuleValue(left);
   const normalizedRight = normalizeCapsuleValue(right);
-  if (!normalizedLeft || !normalizedRight) {
-    return false;
-  }
   return (
-    normalizedLeft.raw === normalizedRight.raw ||
-    normalizedLeft.normalized === normalizedRight.normalized
+    Boolean(normalizedLeft) &&
+    Boolean(normalizedRight) &&
+    (normalizedLeft.raw === normalizedRight.raw ||
+      normalizedLeft.normalized === normalizedRight.normalized)
   );
 }
 
-function decomposeArtifactId(id) {
-  const cleaned = toCleanString(id);
+function decomposeArtifactId(identifier) {
+  const cleaned = toCleanString(identifier);
   if (!cleaned) {
     return {};
   }
 
-  if (cleaned.startsWith('capsule-')) {
-    const numericVersionMatch = /^capsule-(.+)-([0-9].*)$/.exec(cleaned);
-    if (numericVersionMatch) {
-      return {
-        capsuleId: numericVersionMatch[1],
-        version: numericVersionMatch[2]
-      };
-    }
-
-    const withoutPrefix = cleaned.slice('capsule-'.length);
+  if (cleaned.startsWith(CAPSULE_HYPHEN_PREFIX)) {
+    const withoutPrefix = cleaned.slice(CAPSULE_HYPHEN_PREFIX.length);
     const lastHyphen = withoutPrefix.lastIndexOf('-');
-    if (lastHyphen !== -1) {
+    if (lastHyphen > 0) {
       const capsuleId = withoutPrefix.slice(0, lastHyphen);
       const version = withoutPrefix.slice(lastHyphen + 1);
       if (capsuleId && version) {
@@ -108,148 +152,98 @@ function decomposeArtifactId(id) {
     }
   }
 
-  if (cleaned.startsWith(CAPSULE_PREFIX)) {
-    const segments = cleaned.split('.');
-    if (segments.length >= 2) {
-      const last = segments[segments.length - 1];
-      if (/^v[0-9][\w.-]*$/i.test(last)) {
-        return {
-          capsuleId: segments.slice(0, -1).join('.'),
-          version: last
-        };
-      }
-    }
+  const dottedMatch = cleaned.match(/^(capsule\.[^.]+(?:\.[^.]+)*)\.(v[\w.-]+)$/i);
+  if (dottedMatch) {
+    return {
+      capsuleId: dottedMatch[1],
+      version: dottedMatch[2]
+    };
   }
 
   return {};
 }
 
 function extractIdentifiers(entry) {
-  if (!entry || typeof entry !== 'object') {
+  if (!isObject(entry)) {
     return { id: null, capsuleId: null, version: null };
   }
 
-  const payload =
-    (entry && typeof entry.payload === 'object' && entry.payload) || {};
-  const capsule =
-    (payload && typeof payload.capsule === 'object' && payload.capsule) ||
-    (entry && typeof entry.capsule === 'object' && entry.capsule) ||
-    {};
-
-  const artifactId = firstString(
-    payload.id,
-    payload.artifact_id,
-    payload.artifactId,
-    capsule.id,
-    capsule.capsule_id,
-    entry.id,
-    entry.artifact_id,
-    entry.artifactId,
-    entry.capsule_id,
-    entry.capsuleId,
-    entry.capsule_ref,
-    payload.capsule_id,
-    payload.capsuleId,
-    payload.capsule_ref
-  );
-
-  let capsuleId = firstString(
-    capsule.capsule_id,
-    capsule.id,
-    payload.capsule_id,
-    payload.capsuleId,
-    payload.capsule_ref,
-    entry.capsule_id,
-    entry.capsuleId,
-    entry.capsule_ref
-  );
-
-  let version = firstString(
-    capsule.version,
-    payload.version,
-    payload.capsule_version,
-    entry.version,
-    entry.capsule_version
-  );
+  const artifactId = firstStringFromPaths(entry, ARTIFACT_ID_PATHS);
+  let capsuleId = firstStringFromPaths(entry, CAPSULE_ID_PATHS);
+  let version = firstStringFromPaths(entry, VERSION_PATHS);
 
   if (capsuleId) {
-    const derivedFromCapsule = decomposeArtifactId(capsuleId);
-    if (derivedFromCapsule.capsuleId) {
-      capsuleId = derivedFromCapsule.capsuleId;
-      if (!version && derivedFromCapsule.version) {
-        version = derivedFromCapsule.version;
+    const derived = decomposeArtifactId(capsuleId);
+    if (derived.capsuleId) {
+      capsuleId = derived.capsuleId;
+      if (!version && derived.version) {
+        version = derived.version;
       }
     }
   }
 
   if (artifactId) {
-    const derivedFromArtifact = decomposeArtifactId(artifactId);
-    if (!capsuleId && derivedFromArtifact.capsuleId) {
-      capsuleId = derivedFromArtifact.capsuleId;
+    const derived = decomposeArtifactId(artifactId);
+    if (derived.capsuleId && !capsuleId) {
+      capsuleId = derived.capsuleId;
     }
-    if (!version && derivedFromArtifact.version) {
-      version = derivedFromArtifact.version;
+    if (derived.version && !version) {
+      version = derived.version;
     }
   }
 
   return {
-    id: artifactId,
+    id: artifactId || null,
     capsuleId: capsuleId || null,
     version: version || null
   };
 }
 
 function normalizeCriteria(criteria = {}) {
-  if (typeof criteria !== 'object' || criteria === null) {
+  if (!isObject(criteria)) {
     return {};
   }
 
-  const normalized = { ...criteria };
+  const normalized = {};
 
-  if (normalized.id !== undefined) {
-    const cleaned = toCleanString(normalized.id);
+  if (criteria.id !== undefined) {
+    const cleaned = toCleanString(criteria.id);
     if (cleaned) {
       normalized.id = cleaned;
-    } else {
-      delete normalized.id;
     }
   }
 
-  if (normalized.capsuleId !== undefined) {
-    const cleaned = toCleanString(normalized.capsuleId);
+  if (criteria.capsuleId !== undefined) {
+    const cleaned = toCleanString(criteria.capsuleId);
     if (cleaned) {
       normalized.capsuleId = cleaned;
-    } else {
-      delete normalized.capsuleId;
     }
   }
 
-  if (normalized.version !== undefined) {
-    const cleaned = toCleanString(normalized.version);
+  if (criteria.version !== undefined) {
+    const cleaned = toCleanString(criteria.version);
     if (cleaned) {
       normalized.version = cleaned;
-    } else {
-      delete normalized.version;
     }
   }
 
   if (normalized.id) {
-    const derivedFromId = decomposeArtifactId(normalized.id);
-    if (derivedFromId.capsuleId && !normalized.capsuleId) {
-      normalized.capsuleId = derivedFromId.capsuleId;
+    const derived = decomposeArtifactId(normalized.id);
+    if (derived.capsuleId && !normalized.capsuleId) {
+      normalized.capsuleId = derived.capsuleId;
     }
-    if (derivedFromId.version && !normalized.version) {
-      normalized.version = derivedFromId.version;
+    if (derived.version && !normalized.version) {
+      normalized.version = derived.version;
     }
   }
 
   if (normalized.capsuleId) {
-    const derivedFromCapsule = decomposeArtifactId(normalized.capsuleId);
-    if (derivedFromCapsule.capsuleId) {
-      normalized.capsuleId = derivedFromCapsule.capsuleId;
-      if (!normalized.version && derivedFromCapsule.version) {
-        normalized.version = derivedFromCapsule.version;
-      }
+    const derived = decomposeArtifactId(normalized.capsuleId);
+    if (derived.capsuleId) {
+      normalized.capsuleId = derived.capsuleId;
+    }
+    if (derived.version && !normalized.version) {
+      normalized.version = derived.version;
     }
   }
 
@@ -258,61 +252,46 @@ function normalizeCriteria(criteria = {}) {
 
 function matchesCriteria(entry, criteria) {
   const normalized = normalizeCriteria(criteria);
-  const identifiers = extractIdentifiers(entry);
-
-  const hasCriteria = Boolean(
-    normalized.id || normalized.capsuleId || normalized.version
-  );
-
-  if (!hasCriteria) {
+  if (!normalized.id && !normalized.capsuleId && !normalized.version) {
     throw new Error('An artifact identifier (--id or --capsule-id) is required.');
   }
 
-  let satisfied = false;
+  const identifiers = extractIdentifiers(entry);
+  let matched = false;
 
-  if (normalized.id) {
-    if (identifiers.id) {
-      if (identifiers.id !== normalized.id) {
-        return false;
-      }
-      satisfied = true;
+  if (normalized.id && identifiers.id) {
+    if (identifiers.id !== normalized.id) {
+      return false;
     }
+    matched = true;
   }
 
-  if (normalized.capsuleId) {
-    if (identifiers.capsuleId) {
-      if (!capsuleIdsEqual(identifiers.capsuleId, normalized.capsuleId)) {
-        return false;
-      }
-      satisfied = true;
+  if (normalized.capsuleId && identifiers.capsuleId) {
+    if (!capsuleIdsEqual(identifiers.capsuleId, normalized.capsuleId)) {
+      return false;
     }
+    matched = true;
   }
 
-  if (normalized.version) {
-    if (identifiers.version) {
-      if (!versionsEqual(identifiers.version, normalized.version)) {
-        return false;
-      }
-      satisfied = true;
+  if (normalized.version && identifiers.version) {
+    if (!versionsEqual(identifiers.version, normalized.version)) {
+      return false;
     }
+    matched = true;
   }
 
-  if (!satisfied) {
-    return false;
-  }
-
-  return true;
+  return matched;
 }
 
 function getEventType(entry) {
-  if (!entry || typeof entry !== 'object') {
+  if (!isObject(entry)) {
     return undefined;
   }
   return entry.type || entry.event || entry.name || entry.action;
 }
 
 function describeEvent(entry) {
-  if (!entry || typeof entry !== 'object') {
+  if (!isObject(entry)) {
     return 'Unknown event';
   }
 
@@ -321,50 +300,46 @@ function describeEvent(entry) {
     return 'Unknown event';
   }
 
-  switch (type) {
-    case 'capsule.registered': {
-      const payload =
-        (entry && typeof entry.payload === 'object' && entry.payload) || entry;
-      const capsule =
-        (payload && typeof payload.capsule === 'object' && payload.capsule) ||
-        (entry && typeof entry.capsule === 'object' && entry.capsule) ||
-        {};
-      const capsuleId = firstString(
-        capsule.capsule_id,
-        capsule.id,
-        payload.capsule_id,
-        payload.capsuleId,
-        entry.capsule_id,
-        entry.capsuleId
-      );
-      const version = firstString(
-        capsule.version,
-        payload.version,
-        payload.capsule_version,
-        entry.version,
-        entry.capsule_version
-      );
-      const author = firstString(
-        capsule.author,
-        payload.author,
-        entry.author
-      );
-      const parts = [];
-      if (capsuleId) {
-        parts.push(capsuleId);
-      }
-      if (version) {
-        parts.push(version);
-      }
-      const descriptor = parts.length ? parts.join(' ') : 'capsule';
-      if (author) {
-        return `Capsule ${descriptor} registered by ${author}`;
-      }
+  if (type === 'capsule.registered') {
+    const capsule = getPathValue(entry, ['payload', 'capsule']) || entry.capsule || {};
+    const capsuleId = toCleanString(
+      firstStringFromPaths(
+        { capsule },
+        [
+          ['capsule', 'capsule_id'],
+          ['capsule', 'capsuleId'],
+          ['capsule', 'id']
+        ]
+      )
+    );
+    const version = toCleanString(
+      firstStringFromPaths(
+        { capsule },
+        [
+          ['capsule', 'version']
+        ]
+      )
+    );
+    const author = toCleanString(
+      firstStringFromPaths(
+        { capsule },
+        [
+          ['capsule', 'author']
+        ]
+      )
+    ) || toCleanString(getPathValue(entry, ['payload', 'author'])) || toCleanString(entry.author);
+
+    const descriptor = [capsuleId, version].filter(Boolean).join(' ');
+    if (descriptor && author) {
+      return `Capsule ${descriptor} registered by ${author}`;
+    }
+    if (descriptor) {
       return `Capsule ${descriptor} registered`;
     }
-    default:
-      return `Event ${type}`;
+    return 'Capsule registered';
   }
+
+  return `Event ${type}`;
 }
 
 function resolveArtifactId(events, criteria) {
@@ -402,20 +377,18 @@ function resolveArtifactId(events, criteria) {
 
 function resolveCapsule(events) {
   for (const entry of events) {
-    if (entry && typeof entry === 'object') {
-      if (entry.payload && typeof entry.payload.capsule === 'object') {
-        return entry.payload.capsule;
-      }
-      if (entry.capsule && typeof entry.capsule === 'object') {
-        return entry.capsule;
-      }
+    if (isObject(entry.payload) && isObject(entry.payload.capsule)) {
+      return entry.payload.capsule;
+    }
+    if (isObject(entry.capsule)) {
+      return entry.capsule;
     }
   }
   return null;
 }
 
 function extractTimestamp(entry) {
-  if (!entry || typeof entry !== 'object') {
+  if (!isObject(entry)) {
     return null;
   }
   return (
@@ -441,10 +414,10 @@ function parseTimestamp(entry) {
 }
 
 function buildEventPayload(entry) {
-  if (!entry || typeof entry !== 'object') {
+  if (!isObject(entry)) {
     return undefined;
   }
-  if (entry.payload && typeof entry.payload === 'object') {
+  if (isObject(entry.payload)) {
     return entry.payload;
   }
   const {
@@ -503,17 +476,11 @@ function parseLedger(contents) {
 
 function buildTrace(entries, criteria = {}) {
   const filtered = entries.filter((entry) => matchesCriteria(entry, criteria));
-
   if (filtered.length === 0) {
     return null;
   }
 
-  const sorted = filtered.slice().sort((a, b) => {
-    const left = parseTimestamp(a);
-    const right = parseTimestamp(b);
-    return left - right;
-  });
-
+  const sorted = filtered.slice().sort((a, b) => parseTimestamp(a) - parseTimestamp(b));
   const artifactId = resolveArtifactId(sorted, criteria);
   const capsule = resolveCapsule(sorted);
   const firstEventTimestamp = extractTimestamp(sorted[0]);
