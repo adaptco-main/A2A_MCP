@@ -35,3 +35,9 @@ This repository coordinates automation and human operations around artifact mana
 3. Connect GitHub webhooks to cockpit event listener.
 4. Test with a Freeze Artifact quick-action.
 
+## Mock Telemetry Server
+- Run `npm install` to ensure dependencies are available.
+- Start the simulated HUD stream with `npm run start:mock-telemetry`.
+- Connect a WebSocket client to `ws://localhost:8080/streams/telemetry/solF1/v1` using token `demo` (either query string `?token=demo` or `Authorization: Bearer demo`).
+- The server replays `capsules/telemetry/capsule.telemetry.render.v1.events_examples.jsonl` at 30Hz in a loop and exposes a `/healthz` endpoint for status checks.
+
