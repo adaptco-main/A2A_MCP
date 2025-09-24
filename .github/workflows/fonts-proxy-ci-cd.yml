@@ -13,6 +13,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      OPENAPI_PATH: .well-known/openapi.yaml
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -46,14 +48,15 @@ jobs:
           chmod +x scripts/emit_event.sh
 
       - name: Install API-diff and Spectral
-        run: npm install -g @stoplight/spectral-cli openapi-diff
+        run: npm install -g @stoplight/spectral-cli @openapitools/openapi-diff
 
       - name: Spectral lint (logged)
+        if: ${{ hashFiles(env.OPENAPI_PATH) != '' }}
         shell: bash
         run: |
           source scripts/emit_event.sh
           emit ci.step.start spectral
-          spectral lint .well-known/openapi.yaml
+          spectral lint "${OPENAPI_PATH}"
           emit ci.step.end spectral
 
       - name: Install jq
@@ -65,30 +68,52 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: OpenAPI diff (logged)
+      - name: Prepare OpenAPI specs (PR only)
+        id: prep
         if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          set -euo pipefail
+          mkdir -p .openapi-diff
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          PATH_IN_REPO="${OPENAPI_PATH}"
+
+          if git cat-file -e "${BASE_SHA}:${PATH_IN_REPO}" 2>/dev/null; then
+            git show "${BASE_SHA}:${PATH_IN_REPO}" > .openapi-diff/base.yaml || true
+            if [ -f "${PATH_IN_REPO}" ]; then
+              cp "${PATH_IN_REPO}" .openapi-diff/head.yaml
+              echo "HAS_BASE=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "HAS_BASE=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "HAS_BASE=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: OpenAPI diff (logged)
+        if: ${{ github.event_name == 'pull_request' && steps.prep.outputs.HAS_BASE == 'true' }}
         shell: bash
         run: |
           source scripts/emit_event.sh
           emit ci.step.start openapi-diff
-          BASE_SHA=${{ github.event.pull_request.base.sha }}
-          HEAD_SHA=${{ github.event.pull_request.head.sha }}
-
-          if ! git show "${BASE_SHA}:.well-known/openapi.yaml" > old.yaml 2>/dev/null; then
-            echo "Baseline OpenAPI specification not found at ${BASE_SHA}:.well-known/openapi.yaml; skipping diff."
-            emit ci.step.end openapi-diff '{"status":"skipped","reason":"missing_baseline"}'
-            exit 0
-          fi
-
-          if ! git show "${HEAD_SHA}:.well-known/openapi.yaml" > new.yaml 2>/dev/null; then
-            echo "Head OpenAPI specification not found at ${HEAD_SHA}:.well-known/openapi.yaml; skipping diff."
-            emit ci.step.end openapi-diff '{"status":"skipped","reason":"missing_head"}'
-            exit 0
-          fi
-
-          openapi-diff old.yaml new.yaml --fail-on incompatible,major \
-            --report=html:openapi-diff.html --report=json:openapi-diff.json
+          openapi-diff .openapi-diff/base.yaml .openapi-diff/head.yaml --fail-on incompatible,major \
+            --report=html:.openapi-diff/openapi-diff.html --report=json:.openapi-diff/openapi-diff.json
           emit ci.step.end openapi-diff
+
+      - name: Skip OpenAPI diff (no base)
+        if: ${{ github.event_name == 'pull_request' && steps.prep.outputs.HAS_BASE != 'true' }}
+        shell: bash
+        run: |
+          source scripts/emit_event.sh
+          emit ci.step.start openapi-diff
+          echo "No base spec or head spec missing; skipping diff."
+          emit ci.step.end openapi-diff '{"status":"skipped","reason":"missing_spec"}'
+
+      - name: Upload diff report
+        if: ${{ always() && github.event_name == 'pull_request' && steps.prep.outputs.HAS_BASE == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-diff-report
+          path: .openapi-diff/*
 
       - name: Build & push (logged)
         shell: bash
