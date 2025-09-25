@@ -39,6 +39,16 @@
       "executor_channel": "sol.f1.previz.v1 receives storyboard and asset capsules, returning sealed motion ledgers.",
       "vault_checkpoint": "relay.artifacts.v1 captures resumable checkpoints so CiCi can resume automation from sealed state without human intervention."
     },
+    "telemetry_links": {
+      "scene_capsule": "capsule.scene.ethereal_wrap.v1",
+      "motion_profile": "clip.motion.ethereal_wrap.v1",
+      "asset_bundle": [
+        "asset.costume.aurora_wrap.v1",
+        "asset.prop.vault_glyph.v1"
+      ],
+      "storyboard": "capsule.storyboard.ethereal_wrap.v1",
+      "vault": "relay.artifacts.v1"
+    },
     "sentinel_triad": [
       {
         "name": "Queen CiCi",
@@ -50,7 +60,13 @@
         "name": "Celine",
         "role": "Vector Oracle",
         "color_signature": "emerald flux",
-        "manifest": "Charts the braid vectors, ensuring incoming strands align to canonical cadence."
+        "manifest": "Charts the braid vectors, ensuring incoming strands align to canonical cadence.",
+        "registry_binding": {
+          "runtime_entry": "capsule.scene.ethereal_wrap.v1",
+          "replay_token": "replay:celine:20250924:000",
+          "motion_channel": "clip.motion.ethereal_wrap.v1",
+          "telemetry_vault": "relay.artifacts.v1"
+        }
       },
       {
         "name": "The Braid",

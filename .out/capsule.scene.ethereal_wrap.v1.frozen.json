@@ -1,7 +1,7 @@
 {
   "attestation": {
     "content_hash": "sha256:d0913c974379658d7693940c1ea2b83984d605a663dfd6808593d9ac9e7c4d66",
-    "sealed_at": "2025-09-25T00:55:11Z",
+    "sealed_at": "2025-09-25T01:03:44Z",
     "sealed_by": "Council",
     "status": "SEALED"
   },
