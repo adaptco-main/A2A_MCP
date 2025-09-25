@@ -130,9 +130,9 @@ Each step is auditable; skipping any stage invalidates `replay.authorized` check
 
 ## 7. Reference Bundle Layout
 
-```
+```text
 ssot/
-├── registry.manifest.json        # Consolidated list of sealed artifacts
+├── registry.manifest.json   # Consolidated list of sealed artifacts
 ├── capsules/
 │   ├── storyboards/
 │   │   └── storyboard.monza.v1.json
@@ -155,4 +155,5 @@ This structure mirrors the Git repository and the offline vault so manifests, pa
 
 ---
 
-By adopting this binder, any contributor or autonomous agent can register, verify, or replay capsules without threatening the sovereign lineage of the F1 Lego project. All five entry classes remain anchored to the same Merkle root, delivering tamper-evident provenance across the expanded relay braid (Proof → Flow → Execution → Vault).
+By adopting this binder, any contributor or autonomous agent can register, verify, or replay capsules without threatening the sovereign lineage of the F1 Lego project.
+All five entry classes remain anchored to the same Merkle root, delivering tamper-evident provenance across the **expanded relay braid (Proof → Flow → Execution → Vault)**.
