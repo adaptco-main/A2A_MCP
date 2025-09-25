@@ -49,3 +49,10 @@ Pass `--compact` for single-line JSON or override the wrapper/registry locations
 `--runtime-dir` when running against alternate checkouts. The report includes sticky counts so CiCi can spot any anchors that
 are still rehearsing before the council seals the shell.
 
+## Prompt Graph Capsules
+
+Prompt graphs bind scene beats, continuity tokens, and LoRA overlays so the orchestrator seeds avatars with the correct
+context. The v1 schema lives at `specs/prompt-graph.v1.schema.json`, and the Lego F1 highlight reel example capsule is stored
+under `capsules/prompt/capsule.prompt.graph.lego_f1.sf23_vs_w14.v1.json`. See `docs/PROMPT_GRAPH_DSL.md` for the freezing
+workflow, quality gates, and governance bindings.
+
