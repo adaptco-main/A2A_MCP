@@ -52,9 +52,19 @@ class CoreOrchestratorMergeAgentTests(unittest.TestCase):
         self._run(["git", "push", "-u", "origin", "feature/conflict"], cwd=seed_repo)
         self._run(["git", "checkout", "main"], cwd=seed_repo)
 
+        # Fast-forward branch that can be integrated without a merge commit
+        self._run(["git", "checkout", "-b", "feature/fastforward"], cwd=seed_repo)
+        (seed_repo / "fast.txt").write_text("fast forward ready\n", encoding="utf-8")
+        self._run(["git", "add", "fast.txt"], cwd=seed_repo)
+        self._run(["git", "commit", "-m", "Add fast-forward payload"], cwd=seed_repo)
+        self._run(["git", "push", "-u", "origin", "feature/fastforward"], cwd=seed_repo)
+        self._run(["git", "checkout", "main"], cwd=seed_repo)
+
         # Clone a fresh workspace for the agent under test
         self.clone_path = root / "clone"
         self._run(["git", "clone", self.remote_path.as_posix(), self.clone_path.as_posix()])
+        # Some bare repositories default to a detached HEAD; explicitly track main.
+        self._run(["git", "checkout", "main"], cwd=self.clone_path)
         self._configure_identity(self.clone_path)
 
         self.agent = CoreOrchestratorMergeAgent(self.clone_path)
@@ -81,6 +91,7 @@ class CoreOrchestratorMergeAgentTests(unittest.TestCase):
         branches = {command.branch for command in commands}
         self.assertIn("origin/feature/landing", branches)
         self.assertIn("origin/feature/conflict", branches)
+        self.assertIn("origin/feature/fastforward", branches)
         self.assertNotIn("origin/main", branches)
         for command in commands:
             self.assertTrue(command.sha)
@@ -101,7 +112,10 @@ class CoreOrchestratorMergeAgentTests(unittest.TestCase):
 
     def test_merge_all_aborts_on_conflict(self) -> None:
         self.agent.fetch_remote()
-        commands = self.agent.plan_merges(include_patterns=("feature/*",))
+        commands = self.agent.plan_merges(
+            include_patterns=("feature/*",),
+            exclude_patterns=("*fastforward",),
+        )
         commands = sorted(commands, key=lambda command: 0 if command.branch.endswith("landing") else 1)
 
         results = self.agent.merge_all(commands)
@@ -118,6 +132,23 @@ class CoreOrchestratorMergeAgentTests(unittest.TestCase):
         (self.clone_path / "temp.txt").write_text("dirty\n", encoding="utf-8")
         with self.assertRaises(DirtyWorktreeError):
             self.agent.merge_branch("feature/landing")
+
+    def test_fast_forward_merge_supports_dry_run_and_execution(self) -> None:
+        self.agent.fetch_remote()
+        head_before = self._run(["git", "rev-parse", "HEAD"], cwd=self.clone_path).stdout.strip()
+
+        dry_run = self.agent.merge_branch("feature/fastforward", dry_run=True, fast_forward=True)
+        self.assertTrue(dry_run.success)
+        self.assertTrue(dry_run.dry_run)
+        head_after = self._run(["git", "rev-parse", "HEAD"], cwd=self.clone_path).stdout.strip()
+        self.assertEqual(head_before, head_after)
+        self.assertFalse((self.clone_path / "fast.txt").exists())
+
+        result = self.agent.merge_branch("feature/fastforward", fast_forward=True)
+        self.assertTrue(result.success)
+        self.assertFalse(result.dry_run)
+        self.assertTrue((self.clone_path / "fast.txt").exists())
+        self.assertIsNotNone(result.commit)
 
 
 if __name__ == "__main__":  # pragma: no cover

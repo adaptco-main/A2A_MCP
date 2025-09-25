@@ -198,17 +198,21 @@ class CoreOrchestratorMergeAgent:
         self._ensure_clean_worktree()
         self.checkout_base()
 
+        pre_merge_head = self._run_git("rev-parse", "HEAD").stdout.strip()
+
         args = ["merge"]
-        if dry_run:
-            args.extend(["--no-ff", "--no-commit"])
-        elif not fast_forward:
+        if fast_forward:
+            args.append("--ff-only")
+        else:
             args.append("--no-ff")
+        if dry_run:
+            args.append("--no-commit")
         args.append(branch_ref)
 
         try:
             completed = self._run_git(*args)
         except GitCommandError as exc:
-            self._run_git("merge", "--abort", check=False)
+            self._abort_merge(pre_merge_head if dry_run else None)
             message = self._format_failure_message(branch_ref, exc)
             details = {}
             if exc.stdout.strip():
@@ -224,7 +228,7 @@ class CoreOrchestratorMergeAgent:
             )
 
         if dry_run:
-            self._run_git("merge", "--abort", check=False)
+            self._abort_merge(pre_merge_head, fast_forward=fast_forward)
             message = completed.stdout.strip() or completed.stderr.strip()
             if not message:
                 message = f"{branch_ref} can merge cleanly into {self.base_branch}"
@@ -351,6 +355,22 @@ class CoreOrchestratorMergeAgent:
         if detail:
             return f"Failed to merge {branch}: {detail}"
         return f"Failed to merge {branch}: exit code {exc.returncode}"
+
+    def _abort_merge(
+        self,
+        pre_merge_head: str | None,
+        *,
+        fast_forward: bool | None = None,
+    ) -> None:
+        """Abort the in-progress merge, restoring state on failure."""
+
+        result = self._run_git("merge", "--abort", check=False)
+        if result.returncode != 0 and pre_merge_head:
+            # ``git merge --abort`` is a no-op for fast-forward merges, so
+            # explicitly reset to the recorded head when simulating.
+            reset_needed = fast_forward if fast_forward is not None else True
+            if reset_needed:
+                self._run_git("reset", "--hard", pre_merge_head, check=False)
 
     def _run_git(self, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
