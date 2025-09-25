@@ -4,6 +4,7 @@
 - register intent routing capsule and Boo LoRA rehearsal map in runtime index
 - add freeze helper for routing policy and ledger attestation details
 - publish prompt graph DSL schema, Lego F1 capsule, and freezer hook for ledger alignment
+- enforce maker–checker quorum, replay tokens, and HUD broadcasts in the Kobe cipher freezer script
 
 ## 2025-09-25
 - add ADAPTCO OS wrapper capsule, freeze workflow, and scrollstream ledger hook
