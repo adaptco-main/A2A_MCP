@@ -123,6 +123,7 @@ Each step is auditable; skipping any stage invalidates `replay.authorized` check
 
 * **Core Orchestrator (`qube.orchestrator.v1`)** uses checkpoint capsules to resume flows and validates every payload against `canonical_sha256` + `merkle_root`.
 * **PreViz Executor (`sol.f1.previz.v1`)** requires asset and storyboard capsules to match the SSOT manifest before rendering animatics or ledgers.
+* **SSOT Registry API (`adaptco-ssot`)** now enforces the full `ssot.registry.v1` packet on every asset mutation, guaranteeing the orchestrator receives lineage-bound hashes, attestation signatures, and replay conditions directly from the proof layer.
 * **Artifact Checkpoint Vault (`relay.artifacts.v1`)** mirrors rendered clips, motion ledgers, and orchestrator checkpoints. It subscribes to SSOT updates, confirms hashes, and exposes immutable bundles that downstream editors or playback agents can mount without hitting production repos.
 * **CI Automation**: Every commit triggers a manifest diff check ensuring no sealed capsule has been mutated. Diffs are blocked until a superseding capsule with new lineage is registered.
 * **Telemetry Hooks**: Emit `registry.event` logs whenever a new capsule is sealed or replayed; downstream systems subscribe for governance dashboards.
