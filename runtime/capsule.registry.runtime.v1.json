@@ -33,6 +33,44 @@
       "governance": {
         "router": "Queen Boo"
       }
+    },
+    {
+      "capsule_id": "ssot.registry.v1",
+      "canonical": null,
+      "hash": null,
+      "status": "SEALED",
+      "governance": {
+        "steward": "Q.Enterprise Council"
+      }
+    },
+    {
+      "capsule_id": "qube.orchestrator.v1",
+      "canonical": null,
+      "hash": null,
+      "status": "STAGED",
+      "governance": {
+        "router": "Queen Boo",
+        "stabilizer": "Queen CiCi"
+      }
+    },
+    {
+      "capsule_id": "sol.f1.previz.v1",
+      "canonical": null,
+      "hash": null,
+      "status": "REHEARSAL",
+      "governance": {
+        "executor": "Sol",
+        "steward": "Queen Boo"
+      }
+    },
+    {
+      "capsule_id": "relay.artifacts.v1",
+      "canonical": null,
+      "hash": null,
+      "status": "STAGED",
+      "governance": {
+        "custodian": "Queen CiCi"
+      }
     }
   ],
   "attestation": {

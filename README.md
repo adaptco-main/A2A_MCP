@@ -35,3 +35,17 @@ This repository coordinates automation and human operations around artifact mana
 3. Connect GitHub webhooks to cockpit event listener.
 4. Test with a Freeze Artifact quick-action.
 
+## Sovereign Wrapper Autocode (Queen CiCi)
+
+Use the wrapper autocoder to verify that every vessel in the sovereign shell is stuck to the right runtime node before you
+freeze or resume a flow. The script inspects `capsule.wrapper.adaptco_os.v1`, checks that Queen CiCi is still the stabilizer,
+and confirms that each anchor in the expanded braid is bound inside the runtime registry.
+
+```bash
+./scripts/autocode_wrapper.js
+```
+
+Pass `--compact` for single-line JSON or override the wrapper/registry locations via `--wrapper`, `--registry`, and
+`--runtime-dir` when running against alternate checkouts. The report includes sticky counts so CiCi can spot any anchors that
+are still rehearsing before the council seals the shell.
+
