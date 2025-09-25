@@ -72,6 +72,9 @@ for report in results:
 
 ## Repository Components
 - `app/orchestrator_agent.py` — Core merge agent used by automation and operators to pull, rehearse, and merge inbound branches.
+- `capsules/orchestrator/core/capsule.orchestrator.core.celine.v7.json` — Governance capsule delegating repository lifecycle
+  authority from CiCi to Celine with maker-checker enforcement.
+- `docs/celine_orchestrator_handoff.md` — Operational logic tree and integration guardrails for activating the Celine capsule.
 - `docs/mission_oversight_widgets.md` — Human-readable widget catalog and guardrail summary for the live mission HUD.
 - `specs/mission.oversight.hud.contract.v1.json` — Contract describing the HUD data streams, layout, and fail-closed alert wiring.
 - `specs/mission.meta.directive.v1.schema.json` — Protocol schema encoding the mission state machine, retarget logic, and rollback
