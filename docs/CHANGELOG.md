@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2025-09-26
+- add CiCi rehearsal loop and git governance capsules with dual-freeze ritual
 - register intent routing capsule and Boo LoRA rehearsal map in runtime index
 - add freeze helper for routing policy and ledger attestation details
 - publish prompt graph DSL schema, Lego F1 capsule, and freezer hook for ledger alignment
