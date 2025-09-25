@@ -113,9 +113,10 @@ Each step is auditable; skipping any stage invalidates `replay.authorized` check
 
 1. Confirm you are operating in an air-gapped or read-only network segment before handling sealed bundles.
 2. Use the provided CLI (`registry seal <payload.json>`) to normalize, hash, and enroll payloads—manual edits after hashing are prohibited.
-3. Verify signatures with `registry attestation verify --artifact <id>` prior to pushing manifests.
-4. Update lineage references atomically: parent linkage, fork declarations, and immutability flags must match the governance decision log.
-5. Publish updated manifests to both online mirror and offline vault, keeping checksums identical.
+3. Run `./scripts/freeze_ssot_registry.sh` inside the core orchestrator repo whenever the capsule packet changes; this canonicalizes the registry capsule, refreshes the runtime ledger entry, and propagates the hash to `capsule.registry.runtime.v1`.
+4. Verify signatures with `registry attestation verify --artifact <id>` prior to pushing manifests.
+5. Update lineage references atomically: parent linkage, fork declarations, and immutability flags must match the governance decision log.
+6. Publish updated manifests to both online mirror and offline vault, keeping checksums identical.
 
 ---
 

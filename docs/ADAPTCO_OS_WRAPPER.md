@@ -32,3 +32,4 @@ The wrapper expects `relay.artifacts.v1` checkpoints to be present before resumi
 - Runtime registry now tracks `capsule.gpt.intent.routing.v1` for modality binding and ledger freezes.
 - Queen Boo's rehearsal slots draw from `capsule.boo.lora.map.v1`, which stays in REHEARSAL until council seal.
 - Freeze `capsule.gpt.intent.routing.v1` with `./scripts/freeze_intent_routing.sh` before registering new LoRA checkpoints.
+- Refresh Queen Boo's logic patch with `./scripts/freeze_boo_lora_map.sh` so the runtime registry always exposes the latest canonical JSON and hash.

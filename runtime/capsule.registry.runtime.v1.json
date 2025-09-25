@@ -27,21 +27,23 @@
     },
     {
       "capsule_id": "capsule.boo.lora.map.v1",
-      "canonical": null,
-      "hash": null,
+      "canonical": "runtime/capsule.boo.lora.map.v1.canonical.json",
+      "hash": "55dfd4b509c943f7a929fd1aa0fb46baa009a80998b9211821779a23c6b22ea6",
       "status": "REHEARSAL",
       "governance": {
         "router": "Queen Boo"
-      }
+      },
+      "updated_at": "2025-09-25T05:19:15Z"
     },
     {
       "capsule_id": "ssot.registry.v1",
-      "canonical": null,
-      "hash": null,
+      "canonical": "runtime/capsule.ssot.registry.v1.canonical.json",
+      "hash": "c2f15b1f11fb6e32eeb6dc9072dac6048d66784504fc83f9e4f4e7e5308c29e1",
       "status": "SEALED",
       "governance": {
         "steward": "Q.Enterprise Council"
-      }
+      },
+      "updated_at": "2025-09-25T05:19:10Z"
     },
     {
       "capsule_id": "qube.orchestrator.v1",
