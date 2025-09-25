@@ -98,6 +98,44 @@
       "hash": "3604d72484ade70713bc277359c57de20defccc1b5868b4a6914ce3ed256d1a8",
       "status": "SEALED",
       "updated_at": "2025-09-25T05:37:11Z"
+    },
+    {
+      "capsule_id": "capsule.motion.ledger.v2",
+      "canonical": "runtime/capsule.motion.ledger.v2.canonical.json",
+      "hash": "5a4e3b9051bcf97d16e80429ee73ea64fd8bc177492237ab4549d1d4e41df9ef",
+      "status": "SEALED",
+      "governance": {
+        "maker": "Queen Boo",
+        "checker": "Queen CiCi",
+        "oracle": "Celine"
+      },
+      "updated_at": "2025-09-25T07:41:37Z"
+    },
+    {
+      "capsule_id": "capsule.replay.token.v2",
+      "canonical": "runtime/capsule.replay.token.v2.canonical.json",
+      "hash": "bbd4d04d172b4867c390304f044213b2c581ec18b3a2130635e78db61c3f7e89",
+      "status": "SEALED",
+      "governance": {
+        "quorum": "2-of-3",
+        "signers": [
+          "Queen Boo",
+          "Queen CiCi",
+          "Celine"
+        ]
+      },
+      "updated_at": "2025-09-25T07:41:37Z"
+    },
+    {
+      "capsule_id": "capsule.echo.scrollstream.v2",
+      "canonical": "runtime/capsule.echo.scrollstream.v2.canonical.json",
+      "hash": "4cb5d346de9655828805ec45c739aa11c4a151ccf81778a66b958dd010ba7dc4",
+      "status": "SEALED",
+      "governance": {
+        "weaver": "The Braid",
+        "oracle": "Celine"
+      },
+      "updated_at": "2025-09-25T07:41:37Z"
     }
   ],
   "attestation": {
