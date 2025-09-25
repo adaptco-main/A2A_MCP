@@ -27,3 +27,8 @@ The `capsule.wrapper.adaptco_os.v1` packet binds the expanded relay braid—Proo
 
 ## Vault Checkpoints
 The wrapper expects `relay.artifacts.v1` checkpoints to be present before resuming flows. Missing or stale checkpoints will halt replay until the vault is refreshed and attested by Queen CiCi.
+
+## Intent Routing Integration
+- Runtime registry now tracks `capsule.gpt.intent.routing.v1` for modality binding and ledger freezes.
+- Queen Boo's rehearsal slots draw from `capsule.boo.lora.map.v1`, which stays in REHEARSAL until council seal.
+- Freeze `capsule.gpt.intent.routing.v1` with `./scripts/freeze_intent_routing.sh` before registering new LoRA checkpoints.
