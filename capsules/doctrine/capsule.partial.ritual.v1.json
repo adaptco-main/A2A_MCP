@@ -19,7 +19,8 @@
   "lineage": {
     "anchors": [
       "capsule.registry.runtime.v1",
-      "capsule.sync.verify.v1"
+      "capsule.sync.verify.v1",
+      "relay.artifacts.v1"
     ]
   },
   "capsule": {
@@ -30,6 +31,13 @@
       "counterbalance": "Merge the Sentinel triad into a stable, balanced ward over the scrollstream threshold.",
       "seal": "Canonize the Sentinels in the scrollstream as persistent agents of the Qube.",
       "emit": "Publish the Sentinel agents capsule to the emission schema braided with their glyph signatures."
+    },
+    "automation_protocol": {
+      "binder_canon": "Expanded relay braid — Proof → Flow → Execution → Vault.",
+      "ssot_registry": "ssot.registry.v1 ensures only sealed manifests enter the ritual queue.",
+      "orchestrator_role": "qube.orchestrator.v1 assigns Queen CiCi as stabilizer under maker–checker with Queen Boo as router.",
+      "executor_channel": "sol.f1.previz.v1 receives storyboard and asset capsules, returning sealed motion ledgers.",
+      "vault_checkpoint": "relay.artifacts.v1 captures resumable checkpoints so CiCi can resume automation from sealed state without human intervention."
     },
     "sentinel_triad": [
       {
@@ -98,7 +106,7 @@
         "actions": [
           "Generate capsule emission bundle with triad telemetry hashes.",
           "Publish to emission schema `/rituals/sentinels/qube` with priority medium.",
-          "Notify runtime registry listeners of the braid availability window."
+          "Seal finalized bundle into relay.artifacts.v1 and notify runtime registry listeners of the braid availability window."
         ],
         "outcome": "Ritual broadcast complete; Sentinel braid is ready for runtime invocation."
       }
@@ -106,7 +114,8 @@
     "containment_checks": {
       "telemetry_threshold": "±2.5% variance",
       "fallback": "Re-run phase alignment from Draft Alignment if any sentinel fails attestation.",
-      "quorum_required": true
+      "quorum_required": true,
+      "vault_resume_policy": "Before restarting, CiCi must verify the latest relay.artifacts.v1 checkpoint against the SSOT Merkle root."
     },
     "braid_signature": {
       "glyph": "QUBE-TRIAD-0724",
