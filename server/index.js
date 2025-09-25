@@ -5,6 +5,7 @@ const path = require('path');
 const express = require('express');
 const qbusGateGuard = require('../lib/qbusGates');
 const { loadManifest, buildHudState, getManifestHealth } = require('../lib/bindings');
+const { createLedgerClient } = require('./ledger');
 
 const MANIFEST_PATH = path.join(__dirname, '..', 'governance', 'authority_map.v1.json');
 const DEFAULT_POLICY_TAG = 'pilot-alpha';
@@ -64,71 +65,8 @@ function createManifestManager(manifestPath, options = {}) {
   };
 }
 
-function createLedgerClient(manifestManager, policyTag = DEFAULT_POLICY_TAG) {
-  const gateEvents = [];
-  const freezeArtifacts = new Map();
-  const maxEvents = 50;
-
-  const client = {
-    async recordGateCheck(event) {
-      const enriched = {
-        ...event,
-        recorded_at: new Date().toISOString()
-      };
-      gateEvents.push(enriched);
-      if (gateEvents.length > maxEvents) {
-        gateEvents.shift();
-      }
-      return { recorded: true };
-    },
-    async getLatestProof(manifestInfo) {
-      const info = manifestInfo || (await manifestManager.getAuthorityMap());
-      return {
-        manifest_hash: info.hash,
-        expected_hash: info.expectedHash || null,
-        hash_matches: info.hashMatches,
-        duo: {
-          maker: info.duo && info.duo.maker ? info.duo.maker.verified : false,
-          checker: info.duo && info.duo.checker ? info.duo.checker.verified : false,
-          ok: info.duo ? info.duo.ok : false
-        },
-        signature_artifact_present: Boolean(info.hasSignatureFile),
-        policy_tag: policyTag,
-        generated_at: new Date().toISOString(),
-        events: gateEvents.slice(-10)
-      };
-    },
-    getEvents() {
-      return gateEvents.slice(-10);
-    },
-    async storeFreezeArtifact(artifact) {
-      const payload = {
-        name: artifact.name || 'unknown',
-        hash: artifact.hash || null,
-        signature: artifact.signature || null,
-        canonical: artifact.canonical || null,
-        stored_at: new Date().toISOString()
-      };
-      freezeArtifacts.set(payload.name, payload);
-      return payload;
-    },
-    getFreezeArtifacts() {
-      return Array.from(freezeArtifacts.values());
-    },
-    async getSnapshot(manifestInfo) {
-      const proof = await client.getLatestProof(manifestInfo);
-      return {
-        proof,
-        freeze_artifacts: client.getFreezeArtifacts()
-      };
-    }
-  };
-
-  return client;
-}
-
 const manifestManager = createManifestManager(MANIFEST_PATH);
-const ledgerClient = createLedgerClient(manifestManager, process.env.HUD_POLICY_TAG || DEFAULT_POLICY_TAG);
+const ledgerClient = createLedgerClient(manifestManager, process.env.HUD_POLICY_TAG || DEFAULT_POLICY_TAG, { logger: console });
 
 const app = express();
 app.use(express.json());

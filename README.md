@@ -148,7 +148,17 @@ A running server is required for live data.
 | `HUD_POLICY_TAG` | Policy label included in proofs | `pilot-alpha` |
 | `QBUS_SKEW_SECONDS` | Time skew tolerance for G3 checks | `30` |
 | `LEDGER_BASE_URL` | Base URL used by `run_pilot_workflow.sh` | `http://localhost:3000` |
+| `SEAL_ROOT_SCRIPT` | Override path to the auto-seal script | `ops/v7_seal_root.sh` |
 | `SIGNER` | Override signer command used by freeze scripts | *(unset)* |
+
+### Automatic Merkle sealing
+
+Whenever new freeze artifacts are published the in-memory ledger computes a Merkle
+root across the stored artifacts and invokes `ops/v7_seal_root.sh` (or the path
+configured via `SEAL_ROOT_SCRIPT`). The script receives the Merkle root as its
+first argument and the complete payload in the `MERKLE_PAYLOAD` environment
+variable, enabling external council or HSM processes to observe and sign new
+roots without manual ceremony.
 
 ## Next steps
 
