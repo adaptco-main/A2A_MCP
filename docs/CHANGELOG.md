@@ -3,3 +3,6 @@
 ## 2025-08-23
 - add PowerShell bootstrap doc
 
+## 2025-09-25
+- add ADAPTCO OS wrapper capsule, freeze workflow, and scrollstream ledger hook
+

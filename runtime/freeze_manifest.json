@@ -1,5 +1,14 @@
 {
-  "docs/CHANGELOG.md": "5f2fcf8e2f8e01160ee00ae5f626a4e613d95d39ebf0c6b85c38611499b9d157",
+  "docs/ADAPTCO_OS_WRAPPER.md": "ce70356335c406bc7142d9f68cf0dfe82f74fd8332fe44eeed711e8b005176a9",
+  "docs/CHANGELOG.md": "4c76bf1fe9204d14ffdba4359f72c1af87e6852b3facf556ffd49d554d90cb78",
   "docs/CODEX.md": "023eae426a8c2b711f1341b84686971586bc20cbe4424d2e3e9a223f1436fb81",
-  "scripts/hash_manifest.py": "fbbcea2a365286592808eddd1b68a8206b6efcbfe9cc7c36369bfcadbdc8d7ec"
+  "docs/SSOT_Binder.md": "cba9abd751ff8b1f419e950ff1fdf084efd063e3a7f1d4e0037287b2241f3ee1",
+  "runtime/capsule.wrapper.adaptco_os.v1.canonical.json": "3253b27ee2b596d31e394594ed60b67c95c6e95bdff59f5f2d3e37f19be08582",
+  "runtime/capsule.wrapper.adaptco_os.v1.sha256": "c6d4982505e66f8bcfc7b1b769d6d1107d8d8ef5d4b2e05c9509ac701b362a55",
+  "runtime/scrollstream_ledger.jsonl": "34e827225deebbce182bf9879c877b724315b6b388947c7510c769ebeabcabf9",
+  "scripts/canonicalize_manifest.py": "c342db0bafd3764ada31864c9396826ac3b72aedea5ee3872f1c5dc4e0fc0307",
+  "scripts/freeze_avatar_bindings.sh": "ac4f9350013a6974908bc848803c139d2295d4feac8e936958767e3c24c60bfb",
+  "scripts/freeze_wrapper.sh": "24a2466301cbc1ba018dda502428f4428f73ed9d7c3ef9d8e4ec31529d5326e3",
+  "scripts/hash_manifest.py": "fbbcea2a365286592808eddd1b68a8206b6efcbfe9cc7c36369bfcadbdc8d7ec",
+  "scripts/sign_bindings.sh": "9ef0bd385cbe65a5b0c7d336faaca83d15a49bb437b0f869e6370789135713e6"
 }
