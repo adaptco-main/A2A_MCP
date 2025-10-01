@@ -7,9 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Copy only the server implementation to keep image lean.
-COPY app/server.py ./server.py
+# Copy application code and static artefacts required by the server.
+COPY app ./app
+COPY specs ./specs
+COPY public ./public
 
 EXPOSE 8080
 
-CMD ["python", "server.py"]
+CMD ["python", "-m", "app.server"]

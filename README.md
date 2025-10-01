@@ -35,3 +35,8 @@ This repository coordinates automation and human operations around artifact mana
 3. Connect GitHub webhooks to cockpit event listener.
 4. Test with a Freeze Artifact quick-action.
 
+## Portal Runtime
+- Launch the combined API + portal server with `python -m app.server` (listens on port 8080 by default).
+- Visit `http://localhost:8080/` to open the Sovereign Fleet Architect portal backed by the live middleware model.
+- Static data (e.g., avatar bindings) is served directly from `public/`, enabling the HUD to load manifests without a separate CDN.
+
