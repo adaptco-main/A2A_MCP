@@ -80,6 +80,7 @@ for report in results:
 - `specs/mission.meta.directive.v1.schema.json` — Protocol schema encoding the mission state machine, retarget logic, and rollback
   rules.
 - `specs/fixtures/mission.solstice.directive.json` — Solstice Dawn directive fixture illustrating the schema in practice.
+- `capsules/relay/relay.worldengine.render.v1.json` — Relay capsule binding the runtime, HUD overlays, and sovereign agents into a braided render stream.
 
 ## Mission Oversight Foundations
 - `specs/mission.oversight.hud.contract.v1.json` — Contract describing the data streams, widgets, and alerting that power the live
