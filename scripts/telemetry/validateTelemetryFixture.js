@@ -107,9 +107,9 @@ function validateEvents(events) {
       typeCount: typeSet.size,
       types: [...typeSet].sort(),
       timings: {
-        render: renderStats,
-        composite: compositeStats,
-        io: ioStats
+        render: finalizeStats(renderStats),
+        composite: finalizeStats(compositeStats),
+        io: finalizeStats(ioStats)
       }
     }
   };
@@ -119,7 +119,9 @@ function createStatsCollector() {
   return {
     count: 0,
     min: Infinity,
-    max: -Infinity
+    max: -Infinity,
+    sum: 0,
+    values: []
   };
 }
 
@@ -142,6 +144,42 @@ function updateStats(stats, timings, key, location, warnings) {
   stats.count += 1;
   stats.min = Math.min(stats.min, value);
   stats.max = Math.max(stats.max, value);
+  stats.sum += value;
+  stats.values.push(value);
+}
+
+function computePercentile(sortedValues, percentile) {
+  if (!sortedValues.length) {
+    return null;
+  }
+
+  const index = (percentile / 100) * (sortedValues.length - 1);
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  const weight = index - lower;
+
+  if (lower === upper) {
+    return sortedValues[lower];
+  }
+
+  return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight;
+}
+
+function finalizeStats(stats) {
+  if (!stats.count) {
+    return { count: 0 };
+  }
+
+  const average = stats.sum / stats.count;
+  const sorted = [...stats.values].sort((a, b) => a - b);
+  return {
+    count: stats.count,
+    min: stats.min,
+    max: stats.max,
+    average,
+    median: computePercentile(sorted, 50),
+    p95: computePercentile(sorted, 95)
+  };
 }
 
 function formatRange(stats, label) {
@@ -149,7 +187,11 @@ function formatRange(stats, label) {
     return `- ${label}: no samples`;
   }
 
-  return `- ${label}: ${stats.min.toFixed(2)}ms – ${stats.max.toFixed(2)}ms (${stats.count} samples)`;
+  return (
+    `- ${label}: min ${stats.min.toFixed(2)}ms, max ${stats.max.toFixed(2)}ms, ` +
+    `avg ${stats.average.toFixed(2)}ms, median ${stats.median.toFixed(2)}ms, p95 ${stats.p95.toFixed(2)}ms ` +
+    `(${stats.count} samples)`
+  );
 }
 
 function main() {
