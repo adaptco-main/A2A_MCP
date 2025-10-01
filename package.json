@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "lint:openapi": "spectral lint openapi/openapi.yaml",
-    "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js"
+    "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js",
+    "validate:telemetry": "node scripts/telemetry/validateTelemetryFixture.js"
   },
   "dependencies": {
     "ws": "^8.17.0"

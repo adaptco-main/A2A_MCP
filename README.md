@@ -40,4 +40,5 @@ This repository coordinates automation and human operations around artifact mana
 - Start the simulated HUD stream with `npm run start:mock-telemetry`.
 - Connect a WebSocket client to `ws://localhost:8080/streams/telemetry/solF1/v1` using token `demo` (either query string `?token=demo` or `Authorization: Bearer demo`).
 - The server replays `capsules/telemetry/capsule.telemetry.render.v1.events_examples.jsonl` at 30Hz in a loop and exposes a `/healthz` endpoint for status checks.
+- Validate fixture integrity with `npm run validate:telemetry` (supports overriding the fixture path via CLI arg or `TELEMETRY_EVENT_FILE`).
 
