@@ -7,7 +7,8 @@
     "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js"
   },
   "dependencies": {
-    "ws": "^8.17.0"
+    "ws": "^8.17.0",
+    "axios": "^1.7.7"
   },
   "devDependencies": {
     "@stoplight/spectral-cli": "^6.15.0",
