@@ -50,8 +50,8 @@ function canonicalStringify(value) {
  * @returns {string} Hex-encoded SHA-256 digest.
  */
 function computeEntryHash(entry) {
-  if (!entry || typeof entry !== 'object') {
-    throw new TypeError('Ledger entry must be an object');
+  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+    throw new TypeError('Ledger entry must be a non-null object');
   }
 
   const { hash: _hash, signature: _signature, ...content } = entry;
@@ -67,7 +67,12 @@ function computeEntryHash(entry) {
  * @returns {boolean} True if the signature validates.
  */
 function verifyEntrySignature(entry, publicKeyPem) {
-  if (!entry.hash || !entry.signature) {
+  if (
+    typeof entry.hash !== 'string' ||
+    entry.hash.length === 0 ||
+    typeof entry.signature !== 'string' ||
+    entry.signature.length === 0
+  ) {
     return false;
   }
 
@@ -99,38 +104,49 @@ function verifyLedger(ledger, publicKeyPem) {
   }
 
   const errors = [];
+  let previousComputedHash = null;
 
   for (let i = 0; i < ledger.length; i += 1) {
     const entry = ledger[i];
 
-    if (!entry || typeof entry !== 'object') {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
       errors.push(`Entry at index ${i} is not a valid object`);
+      previousComputedHash = null;
+      continue;
+    }
+
+    let expectedHash;
+    try {
+      expectedHash = computeEntryHash(entry);
+    } catch (error) {
+      errors.push(`Failed to compute hash for entry at index ${i}: ${error.message}`);
+      previousComputedHash = null;
       continue;
     }
 
     if (!('hash' in entry)) {
       errors.push(`Missing hash field at index ${i}`);
-    } else {
-      const expectedHash = computeEntryHash(entry);
-      if (entry.hash !== expectedHash) {
-        errors.push(`Hash mismatch at index ${i}: expected ${expectedHash} but found ${entry.hash}`);
-      }
+    } else if (typeof entry.hash !== 'string' || entry.hash.length === 0) {
+      errors.push(`Invalid hash field at index ${i}: must be a non-empty string`);
+    } else if (entry.hash !== expectedHash) {
+      errors.push(`Hash mismatch at index ${i}: expected ${expectedHash} but found ${entry.hash}`);
     }
 
-    if (i > 0) {
-      const prevHash = ledger[i - 1] && ledger[i - 1].hash;
-      if (entry.prevHash !== prevHash) {
-        errors.push(
-          `Chain broken at index ${i}: prevHash ${entry.prevHash ?? 'null'} does not match previous hash ${prevHash ?? 'null'}`
-        );
-      }
+    if (i > 0 && entry.prevHash !== previousComputedHash) {
+      errors.push(
+        `Chain broken at index ${i}: prevHash ${entry.prevHash ?? 'null'} does not match previous hash ${previousComputedHash ?? 'null'}`
+      );
     }
 
     if (!('signature' in entry)) {
       errors.push(`Missing signature field at index ${i}`);
+    } else if (typeof entry.signature !== 'string' || entry.signature.length === 0) {
+      errors.push(`Invalid signature field at index ${i}: must be a non-empty base64 string`);
     } else if (!verifyEntrySignature(entry, publicKeyPem)) {
       errors.push(`Invalid signature at index ${i}`);
     }
+
+    previousComputedHash = expectedHash;
   }
 
   return {
