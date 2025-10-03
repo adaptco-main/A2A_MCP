@@ -5,7 +5,8 @@
   "scripts": {
     "lint:openapi": "spectral lint openapi/openapi.yaml",
     "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js",
-    "validate:telemetry": "node scripts/telemetry/validateTelemetryFixture.js"
+    "validate:telemetry": "node scripts/telemetry/validateTelemetryFixture.js",
+    "stage:rehearsal": "node scripts/rehearsal/stageRehearsalLoop.js"
   },
   "dependencies": {
     "ws": "^8.17.0"
