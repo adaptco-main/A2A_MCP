@@ -420,19 +420,19 @@ function buildEventPayload(entry) {
   if (isObject(entry.payload)) {
     return entry.payload;
   }
-  const {
-    payload,
-    type,
-    event,
-    name,
-    action,
-    at,
-    ts,
-    timestamp,
-    time,
-    date,
-    ...rest
-  } = entry;
+
+  const rest = { ...entry };
+  delete rest.payload;
+  delete rest.type;
+  delete rest.event;
+  delete rest.name;
+  delete rest.action;
+  delete rest.at;
+  delete rest.ts;
+  delete rest.timestamp;
+  delete rest.time;
+  delete rest.date;
+
   return Object.keys(rest).length ? rest : undefined;
 }
 

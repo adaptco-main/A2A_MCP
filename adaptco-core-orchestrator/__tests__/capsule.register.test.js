@@ -2,7 +2,6 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 const request = require('supertest');
 const app = require('../src/index');
 const { ledgerFile } = require('../src/ledger');
