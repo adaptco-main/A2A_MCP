@@ -13,6 +13,8 @@ each integration without performing real network calls.
 - Out-of-the-box sinks for Notion, Google Calendar, and Shopify that generate
   ready-to-use request bodies.
 - Dry-run friendly CLI to experiment locally before wiring live credentials.
+- Organize-backed sentinel that persists every dispatched event into the SSOT
+  repository for downstream consumers.
 
 ## Installation
 
@@ -49,10 +51,29 @@ environment variables are set before doing so.  The most common settings are:
 - :code:`NOTION_API_TOKEN` and :code:`NOTION_DATABASE_ID`
 - :code:`GOOGLE_API_TOKEN` and :code:`GOOGLE_CALENDAR_ID`
 - :code:`SHOPIFY_ACCESS_TOKEN` and :code:`SHOPIFY_STORE_DOMAIN`
+- :code:`SSOT_REPO_PATH` and :code:`SSOT_DATABASE_FILE` to control where the
+  sentinel snapshot is written.  The CLI defaults to storing events under
+  :code:`adaptco-ssot/data/core-orchestrator/events.json`.
 
 See :code:`infra/secrets.sample.env` for the full list.  The CLI also provides
 flags such as :code:`--sinks` to target a subset of sinks and
 :code:`--default-duration` to override the Google Calendar duration fallback.
+Sentinel behaviour can be controlled with :code:`--ssot-repo`,
+:code:`--ssot-database`, or :code:`--disable-ssot` to skip snapshotting.
+
+## SSOT Sentinel
+
+Every dispatch run records events in a JSON snapshot that lives alongside the
+SSOT repository.  The snapshot captures the normalized payload, raw parser
+metadata, and the tags generated during routing.  This gives downstream
+automations a simple way to consume the orchestrated data without polling the
+upstream services.
+
+The default layout stores the snapshot at
+:code:`adaptco-ssot/data/core-orchestrator/events.json`.  Adjust the location by
+setting :code:`SSOT_REPO_PATH`, :code:`SSOT_DATABASE_FILE`, or their CLI
+counterparts.  The orchestrator automatically creates any missing directories
+and updates metadata, including a timestamp and event count, on each run.
 
 ## Message format
 

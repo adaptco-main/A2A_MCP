@@ -90,10 +90,12 @@ class Router:
         sinks: Optional[Sequence[Sink]] = None,
         *,
         logger: Optional[logging.Logger] = None,
+        sentinel: Optional["Sentinel"] = None,
     ) -> None:
         self._parsers: MutableSequence[Parser] = list(parsers or [])
         self._sinks: MutableSequence[Sink] = list(sinks or [])
         self._logger = logger or logging.getLogger(self.__class__.__name__)
+        self._sentinel = sentinel
 
     # ------------------------------------------------------------------
     # Registration helpers
@@ -146,6 +148,7 @@ class Router:
     def _deliver(self, event: Event, parser: Parser) -> None:
         """Deliver ``event`` to all sinks that opt-in."""
 
+        self._record_with_sentinel(event, parser)
         accepted = False
         for sink in self._sinks:
             if not sink.handles(event):
@@ -165,5 +168,25 @@ class Router:
                 "No sinks accepted event %s emitted by parser %s", event.type, parser.name
             )
 
+    # ------------------------------------------------------------------
+    def _record_with_sentinel(self, event: Event, parser: Parser) -> None:
+        if self._sentinel is None:
+            return
+        try:
+            self._sentinel.record(event)
+        except Exception:  # pragma: no cover - defensive log for sentinel failures
+            self._logger.exception(
+                "Sentinel failed to record %s event emitted by %s",
+                event.type,
+                parser.name,
+            )
 
-__all__ = ["Event", "Parser", "Router", "Sink"]
+
+class Sentinel(Protocol):
+    """Protocol describing the SSOT sentinel contract."""
+
+    def record(self, event: Event) -> Any:
+        """Persist ``event`` in the sentinel."""
+
+
+__all__ = ["Event", "Parser", "Router", "Sink", "Sentinel"]

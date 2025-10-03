@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import Sequence
 
+from .databases import OrganizeSentinel
 from .parsers.discord import DiscordParser
 from .router import Router
 from .sinks import GoogleCalendarSink, NotionSink, ShopifySink
@@ -78,6 +79,24 @@ def _build_argument_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Enable verbose logging",
     )
+    default_repo = os.getenv("SSOT_REPO_PATH")
+    default_repo_path = Path(default_repo) if default_repo else Path("adaptco-ssot")
+    parser.add_argument(
+        "--ssot-repo",
+        type=Path,
+        default=default_repo_path,
+        help="Path to the repository that should store the SSOT snapshot (defaults to SSOT_REPO_PATH)",
+    )
+    parser.add_argument(
+        "--ssot-database",
+        default=os.getenv("SSOT_DATABASE_FILE", "data/core-orchestrator/events.json"),
+        help="Relative path within the SSOT repo for the snapshot JSON file",
+    )
+    parser.add_argument(
+        "--disable-ssot",
+        action="store_true",
+        help="Skip writing SSOT snapshots",
+    )
     return parser
 
 
@@ -119,7 +138,14 @@ def _build_router(args: argparse.Namespace) -> Router:
         messages = _load_messages(args.input)
     parser = DiscordParser(messages, channel_whitelist=args.channels)
 
-    router = Router([parser], sinks)
+    sentinel = None
+    if not args.disable_ssot:
+        repo_path = args.ssot_repo or os.getenv("SSOT_REPO_PATH") or Path("adaptco-ssot")
+        database_path = args.ssot_database or os.getenv("SSOT_DATABASE_FILE") or "data/core-orchestrator/events.json"
+        if repo_path:
+            sentinel = OrganizeSentinel(repo_path=repo_path, relative_path=database_path)
+
+    router = Router([parser], sinks, sentinel=sentinel)
     return router
 
 

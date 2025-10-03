@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
+
+from core_orchestrator.databases import OrganizeSentinel
 
 from core_orchestrator.parsers import DiscordParser
 from core_orchestrator.router import Router
@@ -95,3 +98,32 @@ def test_shopify_payload_contains_metadata():
 
     assert note["summary"].startswith("Create marketing")
     assert note["metadata"]
+
+
+def test_router_records_events_in_ssot(tmp_path):
+    parser = DiscordParser(build_messages())
+    sentinel = OrganizeSentinel(repo_path=tmp_path, relative_path="events.json")
+    router = Router([parser], [RecordingSink()], sentinel=sentinel)
+
+    processed = router.dispatch()
+
+    assert processed == 2
+    payload = json.loads((tmp_path / "events.json").read_text())
+    assert payload["metadata"]["count"] == 2
+    keys = [event["key"] for event in payload["events"]]
+    assert len(keys) == len(set(keys))
+
+
+def test_sentinel_upsert_overwrites_existing_records(tmp_path):
+    parser = DiscordParser(build_messages(), channel_whitelist=["sales"])
+    event = next(iter(parser.fetch_events()))
+    sentinel = OrganizeSentinel(repo_path=tmp_path, relative_path="events.json")
+
+    sentinel.record(event)
+    updated = event.copy(payload={**event.payload, "content": "Kickoff with client (updated)"})
+    sentinel.record(updated)
+
+    payload = json.loads((tmp_path / "events.json").read_text())
+    assert payload["metadata"]["count"] == 1
+    stored = payload["events"][0]
+    assert stored["payload"]["content"].endswith("(updated)")
