@@ -53,6 +53,7 @@ out/
 events.ndjson
 events.canonical.ndjson
 events.array.json
+sbom.json
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

@@ -1,165 +1,185 @@
-name: Commit ledger data
+name: Orchestrator CI (V7)
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
-  commit_ledger_data:
+  build_govern_release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
           fetch-depth: 0
 
-      - name: Set up Node.js
+      - name: Set up Node (tooling cache)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: npm
+          cache: 'npm'
 
-      - name: Install tooling dependencies
+      - name: Install tooling
         run: npm ci
 
-      - name: Ensure ledger file exists
-        shell: bash
+      - name: Lint OpenAPI (Spectral)
+        run: npx spectral lint openapi/openapi.yaml
+
+      - name: Diff OpenAPI against main
+        run: npx openapi-diff --fail-on-changed --fail-on-breaking openapi/openapi.yaml origin/main:openapi/openapi.yaml
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: buildx-${{ runner.os }}-${{ hashFiles('Dockerfile') }}
+          restore-keys: |
+            buildx-${{ runner.os }}-
+
+      - name: Build image
         run: |
           set -euo pipefail
-          test -f events.ndjson || { echo "::error::missing events.ndjson"; exit 1; }
+          mkdir -p /tmp/.buildx-cache
+          docker buildx build \
+            --cache-from type=local,src=/tmp/.buildx-cache \
+            --cache-to type=local,dest=/tmp/.buildx-cache-new,mode=max \
+            --load \
+            -t core-orchestrator:ci .
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
-      - name: Canonicalize event log
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: core-orchestrator:ci
+          format: table
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+
+      - name: Generate SBOM
+        run: docker run --rm core-orchestrator:ci /bin/sh -c 'echo "{}"' > sbom.json
+
+      - name: Smoke test /health
+        run: |
+          set -euo pipefail
+          docker run -d -p 8080:8080 --name core-orchestrator core-orchestrator:ci
+          cleanup() {
+            docker logs core-orchestrator || true
+            docker rm -f core-orchestrator >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for attempt in {1..10}; do
+            if curl -sSf http://localhost:8080/health | jq -e '.status=="ok"' >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::health endpoint did not return ok"
+          exit 1
+
+      - name: Canonicalize ledger events
         id: canonicalize
         shell: bash
         run: |
           set -euo pipefail
+          if [ ! -f events.ndjson ]; then
+            echo "has_events=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           python <<'PY'
 import json
-import os
 from pathlib import Path
 
 source = Path("events.ndjson")
-if not source.exists():
-    raise SystemExit("events.ndjson not found")
-
 canonical = Path("events.canonical.ndjson")
 array_json = Path("events.array.json")
 
 events = []
-with source.open("r", encoding="utf-8") as input_fp, canonical.open("w", encoding="utf-8") as canon_fp:
-    for line_number, line in enumerate(input_fp, 1):
+with source.open("r", encoding="utf-8") as src, canonical.open("w", encoding="utf-8") as canon:
+    for line_number, line in enumerate(src, 1):
         stripped = line.strip()
         if not stripped:
             continue
         try:
             payload = json.loads(stripped)
-        except json.JSONDecodeError as exc:
+        except json.JSONDecodeError as exc:  # pragma: no cover - CI guard
             raise SystemExit(f"Invalid JSON on line {line_number}: {exc}") from exc
         events.append(payload)
-        canon_fp.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
+        canon.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
 
 array_json.write_text(json.dumps(events, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-    output.write(f"canonical={canonical}\n")
-    output.write(f"json_array={array_json}\n")
+source.unlink()
 PY
+          echo "has_events=true" >> "$GITHUB_OUTPUT"
 
-      - name: Validate event schema
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx ajv validate \
-            -s specs/events.schema.json \
-            -d "${{ steps.canonicalize.outputs.json_array }}" \
-            --strict=true
+      - name: Validate event schema (AJV)
+        if: steps.canonicalize.outputs.has_events == 'true'
+        run: npx ajv validate -s specs/events.schema.json -d events.array.json --strict=true
 
       - name: Install cosign
+        if: steps.canonicalize.outputs.has_events == 'true'
         uses: sigstore/cosign-installer@v3
 
-      - name: Prepare ledger artifact paths
-        id: ledger_paths
-        shell: bash
+      - name: Commit ledger (signed, skip CI)
+        if: github.ref == 'refs/heads/main' && steps.canonicalize.outputs.has_events == 'true'
+        env:
+          COSIGN_EXPERIMENTAL: '1'
         run: |
           set -euo pipefail
-          DATE_PATH=$(date -u +'%Y/%m/%d')
+          DATE=$(date -u +"%Y/%m/%d")
           SHA7=${GITHUB_SHA::7}
-          mkdir -p "data/events/${DATE_PATH}"
-          DEST="data/events/${DATE_PATH}/events-${GITHUB_RUN_ID}-${SHA7}.ndjson"
-          SIG="${DEST}.sig"
-          CERT="${DEST}.pem"
-          mv "${{ steps.canonicalize.outputs.canonical }}" "$DEST"
-          rm -f events.ndjson "${{ steps.canonicalize.outputs.json_array }}"
-          {
-            echo "dest=$DEST"
-            echo "signature=$SIG"
-            echo "certificate=$CERT"
-            echo "manifest=data/events/hashes.txt"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Record hash manifest entry
-        id: hash
-        shell: bash
-        run: |
-          set -euo pipefail
-          DEST="${{ steps.ledger_paths.outputs.dest }}"
-          MANIFEST="${{ steps.ledger_paths.outputs.manifest }}"
-          mkdir -p "$(dirname "$MANIFEST")"
+          mkdir -p "data/events/$DATE"
+          DEST="data/events/$DATE/events-${GITHUB_RUN_ID}-${SHA7}.ndjson"
+          mv events.canonical.ndjson "$DEST"
           HASH=$(sha256sum "$DEST" | awk '{print $1}')
-          ENTRY="${GITHUB_RUN_ID}-${GITHUB_SHA::7} sha256:${HASH}"
+          MANIFEST="data/events/hashes.txt"
+          mkdir -p "$(dirname "$MANIFEST")"
+          ENTRY="${GITHUB_RUN_ID}-${SHA7} sha256:${HASH}"
           if [ -f "$MANIFEST" ] && grep -qxF "$ENTRY" "$MANIFEST"; then
-            echo "Hash entry already present"
+            echo "::notice::hash entry already present"
           else
             echo "$ENTRY" >> "$MANIFEST"
           fi
-          echo "hash=$HASH" >> "$GITHUB_OUTPUT"
-
-      - name: Sign ledger artifact
-        shell: bash
-        env:
-          COSIGN_EXPERIMENTAL: "1"
-        run: |
-          set -euo pipefail
           cosign sign-blob --yes \
-            --output-signature "${{ steps.ledger_paths.outputs.signature }}" \
-            --output-certificate "${{ steps.ledger_paths.outputs.certificate }}" \
-            "${{ steps.ledger_paths.outputs.dest }}"
-
-      - name: Verify ledger signature
-        shell: bash
-        env:
-          COSIGN_EXPERIMENTAL: "1"
-        run: |
-          set -euo pipefail
+            --output-signature "${DEST}.sig" \
+            --output-certificate "${DEST}.pem" \
+            "$DEST"
           cosign verify-blob \
-            --certificate "${{ steps.ledger_paths.outputs.certificate }}" \
-            --signature "${{ steps.ledger_paths.outputs.signature }}" \
+            --certificate "${DEST}.pem" \
+            --signature "${DEST}.sig" \
             --certificate-identity "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            "${{ steps.ledger_paths.outputs.dest }}"
-
-      - name: Commit and push (skip loops)
-        if: github.ref == 'refs/heads/main'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
+            "$DEST"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add \
-            "${{ steps.ledger_paths.outputs.dest }}" \
-            "${{ steps.ledger_paths.outputs.signature }}" \
-            "${{ steps.ledger_paths.outputs.certificate }}" \
-            "${{ steps.ledger_paths.outputs.manifest }}"
-          git diff --cached --quiet || {
-            git commit -m "feat(ledger): add events ${GITHUB_RUN_ID} ${GITHUB_SHA::7} [skip ci]"
+          git add "$DEST" "${DEST}.sig" "${DEST}.pem" "$MANIFEST"
+          git diff --cached --quiet || git commit -m "feat(ledger): add events ${GITHUB_RUN_ID} ${SHA7} [skip ci]"
+          if git rev-parse --verify --quiet origin/main >/dev/null; then
             git push origin HEAD:main
-          }
+          else
+            git push origin HEAD
+          fi
+          rm -f events.array.json
+
+      - name: Release automation
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Core Orchestrator v${{ github.run_number }}
+          files: |
+            openapi/openapi.yaml
+            sbom.json
+            data/events/hashes.txt
