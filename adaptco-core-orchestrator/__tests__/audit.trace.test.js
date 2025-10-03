@@ -110,6 +110,10 @@ describe('artifact audit trace', () => {
       capsuleId: 'capsule.skin.boos.binding',
       version: 'v1'
     });
+    expect(trace.capsule).toEqual({
+      capsule_id: 'capsule.skin.boos.binding',
+      version: 'v1'
+    });
     expect(trace.totalEvents).toBe(3);
     expect(trace.firstSeen).toBe(entries[0].ts);
     expect(trace.lastSeen).toBe(entries[2].ts);

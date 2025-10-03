@@ -387,6 +387,44 @@ function resolveCapsule(events) {
   return null;
 }
 
+function deriveCapsuleMetadata(events, normalizedCriteria) {
+  const capsule = resolveCapsule(events);
+  const metadata = capsule ? { ...capsule } : {};
+
+  let capsuleId = toCleanString(
+    (metadata.capsule_id || metadata.capsuleId || metadata.id || null)
+  );
+  let version = toCleanString(metadata.version);
+
+  for (const entry of events) {
+    const identifiers = extractIdentifiers(entry);
+    if (!capsuleId && identifiers.capsuleId) {
+      capsuleId = identifiers.capsuleId;
+    }
+    if (!version && identifiers.version) {
+      version = identifiers.version;
+    }
+  }
+
+  if (!capsuleId && normalizedCriteria.capsuleId) {
+    capsuleId = normalizedCriteria.capsuleId;
+  }
+
+  if (!version && normalizedCriteria.version) {
+    version = normalizedCriteria.version;
+  }
+
+  if (capsuleId) {
+    metadata.capsule_id = capsuleId;
+  }
+
+  if (version) {
+    metadata.version = version;
+  }
+
+  return Object.keys(metadata).length ? metadata : null;
+}
+
 function extractTimestamp(entry) {
   if (!isObject(entry)) {
     return null;
@@ -482,10 +520,10 @@ function buildTrace(entries, criteria = {}) {
 
   const sorted = filtered.slice().sort((a, b) => parseTimestamp(a) - parseTimestamp(b));
   const artifactId = resolveArtifactId(sorted, criteria);
-  const capsule = resolveCapsule(sorted);
   const firstEventTimestamp = extractTimestamp(sorted[0]);
   const lastEventTimestamp = extractTimestamp(sorted[sorted.length - 1]);
   const normalizedCriteria = normalizeCriteria(criteria);
+  const capsule = deriveCapsuleMetadata(sorted, normalizedCriteria);
 
   return {
     artifactId,
