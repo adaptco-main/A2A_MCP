@@ -76,7 +76,8 @@ describe('SentinelAgent', () => {
       id: 'asset-123',
       name: 'Sample Asset',
       type: 'image',
-      sourcePath: 'assets/sample.gltf'
+      sourcePath: 'assets/sample.gltf',
+      params: {}
     };
 
     await sentinel.renderPreview(descriptor);
@@ -85,8 +86,18 @@ describe('SentinelAgent', () => {
     expect(descriptorWriter).toHaveBeenCalledWith(descriptor, undefined);
 
     await expect(sentinel.renderPreview({ id: 'missing-fields' })).rejects.toThrow(
-      'Descriptor missing required fields: name, type, sourcePath'
+      'Descriptor missing required fields: name, type, sourcePath, params'
     );
+
+    await expect(
+      sentinel.renderPreview({
+        id: 'bad-params',
+        name: 'Invalid Params',
+        type: 'image',
+        sourcePath: 'assets/sample.gltf',
+        params: []
+      })
+    ).rejects.toThrow('Descriptor missing required fields: params');
   });
 
   it('surfaces non-zero exit codes from the PreViz command', async () => {
