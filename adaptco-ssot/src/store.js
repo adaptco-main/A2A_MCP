@@ -42,6 +42,17 @@ function update(id, asset) {
   if (index === -1) {
     return null;
   }
+
+  const targetId = asset.id;
+  if (
+    typeof targetId === 'string' &&
+    targetId !== id &&
+    catalog.some((existing, existingIndex) => existingIndex !== index && existing.id === targetId)
+  ) {
+    const error = new Error(`Asset with id ${targetId} already exists`);
+    error.statusCode = 409;
+    throw error;
+  }
   catalog[index] = { ...asset };
   persist();
   return { ...catalog[index] };
