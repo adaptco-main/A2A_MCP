@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "lint:openapi": "spectral lint openapi/openapi.yaml",
-    "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js"
+    "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js",
+    "validate:telemetry": "node scripts/telemetry/validateTelemetryFixture.js",
+    "stage:rehearsal": "node scripts/rehearsal/stageRehearsalLoop.js"
   },
   "dependencies": {
-    "ws": "^8.17.0"
+    "ws": "^8.17.0",
+    "axios": "^1.7.7"
   },
   "devDependencies": {
     "@stoplight/spectral-cli": "^6.15.0",
