@@ -22,3 +22,21 @@ The 403 originates from the intermediary proxy while establishing a CONNECT tunn
 - Confirm the document's sharing settings allow public access or provide a downloadable copy within the repository.
 - If authentication is required, supply credentials or a token that can be used in this environment.
 - Alternatively, export the relevant content into a Markdown file in this repository so it can be reviewed without external network access.
+
+## Contributor Feedback Loop Request
+The repository does not include any automation or scripts related to the
+`capsule.selfie.dualroot.q.cici.v1.feedback.v1` loop referenced in the latest
+instructions. Because that mechanism appears to rely on external services and
+stateful capsules, it cannot be activated or inspected from within this
+isolated environment. If feedback capture through that loop is required,
+please provide:
+
+- The concrete command(s) that should be run locally (including any required
+  credentials or configuration files).
+- Documentation describing the expected outputs so we can confirm whether the
+  activation succeeded.
+- Guidance on how to record the resulting feedback in this repository (for
+  example, a Markdown template or log file location).
+
+Without those assets the loop remains non-actionable, and no ledger freeze job
+can be scheduled from this workspace.
