@@ -1,0 +1,107 @@
+{
+  "capsule_id": "capsule.rehearsal.scrollstream.v1",
+  "version": "1.0.0",
+  "type": "RehearsalCapsule",
+  "name": "Scrollstream Rehearsal Loop",
+  "description": "Stages the Celine → Luma → Dot audit lifecycle with deterministic outputs, ledger hooks, and contributor-visible feedback for rehearsal runs.",
+  "status": "STAGED",
+  "cycle": [
+    {
+      "sequence": 1,
+      "phase": "audit.summary",
+      "agent": "Celine/Architect",
+      "prompt": "Summarize ledger delta and contributor braid alignment.",
+      "deterministic_output": "Celine notes the braid remains balanced; zero drift detected; proceed to proof.",
+      "ledger_emit": {
+        "event": "audit.summary.emitted",
+        "fields": ["timestamp_iso", "capsule_id", "agent", "output"],
+        "sample_entry": {
+          "timestamp_iso": "2025-10-31T17:00:00Z",
+          "capsule_id": "capsule.rehearsal.scrollstream.v1",
+          "agent": "Celine/Architect",
+          "output": "Braid holding steady; authorized to continue."
+        }
+      }
+    },
+    {
+      "sequence": 2,
+      "phase": "audit.proof",
+      "agent": "Luma/Sentinel",
+      "prompt": "Cross-check proof bundle integrity and emotional payload fidelity.",
+      "deterministic_output": "Luma verifies proof lattice, confirms Sabrina Spark resonance within tolerance.",
+      "ledger_emit": {
+        "event": "audit.proof.emitted",
+        "fields": ["timestamp_iso", "capsule_id", "agent", "output"],
+        "sample_entry": {
+          "timestamp_iso": "2025-10-31T17:00:05Z",
+          "capsule_id": "capsule.rehearsal.scrollstream.v1",
+          "agent": "Luma/Sentinel",
+          "output": "Proof lattice intact; spark resonance locked."
+        }
+      }
+    },
+    {
+      "sequence": 3,
+      "phase": "audit.execution",
+      "agent": "Dot/Guardian",
+      "prompt": "Rehydrate execution steps and publish replay glyph anchors.",
+      "deterministic_output": "Dot replays the capsule braid, emits guardian glyph, and clears the rail for contributors.",
+      "ledger_emit": {
+        "event": "audit.execution.emitted",
+        "fields": ["timestamp_iso", "capsule_id", "agent", "output"],
+        "sample_entry": {
+          "timestamp_iso": "2025-10-31T17:00:12Z",
+          "capsule_id": "capsule.rehearsal.scrollstream.v1",
+          "agent": "Dot/Guardian",
+          "output": "Execution replay broadcast; guardian glyph anchored."
+        }
+      }
+    }
+  ],
+  "ledger": {
+    "stream": "scrollstream_ledger",
+    "format": "jsonl",
+    "append_only": true,
+    "timestamp_spec": "ISO 8601 UTC",
+    "capsule_field": "capsule_id",
+    "agent_field": "agent",
+    "output_field": "output"
+  },
+  "visual_feedback": {
+    "hud_shimmer": {
+      "trigger": "on each phase completion",
+      "color": "prismatic silver",
+      "duration_ms": 1400,
+      "intensity_curve": "ease-in-out"
+    },
+    "replay_glyph": {
+      "location": "scrollstream rail",
+      "pulse_sequence": [320, 640, 320],
+      "status": "deterministic",
+      "tooltip": "Tap to replay full audit braid"
+    }
+  },
+  "training_mode": {
+    "enabled": true,
+    "deterministic_seed": "celine-luma-dot",
+    "emotional_payloads": [
+      "anticipation_glow",
+      "relief_wave",
+      "confidence_chime"
+    ],
+    "scoring": {
+      "protocol": "Sabrina Spark Test",
+      "threshold": 0.92,
+      "feedback": "Highlight contributor beats needing polish."
+    }
+  },
+  "replay": {
+    "glyph": "scrollstream.replay.audit_braid",
+    "bundle": "capsule.validator.ledger.v1",
+    "one_click": true
+  },
+  "attestation": {
+    "status": "UNSEALED",
+    "notes": "Ready for rehearsal emission; seal after validator capsule lands."
+  }
+}
