@@ -1,0 +1,11 @@
+{
+  "capsule_id": "rehearsal.trace.override004.v1",
+  "trace_id": "rehearsal.override004",
+  "source_capsule": "override.apprentice004.v1",
+  "mode": "breach-simulation",
+  "stability_threshold": 0.93,
+  "feedback_window": "live",
+  "observer": ["Echo", "Dot"],
+  "seal": ".trace.active + .rehearsal.bound",
+  "result": ".capsule.bloomed + .trace.verified"
+}
