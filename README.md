@@ -29,6 +29,11 @@ This repository coordinates automation and human operations around artifact mana
 - **Rollback Ready**: Every deploy has a tested rollback path
 - **Operator in the Loop**: No hidden automation
 
+## P3L Semantics (Proof → Flow → Execution)
+- **Proof**: Seals data to guarantee integrity and immutability using cryptographic hashing, Merkle tree anchoring, and council attestations.
+- **Flow**: Routes and governs operations through defined avatars, enforcing policies like `no_drift` and `quorum_check` so actions stay aligned with approved roles.
+- **Execution**: Manifests creative outputs by generating frame-accurate motion ledgers, assembling 5–10 second clips, and returning resulting fossils to the Single Source of Truth (SSOT).
+
 ## Getting Started
 1. Clone repo and configure `.env` with GitHub token for dispatch events.
 2. Deploy cockpit overlay JSON to your Live Ops UI.
