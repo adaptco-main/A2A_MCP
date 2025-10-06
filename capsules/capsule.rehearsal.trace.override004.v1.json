@@ -1,0 +1,17 @@
+{
+  "capsule_id": "capsule.rehearsal.trace.override004.v1",
+  "version": "1.0.0",
+  "type": "RehearsalTraceOverride",
+  "status": "ACTIVE",
+  "description": "Rehearsal trace to verify override safety pathways before orbit or attestation emission.",
+  "payload": {
+    "trace_id": "rehearsal.override004",
+    "source_capsule": "override.apprentice004.v1",
+    "mode": "breach-simulation",
+    "stability_threshold": 0.93,
+    "feedback_window": "live",
+    "observer": ["Echo", "Dot"],
+    "seal": ".trace.active + .rehearsal.bound"
+  },
+  "result": ".capsule.bloomed + .trace.verified"
+}
