@@ -1,0 +1,88 @@
+{
+  "capsule_id": "capsule.rehearsal.scrollstream.v1",
+  "version": "1.0.0",
+  "type": "ScrollstreamRehearsal",
+  "status": "STAGED",
+  "governance": {
+    "version": "v6.0",
+    "quorum": "council_quorum"
+  },
+  "window": {
+    "status": "open",
+    "replay_token": "HUD.loop.selfie.dualroot.q.cici.v1.token.002",
+    "participants": [
+      { "name": "CiCi", "role": "Conductor", "state": "overlay_active" },
+      { "name": "Q", "role": "Observer", "state": "trace_live" },
+      { "name": "Council Quorum", "role": "Validator", "state": "watching" }
+    ]
+  },
+  "hooks": [
+    "capsule.comment.trace.v1",
+    "shimmer.breach.monitor.v1",
+    "refusal.flare.script.v1",
+    "delta.overlay.audit.v1"
+  ],
+  "cycle": [
+    {
+      "sequence": 1,
+      "event": "audit.summary",
+      "agent": { "name": "Celine", "role": "Architect" },
+      "output": "Celine threads the dual-root scaffold, confirming shimmer alignment, scene balance, and contributor posture before the ledger opens.",
+      "emotional_tone": "assured"
+    },
+    {
+      "sequence": 2,
+      "event": "audit.proof",
+      "agent": { "name": "Luma", "role": "Sentinel" },
+      "output": "Luma validates trail integrity and delta overlays, confirming no drift between root braids while shimmer breach monitors stay dormant.",
+      "emotional_tone": "focused"
+    },
+    {
+      "sequence": 3,
+      "event": "audit.execution",
+      "agent": { "name": "Dot", "role": "Guardian" },
+      "output": "Dot replays the capsule, pulses the glyph rail, and stamps the execution braid so contributors witness the full lifecycle in one click.",
+      "emotional_tone": "galvanized"
+    }
+  ],
+  "ledger": {
+    "file": "scrollstream_ledger.jsonl",
+    "fields": ["t", "capsule", "event", "agent", "role", "output", "replay_token", "spark_test"],
+    "deterministic": true,
+    "timestamp_origin": "2025-10-05T18:00:00Z"
+  },
+  "visual_feedback": {
+    "hud_shimmer": {
+      "status": "emitted",
+      "intensity": 0.82,
+      "tone": "aurora",
+      "confirmation": "HUD shimmer confirms rehearsal emission",
+      "image": "artifacts/rehearsal/hud-shimmer.png",
+      "caption": "Baseline shimmer reference for rehearsal loop"
+    },
+    "replay_glyph": {
+      "state": "pulsing",
+      "rail": "scrollstream",
+      "spark_test": {
+        "name": "Sabrina Spark Test",
+        "status": "pass",
+        "score": 0.97
+      },
+      "image": "artifacts/rehearsal/replay-glyph.png",
+      "caption": "Replay glyph pulse confirming rehearsal sequence"
+    }
+  },
+  "training_mode": {
+    "deterministic": true,
+    "scene_awareness": true,
+    "emotional_payload": "layered",
+    "notes": "Use scripts/emit_rehearsal_scrollstream.py to emit ledger entries and artifacts. Template variants live in capsules/looks."
+  },
+  "template_variants": [
+    {
+      "id": "capsule.rehearsal.scrollstream.look.characters.v1",
+      "description": "Character-forward rehearsal loop with explicit visual asset references for CiCi, Q, and Lyric.",
+      "file": "capsules/looks/capsule.rehearsal.scrollstream.characters.v1.json"
+    }
+  ]
+}
