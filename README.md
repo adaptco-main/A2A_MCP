@@ -29,6 +29,17 @@ This repository coordinates automation and human operations around artifact mana
 - **Rollback Ready**: Every deploy has a tested rollback path
 - **Operator in the Loop**: No hidden automation
 
+## P3L Semantics (Proof → Flow → Execution)
+- **Proof**: Seals data to guarantee integrity and immutability using cryptographic hashing, Merkle tree anchoring, and council attestations.
+- **Flow**: Routes and governs operations through defined avatars, enforcing policies like `no_drift` and `quorum_check` so actions stay aligned with approved roles.
+- **Execution**: Manifests creative outputs by generating frame-accurate motion ledgers, assembling 5–10 second clips, and returning resulting fossils to the Single Source of Truth (SSOT).
+
+## QUBE Patent Draft Capsule Pipeline
+- Use `make qube-stage`, `make qube-seal`, and `make qube-export` to mirror the council path of stage → seal → export. Each target chains the shared `scripts/capsules/qube_patent_pipeline.py` helper so the staged capsule header, ledger, and export request stay deterministic.
+- The packaging map follows **P3L → qLock/LiD → QBits → SR Gate → MoE → BLQB9X → R0P3** with gates G01–G04 captured in `capsules/doctrine/capsule.patentDraft.qube.v1/ledger.jsonl` alongside the dual-run delta check.
+- Canonical proof binding (`sha256:9885f5…`) is computed from the export request template before the binding is embedded, providing a stable digest for the seal and DAO ledger events even if the human-readable JSON formatting is adjusted.
+- The export request produced by `make qube-export` anchors the DAO append target (`ledger/federation.jsonl`) and the council’s 2-of-3 attestation quorum, ready for `POST /runs/{id}/dao-export` once the seal is confirmed.
+
 ## Getting Started
 1. Clone repo and configure `.env` with GitHub token for dispatch events.
 2. Deploy cockpit overlay JSON to your Live Ops UI.
@@ -46,4 +57,14 @@ This repository coordinates automation and human operations around artifact mana
 - Stage the rehearsal capsule ledger entries with `npm run stage:rehearsal`.
 - Pass `--training` to emit deterministic timestamps for CI/CD smoke tests (or set `REHEARSAL_TRAINING=1`).
 - Override the ledger destination with `--ledger <path>` if you need to append to a non-default scrollstream ledger.
+
+## Contributor Echo Trace
+- Generate an echo trace ledger that mirrors the active avatar bindings with `npm run inscribe:echo`.
+- Pass `--seed <iso8601>` for deterministic timestamps or `--mode overwrite` to rebuild the ledger from scratch.
+- Use `--dry-run` to preview the contributor table without writing to disk.
+
+## Glyphstream Overlay Preview
+- Produce a glyphstream overlay scaffold for apprentice ignition arcs with `npm run preview:glyphstream`.
+- Combine with `--pretty` for human-readable JSON or `--dry-run` to limit the command to console output.
+- Provide an alternate avatar dataset via `--source` when evaluating experimental bindings.
 
