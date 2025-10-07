@@ -1,0 +1,23 @@
+{
+  "capsule_id": "capsule.ops.branch_s.v1",
+  "version": "1.1.0",
+  "status": "STAGED",
+  "description": "QLOCK Sentinel Branch-S operations toolkit for applying, revoking, reissuing, and federating Scrollstream capsules.",
+  "entrypoints": {
+    "make": "Makefile",
+    "apply": "apply_and_seal.sh",
+    "revoke": "revoke_branch_s.sh",
+    "reissue": "reissue_branch_s.sh"
+  },
+  "dependencies": {
+    "capsule_manifest": "../capsules/capsule.prompt.designStudio.dual.v1.json",
+    "builder": "../scripts/build_scrollstream_capsule_b.py",
+    "common_lib": "lib/branch_s_common.sh"
+  },
+  "outputs": ".out/<timestamp>_<action>/",
+  "ledger": "ledger.branch_s.jsonl",
+  "notes": [
+    "Each operation emits canonical manifest, gate report, receipts, and checksum archives inside the run directory.",
+    "Ledger entries store hashes, federation context, and a pointer to the originating run path."
+  ]
+}
