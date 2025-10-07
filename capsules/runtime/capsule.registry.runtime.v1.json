@@ -71,6 +71,10 @@
     "capsule.viewer.relay.v1": {
       "state": "STAGED"
     },
+    "capsule.rehearsal.echo_bloom.v1": {
+      "state": "STAGED",
+      "overlay": "overlay.cici_sabrina.echo_bloom.v1"
+    },
     "glyph.registry.qube.v1": {
       "state": "STAGED"
     },
@@ -124,6 +128,11 @@
     {
       "from": "capsule.viewer.relay.v1",
       "to": "hud.overlay.arc.v1",
+      "type": "overlay"
+    },
+    {
+      "from": "capsule.rehearsal.echo_bloom.v1",
+      "to": "overlay.cici_sabrina.echo_bloom.v1",
       "type": "overlay"
     },
     {
