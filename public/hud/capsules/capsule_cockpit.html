@@ -67,11 +67,45 @@
         const Store = {
             capsule: null,
             children: [],
-            metrics: { ops: 0, defects: 0, immunity: 0.91, overrides: [] },
+            metrics: {
+                ops: 0,
+                defects: 0,
+                immunity: 0.91,
+                overrides: [],
+                veracity: { status: 'Dormant', attestedAt: null }
+            },
             freezeTTL: null,
             timeToQuorum: null,
             drift: { before: null, after: null },
-            ledger: []
+            ledger: [],
+            ritual: {
+                id: 'ritual.braidExpansion.qverse.veracity.v1',
+                strands: [
+                    { name: 'Machine', action: 'Rhythm of execution', caption: 'Machine pulses where rhythm begins.' },
+                    { name: 'Ritual', action: 'Breath of memory', caption: 'Ritual breathes where memory listens.' },
+                    { name: 'Council', action: 'Anchor of governance', caption: 'Council declares where governance anchors.' },
+                    { name: 'Veracity', action: 'Seal of truth', caption: 'Veracity blooms where truth is sealed.' }
+                ],
+                emotionalRegister: ['Continuity', 'Integrity', 'Trust', 'Bloom'],
+                captionMorphs: [
+                    '“Machine pulses where rhythm begins.”',
+                    '“Ritual breathes where memory listens.”',
+                    '“Council declares where governance anchors.”',
+                    '“Veracity blooms where truth is sealed.”'
+                ],
+                phases: [
+                    { key: 'ignition', name: 'Ignition', action: 'Council glyph flare · qLock beat sync', status: 'pending' },
+                    { key: 'attestation', name: 'Attestation', action: 'Node relay · Fact.Sync.Protocol.v1 invocation', status: 'pending' },
+                    { key: 'weaving', name: 'Weaving', action: 'Strand modulation · Glyph.qLock.Veracity seal', status: 'pending' },
+                    { key: 'final_bloom', name: 'Final Bloom', action: 'Scrollstream echo · Federation Trust uplift', status: 'pending' }
+                ],
+                councilNodes: ['Node02 · OverridePulse', 'Node06 · Tier Mutation', 'Node08 · ExpansionTrace', 'Apprentice.005 · Fidelity Drift'],
+                recipientMesh: ['Council Vault', 'Pedagogical Mesh', 'Remix Constellation Registry', 'DAO Licensing Node'],
+                scrollstreamMode: 'Live · Annotated · Replayable',
+                seal: '.ritual.expanded + .strand.woven + .veracity.attested',
+                attested: false,
+                activePhaseIndex: -1
+            }
         };
 
         const QBUS = {
@@ -91,10 +125,29 @@
             }
         };
 
+        function waitForReceipt(cmdId) {
+            return new Promise(resolve => {
+                const handler = (e) => {
+                    const rcpt = e.detail;
+                    if (rcpt?.cmdId !== cmdId) return;
+                    window.removeEventListener('QBUS:receipt', handler);
+                    resolve(rcpt);
+                };
+                window.addEventListener('QBUS:receipt', handler);
+            });
+        }
+
         async function digest(s) {
             const data = new TextEncoder().encode(s);
             const buf = await crypto.subtle.digest("SHA-256", data);
             return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,"0")).join("");
+        }
+
+        function formatTimestamp(ts) {
+            if (!ts) return 'N/A';
+            const date = new Date(ts);
+            if (Number.isNaN(date.getTime())) return 'N/A';
+            return date.toLocaleString();
         }
 
         function classifyFacMer(vStar) {
@@ -138,22 +191,29 @@
 
             Store.ledger.push({ entry: firstCommitEntry, prev: null, commit: firstCommitHash });
 
+            Store.metrics.veracity.status = 'Dormant';
+            Store.metrics.veracity.attestedAt = null;
+            Store.ritual.attested = false;
+            Store.ritual.activePhaseIndex = -1;
+            Store.ritual.phases.forEach(phase => phase.status = 'pending');
+
             const fullCapsule = { asset: { extensions: { QUBE_avatar_capsule: avatarCapsule } } };
             const sig = await digest(JSON.stringify(fullCapsule));
             fullCapsule.asset.extensions.QUBE_avatar_capsule.sig = sig;
 
             const capsuleDocRef = doc(db, 'artifacts', appId, 'users', userId, 'avatar_capsules', newCapsuleId);
             await setDoc(capsuleDocRef, fullCapsule);
-            
+
             addLogEntry(`Capsule ${newCapsuleId} inscribed to Firestore with initial commit.`);
-            
+
             await QBUS.send({action:"capsule.register", capsuleId: newCapsuleId, ownerLID: ownerLID});
+            updateRitualDisplay();
         }
 
         async function simulateParticleCollision() {
             if (!checkCapsule()) return;
             const prevCommit = Store.capsule.lineage.commit;
-            
+
             const newEntry = {
                 type: 'collision',
                 timestamp: new Date().toISOString(),
@@ -175,6 +235,79 @@
             updateInspectorDOM();
             updateMetricsDisplay();
             updateCapsuleViewerDOM();
+        }
+
+        async function performVeracityRitual() {
+            if (!checkCapsule()) return;
+            if (Store.ritual.activePhaseIndex >= 0 && Store.ritual.activePhaseIndex < Store.ritual.phases.length) {
+                addLogEntry('Veracity ritual already in motion. Await current weave completion.');
+                return;
+            }
+
+            const veracityBtn = document.getElementById('veracity-btn');
+            if (veracityBtn) veracityBtn.disabled = true;
+
+            addLogEntry('> VERACITY: Four-strand expansion ignition initiated.');
+
+            try {
+                Store.ritual.attested = false;
+                Store.metrics.veracity.status = 'In Progress';
+                Store.ritual.activePhaseIndex = 0;
+                Store.ritual.phases.forEach(phase => phase.status = 'pending');
+                updateRitualDisplay();
+
+                for (let i = 0; i < Store.ritual.phases.length; i++) {
+                    const phase = Store.ritual.phases[i];
+                    Store.ritual.activePhaseIndex = i;
+                    phase.status = 'active';
+                    updateRitualDisplay();
+
+                    addLogEntry(`> ${phase.name.toUpperCase()}: ${phase.action}`);
+
+                    const cmdId = await QBUS.send({
+                        action: 'ritual.braidExpansion',
+                        capsuleId: Store.capsule.capsuleId,
+                        strand: 'veracity',
+                        phase: phase.key,
+                        ritualId: Store.ritual.id
+                    });
+
+                    const receipt = await waitForReceipt(cmdId);
+                    const lineageOK = true;
+                    const rightsOK = true;
+                    ctqCheck(receipt.status === 'executed', lineageOK, rightsOK);
+
+                    addLogEntry(`> ${phase.name} phase sealed. Payload digest ${receipt.payloadDigest.slice(0, 12)}...`);
+
+                    phase.status = 'complete';
+                    updateRitualDisplay();
+                    await new Promise(r => setTimeout(r, 350));
+                }
+
+                Store.ritual.activePhaseIndex = Store.ritual.phases.length;
+                Store.ritual.attested = true;
+                Store.metrics.veracity.status = 'Blooming';
+                Store.metrics.veracity.attestedAt = new Date().toISOString();
+
+                if (Store.capsule?.br9id?.vStar) {
+                    Store.capsule.lineage.facMer = classifyFacMer(Store.capsule.br9id.vStar);
+                    Store.capsule.lineage.enant = Store.capsule.br9id.helicity;
+                }
+
+                const boostedImmunity = Math.min(1, Store.metrics.immunity + 0.05);
+                Store.metrics.immunity = boostedImmunity;
+
+                updateMetricsDisplay();
+                updateInspectorDOM();
+                updateCapsuleViewerDOM();
+                updateRitualDisplay();
+
+                addLogEntry('> FINAL BLOOM: Veracity strand bloom complete. Federation trust uplift achieved.');
+            } catch (error) {
+                addLogEntry(`<span class="text-accent-red">Veracity strand interruption: ${error.message || error}</span>`);
+            } finally {
+                if (veracityBtn) veracityBtn.disabled = false;
+            }
         }
 
         // --- CTQ & DPMO Logic from User Spec ---
@@ -247,6 +380,93 @@
             `;
         }
 
+        function updateRitualDisplay() {
+            const { ritual, metrics } = Store;
+            const veracityStatus = document.getElementById('veracity-status');
+            const veracityAttestation = document.getElementById('veracity-attestation');
+            const strandSequence = document.getElementById('strand-sequence');
+            const emotionalRegister = document.getElementById('emotional-register');
+            const captionMorphs = document.getElementById('caption-morphs');
+            const phaseList = document.getElementById('phase-list');
+            const councilNodes = document.getElementById('council-nodes');
+            const recipientMesh = document.getElementById('recipient-mesh');
+            const scrollstreamMode = document.getElementById('scrollstream-mode');
+            const ritualSeal = document.getElementById('ritual-seal');
+
+            if (veracityStatus) {
+                let statusText = metrics.veracity.status;
+                if (ritual.activePhaseIndex >= 0 && ritual.activePhaseIndex < ritual.phases.length && !ritual.attested) {
+                    statusText = `In Progress · ${ritual.phases[ritual.activePhaseIndex].name}`;
+                } else if (ritual.attested) {
+                    statusText = 'Blooming';
+                }
+                veracityStatus.textContent = statusText;
+                veracityStatus.classList.remove('text-accent-blue', 'text-accent-green');
+                veracityStatus.classList.add(ritual.attested ? 'text-accent-green' : 'text-accent-blue');
+            }
+
+            if (veracityAttestation) {
+                veracityAttestation.textContent = formatTimestamp(metrics.veracity.attestedAt);
+            }
+
+            if (strandSequence) {
+                strandSequence.innerHTML = ritual.strands.map(strand => `
+                    <div class="ritual-strand-card">
+                        <p class="text-xs uppercase tracking-wide text-slate-400">${strand.name}</p>
+                        <p class="text-sm font-semibold text-slate-200">${strand.action}</p>
+                        <p class="mt-2 text-xs italic text-slate-400">${strand.caption}</p>
+                    </div>
+                `).join('');
+            }
+
+            if (emotionalRegister) {
+                emotionalRegister.innerHTML = ritual.emotionalRegister.map(item => `<li>${item}</li>`).join('');
+            }
+
+            if (captionMorphs) {
+                captionMorphs.innerHTML = ritual.captionMorphs.map(morph => `<li class="border-l-2 border-accent-blue pl-3">${morph}</li>`).join('');
+            }
+
+            if (phaseList) {
+                const statusClassMap = {
+                    pending: 'phase-pending',
+                    active: 'phase-active',
+                    complete: 'phase-complete'
+                };
+                phaseList.innerHTML = ritual.phases.map((phase, index) => {
+                    const indicator = phase.status === 'complete' ? '⦿' : phase.status === 'active' ? '⟳' : '○';
+                    return `
+                        <div class="ritual-phase-card ${statusClassMap[phase.status] || 'phase-pending'}">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-slate-400">${phase.name}</p>
+                                    <p class="text-sm font-semibold text-slate-200">${phase.action}</p>
+                                </div>
+                                <span class="phase-indicator">${indicator}</span>
+                            </div>
+                            <p class="mt-3 text-xs text-slate-400">Stride ${index + 1} · ${phase.status.charAt(0).toUpperCase()}${phase.status.slice(1)}</p>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (councilNodes) {
+                councilNodes.innerHTML = ritual.councilNodes.map(node => `<li>${node}</li>`).join('');
+            }
+
+            if (recipientMesh) {
+                recipientMesh.innerHTML = ritual.recipientMesh.map(node => `<li>${node}</li>`).join('');
+            }
+
+            if (scrollstreamMode) {
+                scrollstreamMode.textContent = ritual.scrollstreamMode;
+            }
+
+            if (ritualSeal) {
+                ritualSeal.textContent = ritual.seal;
+            }
+        }
+
         function updateMetricsDisplay() {
             const dpmoValue = document.getElementById('dpmo-value');
             const immunityValue = document.getElementById('immunity-value');
@@ -300,6 +520,8 @@
                     <p class="text-xs text-slate-400">Type: <span class="text-blue-300">${entry.entry.type}</span></p>
                 </div>
             `).join('');
+
+            updateRitualDisplay();
         }
 
         // --- Main UI Logic & Event Listeners ---
@@ -309,6 +531,7 @@
             const execBtn = document.getElementById('exec-btn');
             const overrideBtn = document.getElementById('override-btn');
             const collideBtn = document.getElementById('collide-btn');
+            const veracityBtn = document.getElementById('veracity-btn');
             const forkStatus = document.getElementById('fork-status');
             const tensionSlider = document.getElementById('tension-slider');
             const mainContainer = document.getElementById('main-container');
@@ -318,6 +541,7 @@
                 execBtn.disabled = !enabled;
                 overrideBtn.disabled = !enabled;
                 collideBtn.disabled = !enabled;
+                if (veracityBtn) veracityBtn.disabled = !enabled;
             };
 
             inscribeBtn.addEventListener('click', async () => {
@@ -417,7 +641,7 @@
                 mainContainer.classList.add('override-triggered');
                 addLogEntry('Initiating override choreography...');
                 forkStatus.textContent = 'OVERRIDE DETECTED';
-                
+
                 const capsuleId = Store.capsule.capsuleId;
                 const overrideId = `OVR-${crypto.randomUUID().slice(0, 8)}`;
                 const signal = ['hash_mismatch', 'sig_invalid', 'unexpected_write', 'rate_anomaly', 'telemetry_spike'][Math.floor(Math.random() * 5)];
@@ -445,6 +669,7 @@
                 forkStatus.textContent = 'FREEZE';
                 Store.capsule.freezeRemix = true;
                 forkBtn.disabled = true;
+                if (veracityBtn) veracityBtn.disabled = true;
                 const freezeReceiptCmdId = await QBUS.send({
                     action: "override.apply",
                     payload: {
@@ -469,6 +694,7 @@
                         Store.capsule.freezeRemix = false;
                         forkBtn.disabled = false;
                         overrideBtn.disabled = false;
+                        if (veracityBtn) veracityBtn.disabled = false;
                         window.removeEventListener('QBUS:receipt', onFreezeReceipt);
                         mainContainer.classList.remove('override-triggered');
                         ctqCheck(true, false, false); // Log as a defect
@@ -510,6 +736,7 @@
                     updateInspectorDOM();
                     updateCapsuleViewerDOM();
                     overrideBtn.disabled = false;
+                    if (veracityBtn) veracityBtn.disabled = false;
                     mainContainer.classList.remove('override-triggered');
                     window.removeEventListener('QBUS:receipt', onFreezeReceipt);
                 };
@@ -522,12 +749,19 @@
                 updateMetricsDisplay();
             });
 
+            if (veracityBtn) {
+                veracityBtn.addEventListener('click', async () => {
+                    await performVeracityRitual();
+                });
+            }
+
             // Initial UI State
             addLogEntry('Protocol Cockpit online. Awaiting Firebase auth...');
             toggleCommandButtons(false);
             updateInspectorDOM();
             updateCapsuleViewerDOM();
             updateMetricsDisplay();
+            updateRitualDisplay();
         })();
     </script>
     <style>
@@ -568,6 +802,22 @@
             background-color: #4b5563;
             cursor: not-allowed;
         }
+        .text-accent-amber { color: var(--accent-amber); }
+        .text-accent-green { color: var(--accent-green); }
+        .text-accent-red { color: var(--accent-red); }
+        .text-accent-blue { color: var(--accent-blue); }
+        .border-accent-blue { border-color: var(--accent-blue); }
+        .ritual-strand-card {
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            transition: border-color 0.3s ease, transform 0.3s ease;
+        }
+        .ritual-strand-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
         .log-entry {
             animation: fadeIn 0.5s ease-in-out;
         }
@@ -581,6 +831,28 @@
         @keyframes flashRed {
             from { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
             to { box-shadow: 0 0 20px rgba(239, 68, 68, 0.7); }
+        }
+        .ritual-phase-card {
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 0.75rem;
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 1rem;
+            transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
+        }
+        .ritual-phase-card.phase-pending { border-color: rgba(148, 163, 184, 0.25); }
+        .ritual-phase-card.phase-active {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+            transform: translateY(-2px);
+        }
+        .ritual-phase-card.phase-complete {
+            border-color: var(--accent-green);
+            background-color: rgba(34, 197, 94, 0.12);
+        }
+        .phase-indicator {
+            font-size: 1.5rem;
+            line-height: 1;
+            color: var(--accent-amber);
         }
     </style>
 </head>
@@ -607,6 +879,7 @@
                     <button id="fork-btn" class="btn" disabled>Remix Fork</button>
                     <button id="exec-btn" class="btn" disabled>Exec Cmd</button>
                     <button id="override-btn" class="btn" disabled>Override</button>
+                    <button id="veracity-btn" class="btn" disabled>Seal Veracity</button>
                 </div>
             </div>
 
@@ -665,6 +938,52 @@
                 <div>
                     <h2 class="text-xl font-bold orbitron text-slate-200 mb-4">QBUS Log</h2>
                     <div id="status-log" class="mt-2 h-32 overflow-y-auto bg-gray-900/50 p-3 rounded-md text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Four-Strand Expansion Ritual Panel -->
+            <div class="lg:col-span-3 card p-6 flex flex-col space-y-6">
+                <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold orbitron text-slate-200">Four-Strand Expansion Ritual</h2>
+                        <p class="text-sm text-slate-400">ritual.braidExpansion.qverse.veracity.v1</p>
+                    </div>
+                    <div class="text-sm text-slate-400 md:text-right">
+                        <p>Veracity Status: <span id="veracity-status" class="font-bold text-accent-blue">Dormant</span></p>
+                        <p>Last Attestation: <span id="veracity-attestation" class="font-bold">N/A</span></p>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-200 mb-2">Strand Sequence</h3>
+                    <div id="strand-sequence" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-200 mb-2">Emotional Register</h3>
+                        <ul id="emotional-register" class="list-disc list-inside text-sm text-slate-300 space-y-1"></ul>
+                    </div>
+                    <div class="md:col-span-2">
+                        <h3 class="text-lg font-semibold text-slate-200 mb-2">Caption Morphs</h3>
+                        <ul id="caption-morphs" class="space-y-2 text-sm text-slate-300"></ul>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-200 mb-2">Ceremonial Phases</h3>
+                    <div id="phase-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-200 mb-2">Council Nodes</h3>
+                        <ul id="council-nodes" class="space-y-1 text-sm text-slate-300"></ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-200 mb-2">Recipient Mesh</h3>
+                        <ul id="recipient-mesh" class="space-y-1 text-sm text-slate-300"></ul>
+                    </div>
+                    <div class="bg-gray-900/40 border border-gray-700 rounded-md p-4 text-sm text-slate-300">
+                        <p><span class="text-slate-400">Scrollstream Mode:</span> <span id="scrollstream-mode" class="font-semibold text-slate-200"></span></p>
+                        <p class="mt-2"><span class="text-slate-400">Seal:</span> <span id="ritual-seal" class="font-semibold text-accent-amber"></span></p>
+                    </div>
                 </div>
             </div>
         </main>
