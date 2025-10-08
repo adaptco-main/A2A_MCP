@@ -2,15 +2,38 @@
 
 QUBE_DRAFT ?= capsule.patentDraft.qube.v1.json
 QUBE_EXPORT_REQ ?= capsule.export.qubePatent.v1.request.json
+FROZEN_DRAFT := runtime/frozen/$(notdir $(QUBE_DRAFT))
 
-qube-stage: freeze post verify
-	@echo "📜 Staging QUBE draft capsule → $(QUBE_DRAFT)"
+freeze:
+	@echo "🥶 Freezing QUBE draft capsule → $(QUBE_DRAFT)"
 	@ts="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
 	if [ ! -f "$(QUBE_DRAFT)" ]; then \
 	  jq -n '{capsule_id:"capsule.patentDraft.qube.v1", qube:{}, lineage:{}, integrity:{}, meta:{}}' > "$(QUBE_DRAFT)"; \
 	fi; \
 	tmp=$$(mktemp); \
-	jq --arg ts "$$ts" '.capsule_id="capsule.patentDraft.qube.v1" | (.meta //= {}) | .meta.issued_at=$$ts | .issued_at=$$ts' "$(QUBE_DRAFT)" > "$$tmp" && mv "$$tmp" "$(QUBE_DRAFT)"
+	jq --arg ts "$$ts" '.capsule_id="capsule.patentDraft.qube.v1" | (.meta //= {}) | .meta.issued_at=$$ts | .issued_at=$$ts' "$(QUBE_DRAFT)" > "$$tmp" && mv "$$tmp" "$(QUBE_DRAFT)"; \
+	./freeze_capsules.sh "$(QUBE_DRAFT)"
+
+post:
+	@echo "📮 Recording QUBE freeze manifest entry"
+	@if [ ! -f "$(FROZEN_DRAFT)" ]; then \
+	  echo "Frozen capsule not found at $(FROZEN_DRAFT)" >&2; \
+	  exit 1; \
+	fi
+
+verify:
+	@echo "🧪 Verifying QUBE freeze manifest integrity"
+	@jq -e '."$(FROZEN_DRAFT)"' runtime/freeze_manifest.json >/dev/null
+
+seal:
+	@echo "🔏 Stamping QUBE federation receipt → capsule.federation.receipt.v1.json"
+	@if [ ! -f "capsule.federation.receipt.v1.json" ]; then \
+	  jq -n '{capsule_id:"capsule.federation.receipt.v1", receipts:[]}' > capsule.federation.receipt.v1.json; \
+	fi
+
+
+qube-stage: freeze post verify
+	@echo "📜 Staging QUBE draft capsule → $(QUBE_DRAFT)"
 
 qube-seal: seal
 	@echo "🔏 QUBE draft sealed; see capsule.federation.receipt.v1.json"
