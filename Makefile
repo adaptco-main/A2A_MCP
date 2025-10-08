@@ -1,4 +1,4 @@
-.PHONY: freeze post verify seal qube-stage qube-seal qube-export echo-flare
+.PHONY: freeze listener post verify seal qube-stage qube-seal qube-export echo-flare
 
 QUBE_TOOL := scripts/capsules/qube_patent_pipeline.py
 QUBE_DRAFT ?= capsules/doctrine/capsule.patentDraft.qube.v1/capsule.patentDraft.qube.v1.json
@@ -7,6 +7,9 @@ QUBE_LEDGER ?= capsules/doctrine/capsule.patentDraft.qube.v1/ledger.jsonl
 
 freeze:
 	@echo "🧊 Freeze checkpoint acknowledged – ensure /runs API snapshot is current before proceeding."
+
+listener:
+	@echo "👂 Listener online – routing cockpit events to /runs ingest."
 
 post:
 	@echo "📮 Posting capsule metadata to /runs with expected artifacts acsa.trace.jsonl + acsa.metrics.json."
@@ -17,7 +20,7 @@ verify:
 seal:
 	@echo "🔏 Submit /runs/{id}/seal to bind finalsealHash to DAO proof binding."
 
-qube-stage: freeze post verify
+qube-stage: freeze listener post verify
 	@echo "📜 Staging QUBE draft capsule → $(QUBE_DRAFT)"
 	@$(QUBE_TOOL) stage
 

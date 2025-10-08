@@ -36,9 +36,11 @@ This repository coordinates automation and human operations around artifact mana
 
 ## QUBE Patent Draft Capsule Pipeline
 - Use `make qube-stage`, `make qube-seal`, and `make qube-export` to mirror the council path of stage → seal → export. Each target chains the shared `scripts/capsules/qube_patent_pipeline.py` helper so the staged capsule header, ledger, and export request stay deterministic.
+- Insert `make listener` after `make freeze` to activate the cockpit ingest shim before calling `make post` and `make verify`.
 - The packaging map follows **P3L → qLock/LiD → QBits → SR Gate → MoE → BLQB9X → R0P3** with gates G01–G04 captured in `capsules/doctrine/capsule.patentDraft.qube.v1/ledger.jsonl` alongside the dual-run delta check.
 - The proof binding recorded in the ledger is the SHA-256 digest of the export request stub (which retains the `sha256:REQUEST` placeholder), ensuring the seal and DAO ledger events reference the exact bytes that were staged for council review.
 - The export request produced by `make qube-export` anchors the DAO append target (`ledger/federation.jsonl`) and the council’s 2-of-3 attestation quorum, ready for `POST /runs/{id}/dao-export` once the seal is confirmed.
+- Pass `--force` to any stage, seal, or export command (e.g., `python scripts/capsules/qube_patent_pipeline.py seal --force`) to rebuild a ledger event without manual file edits. Additional flags expose overrides for timestamps, hashes, DAO metadata, and capsule fields so council review scenarios can be replayed precisely.
 
 ## Getting Started
 1. Clone repo and configure `.env` with GitHub token for dispatch events.
