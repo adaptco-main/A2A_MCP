@@ -23,7 +23,6 @@ EXPORT_TS = "2025-09-19T04:49:10Z"
 DUAL_RUN_SEED = "2025-09-19T04:40:00Z"
 ARTIFACT_HASH = "sha256:aa04c37d52c182716bb11817902bef83fa30de12afa427d29b2792146f4bf478"
 FINAL_SEAL_HASH = "sha256:f8f9324315d14170e85c0e75182c904bc5803956215f50b2981d8a74bdc88ac2"
-CANONICAL_REQUEST_DIGEST = "sha256:9885f52067a610b0df106b63f61763a3ba4486e893fe422b28240b95566af67c"
 
 
 @dataclass
@@ -158,14 +157,14 @@ def seal() -> None:
                 },
                 "G04": {"verify_result": "pass", "status": "PASS"},
             },
-            "proof_binding": CANONICAL_REQUEST_DIGEST,
+            "proof_binding": _canonical_request_digest(),
             "merkle_proof": True,
             "attestation_quorum": "2-of-3",
         },
     )
     entries.append(json.loads(sealed_event.to_json()))
     _write_ledger(entries)
-    print("🔏 Recorded capsule seal with proof binding", CANONICAL_REQUEST_DIGEST)
+    print("🔏 Recorded capsule seal with proof binding", _canonical_request_digest())
 
 
 def _canonical_export_body() -> Dict:
@@ -184,7 +183,7 @@ def _canonical_export_body() -> Dict:
             },
             "ledger_binding": {
                 "append_target": "ledger/federation.jsonl",
-                "proof_binding": CANONICAL_REQUEST_DIGEST,
+                "proof_binding": "sha256:REQUEST",
             },
         },
         "meta": {
@@ -197,11 +196,20 @@ def _canonical_export_body() -> Dict:
     }
 
 
+def _canonical_request_payload() -> str:
+    return json.dumps(_canonical_export_body(), indent=2) + "\n"
+
+
+def _canonical_request_digest() -> str:
+    return f"sha256:{hashlib.sha256(_canonical_request_payload().encode()).hexdigest()}"
+
+
 def export() -> None:
-    body = _canonical_export_body()
+    payload = _canonical_request_payload()
+    QUBE_DIR.mkdir(parents=True, exist_ok=True)
     with QUBE_EXPORT.open("w") as fh:
-        json.dump(body, fh, indent=2)
-        fh.write("\n")
+        fh.write(payload)
+    request_digest = _canonical_request_digest()
     entries = _load_ledger()
     if any(entry["type"] == "dao.export.requested" for entry in entries):
         print("✅ Ledger already contains dao.export.requested event")
@@ -212,10 +220,10 @@ def export() -> None:
         payload={
             "protocol": "capsule.export.qubePatent.v1",
             "request_ref": "capsule.export.qubePatent.v1.request.json",
-            "request_sha256": CANONICAL_REQUEST_DIGEST,
+            "request_sha256": request_digest,
             "ledger_binding": {
                 "append_target": "ledger/federation.jsonl",
-                "proof_binding": CANONICAL_REQUEST_DIGEST,
+                "proof_binding": request_digest,
             },
         },
     )

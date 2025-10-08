@@ -13,7 +13,7 @@
     },
     "ledger_binding": {
       "append_target": "ledger/federation.jsonl",
-      "proof_binding": "sha256:9885f52067a610b0df106b63f61763a3ba4486e893fe422b28240b95566af67c"
+      "proof_binding": "sha256:REQUEST"
     }
   },
   "meta": {
