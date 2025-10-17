@@ -87,6 +87,12 @@ describe('artifact audit trace', () => {
         sha256: 'sha256:38dbd4dfb04417fbc61e1fce5ca63330cc8cbf808f00e42dd66c6deb8d97b9ae'
       },
       {
+        ts: '2025-09-20T14:08:32-04:00',
+        event: 'migration.execute.v1',
+        migration_plan: 'migration.skin.binding.plan.jsonl',
+        status: 'COMPLETED'
+      },
+      {
         ts: '2025-09-20T14:08:33-04:00',
         event: 'ledger.append.v1',
         capsule_id: 'capsule.skin.boos.binding.v1',
@@ -114,16 +120,52 @@ describe('artifact audit trace', () => {
       capsule_id: 'capsule.skin.boos.binding',
       version: 'v1'
     });
-    expect(trace.totalEvents).toBe(3);
+    expect(trace.totalEvents).toBe(4);
     expect(trace.firstSeen).toBe(entries[0].ts);
-    expect(trace.lastSeen).toBe(entries[2].ts);
+    expect(trace.lastSeen).toBe(entries[3].ts);
     expect(trace.events.map((event) => event.type)).toEqual([
       'capsule.freeze.v1',
+      'migration.execute.v1',
       'ledger.append.v1',
       'event.skin.boos.binding.fossilized.v1'
     ]);
-    expect(trace.events[1].payload.ssot_ref).toBe('capsule.avatar.boos.ssot.v1');
+    expect(trace.events[2].payload.ssot_ref).toBe('capsule.avatar.boos.ssot.v1');
+    expect(trace.events[1].summary).toBe('Event migration.execute.v1');
     expect(trace.events[0].summary).toBe('Event capsule.freeze.v1');
+  });
+
+  it('excludes unrelated ledger entries that fall outside the matching emission span', () => {
+    const entries = [
+      {
+        ts: '2025-09-20T14:08:31-04:00',
+        event: 'capsule.freeze.v1',
+        capsule_id: 'capsule.skin.boos.binding.v1'
+      },
+      {
+        ts: '2025-09-20T14:08:32-04:00',
+        event: 'migration.execute.v1',
+        migration_plan: 'migration.skin.binding.plan.jsonl'
+      },
+      {
+        ts: '2025-09-20T14:08:33-04:00',
+        event: 'ledger.append.v1',
+        capsule_id: 'capsule.skin.boos.binding.v1'
+      },
+      {
+        ts: '2025-09-21T08:00:00-04:00',
+        event: 'capsule.freeze.v1',
+        capsule_id: 'capsule.avatar.gloh.binding.v1'
+      }
+    ];
+
+    const trace = buildTrace(entries, { id: 'capsule.skin.boos.binding.v1' });
+    expect(trace).not.toBeNull();
+    expect(trace.totalEvents).toBe(3);
+    expect(trace.events.map((event) => event.type)).toEqual([
+      'capsule.freeze.v1',
+      'migration.execute.v1',
+      'ledger.append.v1'
+    ]);
   });
 
   it('returns null when no ledger entries match the identifier', () => {
@@ -207,6 +249,18 @@ describe('artifact audit trace', () => {
         event: 'capsule.freeze.v1',
         capsule_id: 'capsule.skin.boos.binding.v1',
         seal_state: 'FOSSILIZED'
+      },
+      {
+        ts: '2025-09-20T14:08:32-04:00',
+        event: 'migration.execute.v1',
+        migration_plan: 'migration.skin.binding.plan.jsonl',
+        status: 'COMPLETED'
+      },
+      {
+        ts: '2025-09-20T14:08:33-04:00',
+        event: 'ledger.append.v1',
+        capsule_id: 'capsule.skin.boos.binding.v1',
+        ssot_ref: 'capsule.avatar.boos.ssot.v1'
       }
     ]);
     tempDir = dir;
@@ -225,7 +279,11 @@ describe('artifact audit trace', () => {
     const result = JSON.parse(stdout);
     expect(result.artifactId).toBe('capsule.skin.boos.binding.v1');
     expect(result.criteria.capsuleId).toBe('capsule.skin.boos.binding');
-    expect(result.events).toHaveLength(1);
-    expect(result.events[0].summary).toBe('Event capsule.freeze.v1');
+    expect(result.events).toHaveLength(3);
+    expect(result.events.map((event) => event.type)).toEqual([
+      'capsule.freeze.v1',
+      'migration.execute.v1',
+      'ledger.append.v1'
+    ]);
   });
 });

@@ -250,12 +250,7 @@ function normalizeCriteria(criteria = {}) {
   return normalized;
 }
 
-function matchesCriteria(entry, criteria) {
-  const normalized = normalizeCriteria(criteria);
-  if (!normalized.id && !normalized.capsuleId && !normalized.version) {
-    throw new Error('An artifact identifier (--id or --capsule-id) is required.');
-  }
-
+function entryMatchesNormalized(entry, normalized) {
   const identifiers = extractIdentifiers(entry);
   let matched = false;
 
@@ -281,6 +276,16 @@ function matchesCriteria(entry, criteria) {
   }
 
   return matched;
+}
+
+function matchesCriteria(entry, criteria, normalizedCriteria) {
+  const normalized =
+    normalizedCriteria === undefined ? normalizeCriteria(criteria) : normalizedCriteria;
+  if (!normalized.id && !normalized.capsuleId && !normalized.version) {
+    throw new Error('An artifact identifier (--id or --capsule-id) is required.');
+  }
+
+  return entryMatchesNormalized(entry, normalized);
 }
 
 function getEventType(entry) {
@@ -513,16 +518,32 @@ function parseLedger(contents) {
 }
 
 function buildTrace(entries, criteria = {}) {
-  const filtered = entries.filter((entry) => matchesCriteria(entry, criteria));
-  if (filtered.length === 0) {
+  const normalizedCriteria = normalizeCriteria(criteria);
+  if (!normalizedCriteria.id && !normalizedCriteria.capsuleId && !normalizedCriteria.version) {
+    throw new Error('An artifact identifier (--id or --capsule-id) is required.');
+  }
+
+  const matchingIndices = [];
+  const matchingEntries = [];
+
+  entries.forEach((entry, index) => {
+    if (matchesCriteria(entry, criteria, normalizedCriteria)) {
+      matchingIndices.push(index);
+      matchingEntries.push(entry);
+    }
+  });
+
+  if (matchingEntries.length === 0) {
     return null;
   }
 
-  const sorted = filtered.slice().sort((a, b) => parseTimestamp(a) - parseTimestamp(b));
-  const artifactId = resolveArtifactId(sorted, criteria);
+  const startIndex = Math.min(...matchingIndices);
+  const endIndex = Math.max(...matchingIndices);
+  const spanEntries = entries.slice(startIndex, endIndex + 1);
+  const sorted = spanEntries.slice().sort((a, b) => parseTimestamp(a) - parseTimestamp(b));
+  const artifactId = resolveArtifactId(matchingEntries, normalizedCriteria);
   const firstEventTimestamp = extractTimestamp(sorted[0]);
   const lastEventTimestamp = extractTimestamp(sorted[sorted.length - 1]);
-  const normalizedCriteria = normalizeCriteria(criteria);
   const capsule = deriveCapsuleMetadata(sorted, normalizedCriteria);
 
   return {
