@@ -5,7 +5,9 @@
   "scripts": {
     "lint:openapi": "spectral lint openapi/openapi.yaml",
     "verify:ledger": "node scripts/verify-ledger.js",
-    "test:ledger": "node --test tests/verify-ledger.test.js"
+    "rehearse:scrollstream": "node scripts/emit-scrollstream-rehearsal.js",
+    "test:ledger": "node --test tests/verify-ledger.test.js",
+    "test:scrollstream": "node --test tests/scrollstreamRehearsal.test.js"
   },
   "devDependencies": {
     "@stoplight/spectral-cli": "^6.15.0",

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scrollstream Rehearsal Capsule</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at 15% 25%, rgba(14,165,233,0.15), transparent 55%),
+                  radial-gradient(circle at 85% 10%, rgba(249,115,22,0.18), transparent 50%),
+                  #0b1120;
+      min-height: 100vh;
+    }
+    .hud-card {
+      position: relative;
+      overflow: hidden;
+      background: rgba(17, 24, 39, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 1.25rem;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.45);
+    }
+    .hud-card::after {
+      content: '';
+      position: absolute;
+      inset: -150%;
+      background: linear-gradient(120deg, transparent, rgba(94, 234, 212, 0.25), transparent);
+      transform: translateX(-100%);
+      animation: shimmer 6s linear infinite;
+      opacity: 0;
+    }
+    .hud-card.shimmer::after {
+      opacity: 1;
+    }
+    @keyframes shimmer {
+      0% {
+        transform: translateX(-100%);
+      }
+      60% {
+        transform: translateX(120%);
+      }
+      100% {
+        transform: translateX(120%);
+      }
+    }
+    .glyph {
+      width: 72px;
+      height: 72px;
+      border-radius: 9999px;
+      display: grid;
+      place-items: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, rgba(94, 234, 212, 0.15), rgba(59, 130, 246, 0.35));
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #e0f2fe;
+      transition: transform 0.5s ease, box-shadow 0.5s ease;
+    }
+    .glyph.pulse {
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45);
+      }
+      50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 18px rgba(59, 130, 246, 0);
+      }
+    }
+    .timeline-step.active {
+      border-color: rgba(94, 234, 212, 0.6);
+      background: rgba(30, 64, 175, 0.35);
+      box-shadow: 0 18px 32px rgba(14, 116, 144, 0.4);
+    }
+    .timeline-rail::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 4px;
+      background: linear-gradient(180deg, rgba(94, 234, 212, 0.45), rgba(59, 130, 246, 0.15));
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="text-slate-200">
+  <main class="max-w-5xl mx-auto px-6 py-16 space-y-14">
+    <header class="text-center space-y-4">
+      <p class="uppercase tracking-[0.35em] text-xs text-slate-400">capsule.rehearsal.scrollstream.v1</p>
+      <h1 class="text-4xl sm:text-5xl font-extrabold text-sky-200">Scrollstream Rehearsal Loop</h1>
+      <p class="text-slate-400 max-w-2xl mx-auto text-base sm:text-lg">
+        Simulate the full Celine → Luma → Dot audit braid. HUD shimmer confirms emission,
+        the replay glyph pulses on execution, and every entry is stamped into the scrollstream ledger.
+      </p>
+      <button id="replayButton" class="px-6 py-2 rounded-full bg-sky-500/20 border border-sky-400/50 text-sky-100 text-sm uppercase tracking-widest hover:bg-sky-500/30 transition">
+        Replay Cycle
+      </button>
+    </header>
+
+    <section id="hudCard" class="hud-card shimmer p-8 space-y-6">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <p class="text-xs uppercase tracking-[0.35em] text-slate-400">HUD Feedback</p>
+          <h2 class="text-2xl font-semibold text-slate-100">Scrollstream Rail</h2>
+        </div>
+        <div class="glyph" id="replayGlyph" aria-label="Replay glyph">↺</div>
+      </div>
+      <p class="text-slate-400 leading-relaxed">
+        Training mode keeps the emotional payload deterministic for Sabrina Spark scoring. All
+        glyphs run through rehearsal-safe output so CI/CD smoke tests can follow the exact same braid.
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="hudFacts">
+        <div class="rounded-xl border border-slate-600/70 bg-slate-900/60 px-4 py-3">
+          <p class="text-xs uppercase tracking-[0.32em] text-slate-500">Mode</p>
+          <p class="text-lg text-slate-100">Rehearsal • Deterministic</p>
+        </div>
+        <div class="rounded-xl border border-slate-600/70 bg-slate-900/60 px-4 py-3">
+          <p class="text-xs uppercase tracking-[0.32em] text-slate-500">Sabrina Spark Test</p>
+          <p class="text-lg text-emerald-300">PASS</p>
+        </div>
+        <div class="rounded-xl border border-slate-600/70 bg-slate-900/60 px-4 py-3">
+          <p class="text-xs uppercase tracking-[0.32em] text-slate-500">Glyph Rail</p>
+          <p class="text-lg text-sky-200">Replay pulse ready</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="relative timeline-rail pl-10">
+      <div class="space-y-6" id="timeline"></div>
+    </section>
+  </main>
+
+  <template id="timelineStepTemplate">
+    <article class="timeline-step relative border border-slate-700/70 bg-slate-900/50 rounded-2xl p-6 transition-all">
+      <div class="absolute -left-12 top-6 w-8 h-8 rounded-full grid place-items-center bg-slate-800 border border-slate-600 text-xs font-semibold text-slate-200"></div>
+      <header class="flex items-baseline justify-between gap-4 flex-wrap">
+        <div>
+          <p class="text-xs uppercase tracking-[0.32em] text-slate-400 stage-label"></p>
+          <h3 class="text-xl font-bold text-slate-100 agent-label"></h3>
+        </div>
+        <p class="text-sm text-slate-400 timestamp"></p>
+      </header>
+      <p class="mt-4 text-base text-slate-300 headline"></p>
+      <ul class="mt-4 space-y-2 text-sm text-slate-400 body"></ul>
+      <div class="mt-6 grid gap-2 text-xs text-slate-400 font-medium">
+        <span class="uppercase tracking-[0.32em] text-slate-500">Emotional Payload</span>
+        <div class="flex flex-wrap gap-4 text-sm text-slate-300 payload"></div>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    const TIMELINE = document.getElementById('timeline');
+    const TEMPLATE = document.getElementById('timelineStepTemplate');
+    const REPLAY_BUTTON = document.getElementById('replayButton');
+    const REPLAY_GLYPH = document.getElementById('replayGlyph');
+
+    async function fetchLedger() {
+      const response = await fetch('../../../data/scrollstream_ledger.json');
+      if (!response.ok) {
+        throw new Error('Failed to load scrollstream ledger');
+      }
+      return response.json();
+    }
+
+    function renderTimeline(entries) {
+      TIMELINE.innerHTML = '';
+      entries.forEach((entry, index) => {
+        const clone = TEMPLATE.content.firstElementChild.cloneNode(true);
+        const marker = clone.querySelector(':scope > div');
+        marker.textContent = index + 1;
+
+        clone.querySelector('.stage-label').textContent = entry.stage.replace('.', ' · ');
+        clone.querySelector('.agent-label').textContent = `${entry.agent.name} / ${entry.agent.callSign}`;
+        clone.querySelector('.timestamp').textContent = new Date(entry.timestamp).toLocaleString();
+        clone.querySelector('.headline').textContent = entry.output.headline;
+
+        const bodyList = clone.querySelector('.body');
+        entry.output.body.forEach((line) => {
+          const item = document.createElement('li');
+          item.textContent = line;
+          bodyList.appendChild(item);
+        });
+
+        const payload = clone.querySelector('.payload');
+        const payloadBits = entry.output.emotionalPayload;
+        Object.keys(payloadBits).forEach((key) => {
+          const pill = document.createElement('span');
+          pill.className = 'px-3 py-1 rounded-full border border-slate-600/60 bg-slate-900/60';
+          pill.textContent = `${key}: ${payloadBits[key]}`;
+          payload.appendChild(pill);
+        });
+
+        if (entry.visual.replayGlyphPulse) {
+          clone.dataset.replay = 'true';
+        }
+
+        TIMELINE.appendChild(clone);
+      });
+    }
+
+    function replayCycle() {
+      const steps = Array.from(TIMELINE.children);
+      steps.forEach((step) => step.classList.remove('active'));
+      REPLAY_GLYPH.classList.remove('pulse');
+
+      steps.reduce((delay, step, index) => {
+        const totalDelay = delay + (index === 0 ? 0 : 600);
+        setTimeout(() => {
+          steps.forEach((s) => s.classList.remove('active'));
+          step.classList.add('active');
+          if (step.dataset.replay === 'true') {
+            REPLAY_GLYPH.classList.add('pulse');
+          } else {
+            REPLAY_GLYPH.classList.remove('pulse');
+          }
+        }, totalDelay);
+        return totalDelay;
+      }, 0);
+    }
+
+    async function bootstrap() {
+      try {
+        const entries = await fetchLedger();
+        renderTimeline(entries);
+        replayCycle();
+      } catch (error) {
+        TIMELINE.innerHTML = `<p class="text-sm text-rose-300">${error.message}</p>`;
+      }
+    }
+
+    REPLAY_BUTTON.addEventListener('click', () => {
+      replayCycle();
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>
