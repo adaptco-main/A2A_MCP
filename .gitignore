@@ -84,3 +84,4 @@ openapi-diff.cache/
 ##################################
 scripts/local-*.*
 fixtures/*.json
+!fixtures/snapshot.json
