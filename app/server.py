@@ -4,9 +4,30 @@ import json
 import logging
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 logger = logging.getLogger("core_orchestrator.server")
 logging.basicConfig(level=logging.INFO)
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+SCROLLSTREAM_LEDGER = BASE_DIR / "data" / "scrollstream" / "scrollstream_ledger.ndjson"
+
+
+def _load_scrollstream_events() -> list[dict]:
+    if not SCROLLSTREAM_LEDGER.exists():
+        return []
+
+    events: list[dict] = []
+    with SCROLLSTREAM_LEDGER.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                logger.warning("Skipping malformed scrollstream line", extra={"line": line})
+    return events
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -17,11 +38,22 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802 (BaseHTTPRequestHandler API)
         """Respond to GET requests with a JSON health payload."""
 
-        if self.path.rstrip("/") == "/health":
+        path = self.path.rstrip("/")
+
+        if path == "/health":
             payload = {"status": "ok"}
             body = json.dumps(payload).encode("utf-8")
             self._send_response(200, body)
             logger.info("Responded to /health request")
+        elif path == "/scrollstream/rehearsal":
+            payload = {
+                "capsule": "capsule.rehearsal.scrollstream.v1",
+                "ledger": "scrollstream_ledger",
+                "events": _load_scrollstream_events(),
+            }
+            body = json.dumps(payload).encode("utf-8")
+            self._send_response(200, body)
+            logger.info("Served rehearsal scrollstream payload with %s events", len(payload["events"]))
         else:
             self._send_response(404, b"{}")
             logger.warning("Unhandled path requested: %s", self.path)

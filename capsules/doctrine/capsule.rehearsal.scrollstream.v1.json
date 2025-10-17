@@ -1,0 +1,64 @@
+{
+  "capsule_id": "capsule.rehearsal.scrollstream.v1",
+  "type": "RehearsalCapsule",
+  "version": "1.0.0",
+  "purpose": "Stages the scrollstream rehearsal loop so contributors can trace the audit braid before production sealing.",
+  "cycle": [
+    {
+      "order": 1,
+      "stage": "audit.summary",
+      "agent": "celine",
+      "role": "Architect",
+      "description": "Celine drafts the canonical audit summary and primes the HUD shimmer."
+    },
+    {
+      "order": 2,
+      "stage": "audit.proof",
+      "agent": "luma",
+      "role": "Sentinel",
+      "description": "Luma validates the proof glyph, pulsing the replay rail for verification."
+    },
+    {
+      "order": 3,
+      "stage": "audit.execution",
+      "agent": "dot",
+      "role": "Guardian",
+      "description": "Dot executes the scrollstream playback and seals rehearsal state."
+    }
+  ],
+  "ledger": {
+    "channel": "scrollstream_ledger",
+    "path": "data/scrollstream/scrollstream_ledger.ndjson",
+    "fields": [
+      "timestamp",
+      "capsule_id",
+      "ledger",
+      "stage",
+      "agent",
+      "output",
+      "hud_feedback",
+      "training_mode",
+      "emotional_payload",
+      "sabrina_spark_test"
+    ]
+  },
+  "visual_feedback": {
+    "hud_shimmer": true,
+    "replay_glyph": "pulsed",
+    "training_mode": {
+      "deterministic_outputs": true,
+      "emotional_payloads": true,
+      "sabrina_spark_test": "applied"
+    }
+  },
+  "governance": {
+    "capsule_author": "celine",
+    "delegated_from": "cici",
+    "quorum": "council.quorum.simple",
+    "audit_trace_required": true
+  },
+  "attestation": {
+    "status": "STAGED",
+    "notes": "Rehearsal loop prepared prior to ledger validator capsule."
+  }
+}

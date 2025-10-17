@@ -14,6 +14,8 @@ servers:
 tags:
   - name: health
     description: Liveness and readiness status endpoints.
+  - name: scrollstream
+    description: Deterministic rehearsal ledger for the scrollstream audit braid.
 paths:
   /health:
     get:
@@ -37,3 +39,91 @@ paths:
                     description: Service status indicator.
                     enum:
                       - ok
+  /scrollstream/rehearsal:
+    get:
+      summary: Scrollstream rehearsal ledger
+      operationId: getScrollstreamRehearsal
+      description: >-
+        Retrieve the deterministic rehearsal events for the Celine → Luma → Dot audit braid.
+        Used by HUD clients and CI smoke tests to verify the scrollstream shimmer loop.
+      tags:
+        - scrollstream
+      responses:
+        '200':
+          description: Ledger payload for the rehearsal scrollstream capsule.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - capsule
+                  - ledger
+                  - events
+                properties:
+                  capsule:
+                    type: string
+                    description: Capsule identifier.
+                    example: capsule.rehearsal.scrollstream.v1
+                  ledger:
+                    type: string
+                    description: Ledger channel name receiving the rehearsal events.
+                    example: scrollstream_ledger
+                  events:
+                    type: array
+                    description: Ordered rehearsal events emitted during the braid simulation.
+                    items:
+                      type: object
+                      required:
+                        - timestamp
+                        - stage
+                        - agent
+                        - output
+                        - hud_feedback
+                        - emotional_payload
+                        - sabrina_spark_test
+                      properties:
+                        timestamp:
+                          type: string
+                          format: date-time
+                          description: ISO-8601 timestamp for the rehearsal event.
+                          example: 2025-02-17T17:00:00Z
+                        capsule_id:
+                          type: string
+                          description: Capsule identifier that produced the event.
+                          example: capsule.rehearsal.scrollstream.v1
+                        ledger:
+                          type: string
+                          description: Ledger channel receiving the emission.
+                          example: scrollstream_ledger
+                        stage:
+                          type: string
+                          description: Audit braid stage represented by the event.
+                          enum:
+                            - audit.summary
+                            - audit.proof
+                            - audit.execution
+                        agent:
+                          type: string
+                          description: Agent responsible for the event within the rehearsal cycle.
+                          enum:
+                            - celine
+                            - luma
+                            - dot
+                        output:
+                          type: string
+                          description: Narrative payload captured for the rehearsal ledger.
+                        hud_feedback:
+                          type: string
+                          description: HUD animation feedback triggered by the event.
+                          example: shimmer
+                        training_mode:
+                          type: boolean
+                          description: Indicates that the event was emitted in training mode.
+                        emotional_payload:
+                          type: string
+                          description: Emotional signature associated with the glyph.
+                          example: anticipation
+                        sabrina_spark_test:
+                          type: string
+                          description: Sabrina Spark Test outcome for the glyph.
+                          example: pass
