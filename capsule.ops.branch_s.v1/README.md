@@ -58,3 +58,13 @@ Federated runs emit `capsule.federation.receipt.v1.json`, `dao.federation.relay.
 * `make branch-s clean` – Deletes the `.out/` tree while preserving the governance ledger.
 
 Augment with CI (e.g., `.github/workflows/branch_s.yml`) to automate reissue + federation and assert checksum validation at workflow exit.
+
+## Snapshot Fixtures
+Generate deterministic fixtures for downstream harnesses with the repository root helper:
+
+```bash
+chmod +x ./create_fixtures.sh  # one-time
+./create_fixtures.sh
+```
+
+The script emits `fixtures/snapshot.json` (ignored by Git) plus checksum sidecars (`fixtures/snapshot.json.meta.sha256` and `fixtures/snapshot.json.meta.yaml`). The metadata encodes SHA-256 digests for each Branch-S asset so attestors can verify the runtime toolkit without replaying the capsule builder.
