@@ -139,9 +139,11 @@ PY
         run: |
           set -euo pipefail
           DATE=$(date -u +"%Y/%m/%d")
-          SHA7=${GITHUB_SHA::7}
+          RUN_ID="${GITHUB_RUN_ID}"
+          COMMIT_SHA="${GITHUB_SHA}"
+          SHA7=${COMMIT_SHA::7}
           mkdir -p "data/events/$DATE"
-          DEST="data/events/$DATE/events-${GITHUB_RUN_ID}-${SHA7}.ndjson"
+          DEST="data/events/$DATE/events.${RUN_ID}.${COMMIT_SHA}.ndjson"
           mv events.canonical.ndjson "$DEST"
           HASH=$(sha256sum "$DEST" | awk '{print $1}')
           MANIFEST="data/events/hashes.txt"
@@ -162,10 +164,10 @@ PY
             --certificate-identity "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             "$DEST"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "CI Ledger Bot"
+          git config user.email "ci-ledger@yourdomain.com"
           git add "$DEST" "${DEST}.sig" "${DEST}.pem" "$MANIFEST"
-          git diff --cached --quiet || git commit -m "feat(ledger): add events ${GITHUB_RUN_ID} ${SHA7} [skip ci]"
+          git diff --cached --quiet || git commit -m "ci: ledger commit for run ${RUN_ID} [skip ci]"
           if git rev-parse --verify --quiet origin/main >/dev/null; then
             git push origin HEAD:main
           else
