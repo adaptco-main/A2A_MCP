@@ -7,7 +7,9 @@ FREEZE_MANIFEST := runtime/freeze_manifest.json
 FREEZE_REQUIREMENTS := freeze_capsules.sh scripts/canonicalize_manifest.py
 QUBE_RECEIPT := runtime/capsule.federation.receipt.v1.json
 
-freeze: $(QUBE_DRAFT) $(FREEZE_REQUIREMENTS)
+freeze: $(FROZEN_DRAFT)
+
+$(FROZEN_DRAFT): $(QUBE_DRAFT) $(FREEZE_REQUIREMENTS)
 	@ts="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
 	  echo "🥶 Freezing QUBE draft capsule → $(QUBE_DRAFT)"; \
 	  if [ ! -f "$(QUBE_DRAFT)" ]; then \
@@ -15,6 +17,7 @@ freeze: $(QUBE_DRAFT) $(FREEZE_REQUIREMENTS)
 	  fi; \
 	  tmp=$$(mktemp); \
 	  jq --arg ts "$$ts" '.capsule_id="capsule.patentDraft.qube.v1" | (.meta //= {}) | .meta.issued_at=$$ts | .issued_at=$$ts' "$(QUBE_DRAFT)" > "$$tmp" && mv "$$tmp" "$(QUBE_DRAFT)"; \
+	  mkdir -p "$$(dirname "$(FROZEN_DRAFT)")"; \
 	  ./freeze_capsules.sh "$(QUBE_DRAFT)"
 
 post: freeze
