@@ -1,3 +1,12 @@
+# Repository artifacts
+adaptco-core-orchestrator/*
+!adaptco-core-orchestrator/README.md
+adaptco-previz/*
+!adaptco-previz/README.md
+adaptco-ssot/*
+!adaptco-ssot/README.md
+node_modules/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
