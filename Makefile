@@ -18,7 +18,20 @@ verify:
 	@echo "🛡️ Verifying BLQB9X, SR Gate routing tables, and MoE determinism windows."
 
 seal:
-	@echo "🔏 Submit /runs/{id}/seal to bind finalsealHash to DAO proof binding."
+	@mkdir -p .out
+	@jq -cS 'del(.capsule_id,.attestation,.seal,.signatures)' \
+	capsule.metadata.finalizePublicAttestation.v1.json > .out/capsule.body.json
+	@DIGEST="sha256:$$(sha256sum .out/capsule.body.json | awk '{print $$1}')" ; \
+	TS="$$(date -u +%FT%TZ)" ; \
+	jq -S --arg d "$$DIGEST" --arg ts "$$TS" \
+	'.outputs.ledger_frame.sha256=$$d | .outputs.ledger_frame.emitted_at=$$ts | \
+	 .outputs.ledger_frame.status="SEALED" | .status="SEALED" | \
+	 .attestation={status:"SEALED",sealed_by:"Council",sealed_at:$$ts,content_hash:$$d}' \
+	capsule.metadata.finalizePublicAttestation.v1.json > \
+	.out/capsule.metadata.finalizePublicAttestation.v1.sealed.json ; \
+	echo "{\"t\":\"$$TS\",\"event\":\"capsule.freeze\",\"capsule\":\"capsule.metadata.finalizePublicAttestation.v1\",\"digest\":\"$$DIGEST\"}" >> .out/ledger.jsonl ; \
+	echo "{\"t\":\"$$TS\",\"event\":\"capsule.seal\",\"capsule\":\"capsule.metadata.finalizePublicAttestation.v1\",\"status\":\"SEALED\"}" >> .out/ledger.jsonl ; \
+	echo "✅ capsule.metadata.finalizePublicAttestation.v1 SEALED ($$DIGEST)"
 
 qube-stage: freeze listener post verify
 	@echo "📜 Staging QUBE draft capsule → $(QUBE_DRAFT)"
