@@ -95,6 +95,11 @@
     },
     "tensor.semantic.cici.v1": {
       "state": "FROZEN"
+    },
+    "capsule.selfie.dualroot.q.cici.v1.feedback.v1": {
+      "state": "ACTIVE",
+      "replay": "HUD.loop.selfie.dualroot.q.cici.v1.token.002",
+      "window": "OPEN"
     }
   },
   "health": {
@@ -161,6 +166,21 @@
       "from": "sol.f1.previz.v1",
       "to": "relay.artifacts.v1",
       "type": "checkpoint"
+    },
+    {
+      "from": "capsule.selfie.dualroot.q.cici.v1.feedback.v1",
+      "to": "capsule.selfie.dualroot.q.cici.v1",
+      "type": "feedback"
+    },
+    {
+      "from": "capsule.selfie.dualroot.q.cici.v1.feedback.v1",
+      "to": "capsule.comment.trace.v1",
+      "type": "hook"
+    },
+    {
+      "from": "capsule.selfie.dualroot.q.cici.v1.feedback.v1",
+      "to": "delta.overlay.audit.v1",
+      "type": "hook"
     }
   ],
   "status": "STAGED",

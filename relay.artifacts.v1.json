@@ -35,5 +35,18 @@
   },
   "attestation": {
     "status": "STAGED"
+  },
+  "feedback_loops": {
+    "selfie_dualroot_q_cici": {
+      "capsule": "capsule.selfie.dualroot.q.cici.v1.feedback.v1",
+      "replay_token": "HUD.loop.selfie.dualroot.q.cici.v1.token.002",
+      "hooks": [
+        "capsule.comment.trace.v1",
+        "shimmer.breach.monitor.v1",
+        "refusal.flare.script.v1",
+        "delta.overlay.audit.v1"
+      ],
+      "window_status": "OPEN"
+    }
   }
 }
