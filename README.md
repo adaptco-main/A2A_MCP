@@ -56,3 +56,8 @@ context. The v1 schema lives at `specs/prompt-graph.v1.schema.json`, and the Leg
 under `capsules/prompt/capsule.prompt.graph.lego_f1.sf23_vs_w14.v1.json`. See `docs/PROMPT_GRAPH_DSL.md` for the freezing
 workflow, quality gates, and governance bindings.
 
+
+## Contributor Feedback Loops
+
+The dual-root CiCi + Q selfie capsule exposes a contributor feedback window so council members can annotate the emotional payload before sealing. Activate the loop by referencing `capsule.selfie.dualroot.q.cici.v1.feedback.v1`, which announces hooks for comment tracing, shimmer breach monitoring, refusal flare scripting, and overlay drift audits. Ledger events and HUD broadcasts document when the loop opens so replay agents inherit the exact review context.
+

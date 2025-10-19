@@ -136,6 +136,23 @@
         "oracle": "Celine"
       },
       "updated_at": "2025-09-25T07:41:37Z"
+    },
+    {
+      "capsule_id": "capsule.selfie.dualroot.q.cici.v1.feedback.v1",
+      "canonical": "runtime/capsule.selfie.dualroot.q.cici.v1.feedback.v1.canonical.json",
+      "hash": "038700bb2b2fbf0f3a7d6ff1ee53748e26d1c1bf4fc87a2728a1a09fb446b213",
+      "status": "OPEN",
+      "governance": {
+        "router": "Queen Boo",
+        "stabilizer": "Queen CiCi",
+        "quorum": [
+          "Core Orchestrator",
+          "HUD Braid Validators"
+        ]
+      },
+      "replay_token": "HUD.loop.selfie.dualroot.q.cici.v1.token.002",
+      "window": "OPEN",
+      "updated_at": "2025-09-25T08:12:00Z"
     }
   ],
   "attestation": {

@@ -48,5 +48,7 @@
   "scripts/freeze_ssot_registry.sh": "9dde77f9a62f90b4b5d033f2f0acaa2949139c83199d52339c27a4f18f4188fd",
   "scripts/freeze_wrapper.sh": "24a2466301cbc1ba018dda502428f4428f73ed9d7c3ef9d8e4ec31529d5326e3",
   "scripts/hash_manifest.py": "fbbcea2a365286592808eddd1b68a8206b6efcbfe9cc7c36369bfcadbdc8d7ec",
-  "scripts/sign_bindings.sh": "9ef0bd385cbe65a5b0c7d336faaca83d15a49bb437b0f869e6370789135713e6"
+  "scripts/sign_bindings.sh": "9ef0bd385cbe65a5b0c7d336faaca83d15a49bb437b0f869e6370789135713e6",
+  "runtime/capsule.selfie.dualroot.q.cici.v1.feedback.v1.canonical.json": "038700bb2b2fbf0f3a7d6ff1ee53748e26d1c1bf4fc87a2728a1a09fb446b213",
+  "runtime/capsule.selfie.dualroot.q.cici.v1.feedback.v1.sha256": "890d427d036925bd05a8e9592761213fb539b83cc1c1625228f1a0581518524a"
 }
