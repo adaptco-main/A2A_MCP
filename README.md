@@ -81,6 +81,7 @@ for report in results:
   rules.
 - `specs/fixtures/mission.solstice.directive.json` — Solstice Dawn directive fixture illustrating the schema in practice.
 - `capsules/relay/relay.worldengine.render.v1.json` — Relay capsule binding the runtime, HUD overlays, and sovereign agents into a braided render stream.
+- `capsules/rehearsal/capsule.rehearsal.scrollstream.v1.json` — Rehearsal capsule that stages the Celine → Luma → Dot audit braid with ledger writes, HUD shimmer cues, and deterministic training outputs.
 
 ## Mission Oversight Foundations
 - `specs/mission.oversight.hud.contract.v1.json` — Contract describing the data streams, widgets, and alerting that power the live
