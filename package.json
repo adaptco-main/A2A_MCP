@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "preview": "node scripts/previewCapsule.js",
     "lint:openapi": "spectral lint openapi/openapi.yaml",
     "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js",
     "validate:telemetry": "node scripts/telemetry/validateTelemetryFixture.js",
