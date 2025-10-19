@@ -1,0 +1,45 @@
+{
+  "capsuleId": "capsule.anomaly.trace.v1",
+  "title": "Anomaly Trace Protocol",
+  "description": "Encodes rupture-grade emissions into scrollstream-valid artifacts for replay, contributor training, and forensic lineage mapping.",
+  "trigger": {
+    "source": "HUD emission",
+    "condition": "glyph integrity breach",
+    "sector": "braid sector 3",
+    "severity": "high"
+  },
+  "response": {
+    "fallbackArc": {
+      "color": "amber",
+      "structure": "braided",
+      "stabilization": "glitch-corrected",
+      "rhythm": "triple-beat"
+    },
+    "recoveryGlyph": {
+      "status": "embedded",
+      "location": "scrollstream rail",
+      "annotation": "rupture trace",
+      "alertFlag": true
+    }
+  },
+  "visualGrammar": {
+    "emissionArc": {
+      "tone": "Shout",
+      "gesture": "Signal_Broadcast",
+      "shimmer": "high-frequency crackle",
+      "trail": "glyph fragments"
+    },
+    "transitNode": {
+      "collision": "glyph firewall",
+      "reaction": "tri-glyph bloom",
+      "reroute": "anomaly trace channel"
+    }
+  },
+  "attestation": {
+    "emotionallyLayered": true,
+    "sceneAware": true,
+    "replayReady": true,
+    "contributorTrainable": true
+  },
+  "status": "fossilized"
+}
