@@ -129,6 +129,11 @@ def run_epoch(
     text.train()
     running = 0.0
     for imgs, prompts, metas in tqdm(loader, desc="train", leave=False):
+        if isinstance(metas, dict):
+            keys = list(metas.keys())
+            stacked = zip(*(metas[key] for key in keys))
+            metas = [dict(zip(keys, values)) for values in stacked]
+
         imgs = imgs.to(device)
         toks = tokenize(prompts).to(device)
         z_img = vision(imgs)
