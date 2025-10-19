@@ -1,5 +1,102 @@
 # Core Orchestrator
 
+The Core Orchestrator repo keeps the `selector.preview.bundle.v1` rehearsal space aligned
+across manifests, automation, and operator tooling. It documents how the rehearsal
+prompts, governance workflows, and ledgers interact so pull requests can be merged and
+the preview bundle can be generated on demand.
+
+## Repository layout
+
+```
+.github/workflows/
+  governance_check.yml   # CI validation for manifests and ledgers
+  freeze_artifact.yml    # Manual snapshot of manifests for later playback
+  override_request.yml   # Manual governance override logging
+  ledger_sync.yml        # Hourly digest of ledger events
+scripts/
+  validate_ssot.py       # Strict validation of the SSOT manifest
+  check_drift.py         # Drift detection between SSOT and deployed manifests
+  freeze.py              # Utility for freezing manifest snapshots
+  generate_preview.sh    # Local rehearsal helper for preview prompts
+  log_action.py          # Ledger and audit-trail logger/validator
+manifests/
+  ssot.yaml              # Declared state for selector.preview.bundle.v1
+  deployed.yaml          # Most recent deployed view of the bundle
+  artifacts/
+    abc123.yaml          # Historical manifest snapshot
+    def456.yaml          # Historical manifest snapshot
+ledger/
+  workflow_ledger.json   # JSON append-only log of workflow events
+  audit_trail.csv        # CSV mirror of ledger entries
+cockpit/
+  ui_overlay.json        # HUD overlay definition for preview cockpit
+  quick_actions.json     # Quick action triggers for operators
+```
+
+## Working with manifests
+
+1. Edit `manifests/ssot.yaml` to adjust the rehearsal modules or metadata.
+2. Update `manifests/deployed.yaml` when the live environment catches up.
+3. Run the validation scripts locally before opening a pull request:
+
+   ```bash
+   python -m pip install --upgrade pip pyyaml
+   python scripts/validate_ssot.py
+   python scripts/check_drift.py
+   ```
+
+   The drift check will exit non-zero if a module or version mismatch is detected. Fix
+the manifests until the check passes to keep governance noise low.
+
+## Creating manifest snapshots
+
+Use the freeze utility to capture the current SSOT manifest into the `artifacts/`
+folder. Provide a descriptive tag so it is easy to locate later.
+
+```bash
+python scripts/freeze.py --tag rehearsal-2024-06-01
+```
+
+Each snapshot is a verbatim copy of the SSOT manifest, making it trivial to diff against
+future states.
+
+## Logging governance activity
+
+All automated and manual events should flow into the ledger so the system maintains an
+agentic audit trail. Append new entries with `log_action.py`:
+
+```bash
+python scripts/log_action.py --event override --ticket OVERRIDE-42 \
+  --message "Temporarily disabling compliance overlay"
+```
+
+Use `--check-only` to ensure the ledger and audit trail are formatted correctly during CI
+runs, and `--summarize` to render a quick breakdown of event counts.
+
+## Preview rehearsal loop
+
+The `scripts/generate_preview.sh` helper validates the manifests and echoes the active
+rehearsal prompts so creative teams can spin up the experience locally. The prompts match
+the rehearsal modules:
+
+- `rupture.flare` → irony shimmer + spark trace
+- `restoration.loop` → breath sync + glyph fidelity
+- `mesh.response` → empathy shimmer + echo match
+
+Integrate the output with your renderer of choice to produce the requested video or
+interactive preview.
+
+## Automation overview
+
+- **Governance Check** ensures every pull request keeps manifests and ledgers healthy.
+- **Freeze Artifact** allows maintainers to capture immutable manifest snapshots on
+  demand.
+- **Override Request** records manual interventions directly into the ledger.
+- **Ledger Sync** posts hourly summaries via the GitHub Actions step summary so
+  stakeholders can monitor activity without digging through raw files.
+
+Keep the README updated as workflows evolve so downstream agents and operators can follow
+the same process without guesswork.
 This repository coordinates automation and human operations around artifact management.
 
 ## Control Surfaces (Human-Operated)
@@ -34,26 +131,16 @@ This repository coordinates automation and human operations around artifact mana
 - **Flow**: Routes and governs operations through defined avatars, enforcing policies like `no_drift` and `quorum_check` so actions stay aligned with approved roles.
 - **Execution**: Manifests creative outputs by generating frame-accurate motion ledgers, assembling 5–10 second clips, and returning resulting fossils to the Single Source of Truth (SSOT).
 
-## QUBE Patent Draft Capsule Pipeline
-- Use `make qube-stage`, `make qube-seal`, and `make qube-export` to mirror the council path of stage → seal → export. Each target chains the shared `scripts/capsules/qube_patent_pipeline.py` helper so the staged capsule header, ledger, and export request stay deterministic.
-- Insert `make listener` after `make freeze` to activate the cockpit ingest shim before calling `make post` and `make verify`.
-- The packaging map follows **P3L → qLock/LiD → QBits → SR Gate → MoE → BLQB9X → R0P3** with gates G01–G04 captured in `capsules/doctrine/capsule.patentDraft.qube.v1/ledger.jsonl` alongside the dual-run delta check.
-- The proof binding recorded in the ledger is the SHA-256 digest of the export request stub (which retains the `sha256:REQUEST` placeholder), ensuring the seal and DAO ledger events reference the exact bytes that were staged for council review.
-- The export request produced by `make qube-export` anchors the DAO append target (`ledger/federation.jsonl`) and the council’s 2-of-3 attestation quorum, ready for `POST /runs/{id}/dao-export` once the seal is confirmed.
-- Pass `--force` to any stage, seal, or export command (e.g., `python scripts/capsules/qube_patent_pipeline.py seal --force`) to rebuild a ledger event without manual file edits. Additional flags expose overrides for timestamps, hashes, DAO metadata, and capsule fields so council review scenarios can be replayed precisely.
-
-## Fossil Body Stub (`capsule/body.json`)
-- The repository now ships with `capsule/body.json`, a canonical emission manifest for **Phase 1: Init Planning** that captures the Proof layer artifacts (charter, RACI roles, risk staging, and P3L lock) together with lineage pointers into `raci.plan.v1.1`.
-- Update the `payload.asset_location`, `payload.description`, and `payload.content_type` fields with the real scaffold you are about to publish, then refresh the `payload.content_sha256` and `asset_snapshot.commit_hash` once your artifact is frozen.
-- Run `make seal` after the payload is in place. The target hashes the normalized body, writes the digest back into `attestation.council_attested_fingerprint` and `proof_layer.manifest_sha256`, emits a sealed copy to `.out/capsule.metadata.finalizePublicAttestation.v1.sealed.json`, and appends freeze + seal ledger entries to `.out/ledger.jsonl`.
-- Follow with `make verify-seal` to recompute the body hash and assert that the sealed manifest and ledger freeze record carry the same digest while the ledger seal entry reports `SEALED`.
-- The original stub remains untouched so you can iterate freely; the sealed copy in `.out/` is what you deliver to the council alongside the ledger proofs for federation.
-
 ## Getting Started
 1. Clone repo and configure `.env` with GitHub token for dispatch events.
 2. Deploy cockpit overlay JSON to your Live Ops UI.
 3. Connect GitHub webhooks to cockpit event listener.
 4. Test with a Freeze Artifact quick-action.
+
+## Capsule Preview Utility
+- Run `npm run preview` to list the staged capsules along with their type, version, and attestation status.
+- Pass a capsule id or filename (for example `npm run preview -- capsule.broadcast.worldengine.v1`)
+  to inspect the detailed payload, routing, and governance metadata for a specific artifact.
 
 ## Mock Telemetry Server
 - Run `npm install` to ensure dependencies are available.

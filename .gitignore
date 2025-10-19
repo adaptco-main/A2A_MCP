@@ -19,6 +19,7 @@ dist/
 build/
 .out/
 out/
+.out/
 tmp/
 temp/
 
@@ -85,3 +86,4 @@ openapi-diff.cache/
 ##################################
 scripts/local-*.*
 fixtures/*.json
+*.qcap

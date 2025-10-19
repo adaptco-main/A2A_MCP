@@ -7,6 +7,7 @@ const defaultLedger = require('../ledger');
 const logger = require('../log');
 const SentinelAgent = require('../sentinel');
 const defaultHashRunner = require('../hash_scroll');
+const hydrateNonCodexOperations = require('../non_codex_hydrator');
 const capsuleSchema = require('../../schemas/capsule.schema.json');
 
 function createCapsuleRouter(options = {}) {
@@ -20,10 +21,11 @@ function createCapsuleRouter(options = {}) {
       const capsule = validateOrThrow(capsuleSchema, req.body);
       const id = `capsule-${capsule.capsule_id}-${capsule.version}`;
       const { operations = {}, ...capsuleRecord } = capsule;
+      const hydratedOperations = hydrateNonCodexOperations(operations);
 
-      const previewConfig = operations.preview;
-      const assetConfig = operations.asset;
-      const hashConfig = operations.hash;
+      const previewConfig = hydratedOperations.preview || operations.preview;
+      const assetConfig = hydratedOperations.asset || operations.asset;
+      const hashConfig = hydratedOperations.hash || operations.hash;
 
       let previewResult = null;
       if (previewConfig) {
