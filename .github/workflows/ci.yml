@@ -1,0 +1,238 @@
+name: Core Orchestrator Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_TAG: ${{ github.sha }}
+  IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+  OPENAPI_SPEC: openapi/openapi.yaml
+  ARTIFACTS_DIR: artifacts
+  DIFF_REPORT: artifacts/openapi-diff.json
+  SBOM_FILE: artifacts/sbom.spdx.json
+
+jobs:
+  govern-build-release:
+    name: Govern, build, and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js with dependency cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install workflow toolchain
+        run: npm ci
+
+      - name: Install API-diff and Spectral
+        run: npm install -g @stoplight/spectral-cli openapi-diff
+
+      - name: Prepare artifact workspace
+        run: mkdir -p "${{ env.ARTIFACTS_DIR }}"
+
+      - name: Lint OpenAPI specification
+        run: spectral lint "${{ env.OPENAPI_SPEC }}"
+
+      - name: Determine OpenAPI baseline
+        id: openapi_base
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          BASE_SPEC="${{ env.ARTIFACTS_DIR }}/openapi-base.yaml"
+
+          write_output() {
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+              printf 'path=%s\n' "$1" >> "$GITHUB_OUTPUT"
+            else
+              echo "GITHUB_OUTPUT is not set; skipping export of '$1'" >&2
+            fi
+          }
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch origin main --depth=1
+            if git show origin/main:${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
+              write_output "$BASE_SPEC"
+            fi
+          else
+            if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+              if git show "$BEFORE_SHA":${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
+                write_output "$BASE_SPEC"
+              fi
+            fi
+          fi
+
+      - name: Compare OpenAPI against baseline
+        if: steps.openapi_base.outputs.path != ''
+        run: |
+          set -o pipefail
+          openapi-diff "${{ steps.openapi_base.outputs.path }}" "${{ env.OPENAPI_SPEC }}" | tee "${{ env.DIFF_REPORT }}"
+
+      - name: Document absent OpenAPI baseline
+        if: steps.openapi_base.outputs.path == ''
+        run: |
+          echo "No baseline OpenAPI specification available for comparison." | tee "${{ env.DIFF_REPORT }}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to container registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and (optionally) push container image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          tags: ${{ env.IMAGE_REF }}
+          push: ${{ github.event_name == 'push' }}
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan container image with Trivy
+        uses: aquasecurity/trivy-action@v0.33.1
+        with:
+          image-ref: ${{ env.IMAGE_REF }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+          cache-dir: ~/.cache/trivy
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.IMAGE_REF }}
+          format: spdx-json
+          output-file: ${{ env.SBOM_FILE }}
+          upload-artifact: false
+          upload-release-assets: false
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign container image
+        if: github.event_name == 'push'
+        env:
+          COSIGN_EXPERIMENTAL: '1'
+        run: cosign sign --yes --keyless "${{ env.IMAGE_REF }}"
+
+      - name: Launch container for smoke tests
+        run: |
+          docker run -d --name core-orchestrator-smoke --rm -p 8080:8080 "${{ env.IMAGE_REF }}"
+          sleep 5
+
+      - name: Execute smoke tests
+        run: |
+          curl --fail --retry 5 --retry-delay 2 http://localhost:8080/health
+
+      - name: Tear down smoke test container
+        if: always()
+        run: |
+          docker ps -q --filter "name=core-orchestrator-smoke" | xargs -r docker stop
+
+      - name: Upload governance artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-artifacts
+          path: |
+            ${{ env.OPENAPI_SPEC }}
+            ${{ env.DIFF_REPORT }}
+            ${{ env.SBOM_FILE }}
+          if-no-files-found: warn
+
+      - name: Stage release assets
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p release
+          cp "${{ env.OPENAPI_SPEC }}" release/openapi.yaml
+          cp "${{ env.DIFF_REPORT }}" release/openapi-diff.json
+          cp "${{ env.SBOM_FILE }}" release/sbom.spdx.json
+
+      - name: Publish GitHub release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release-${{ github.sha }}
+          name: Release ${{ github.sha }}
+          body: |
+            Automated release for commit ${{ github.sha }}.
+
+            * Container image: `${{ env.IMAGE_REF }}`
+            * SBOM: `sbom.spdx.json`
+            * OpenAPI diff: `openapi-diff.json`
+          files: |
+            release/openapi.yaml
+            release/openapi-diff.json
+            release/sbom.spdx.json
+
+      - name: Checkout main for audit log commit
+        if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: audit-log
+
+      - name: Commit event log to ledger
+        if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        env:
+          RUN_ID: ${{ github.run_id }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          SOURCE_FILE="events.ndjson"
+          if [ ! -f "$SOURCE_FILE" ]; then
+            echo "No events.ndjson file generated; skipping audit log commit."
+            exit 0
+          fi
+
+          AUDIT_REPO="audit-log"
+          DATE="$(date -u +%Y/%m/%d)"
+          TARGET_DIR="$AUDIT_REPO/data/events/$DATE"
+          TARGET_FILE="events.${RUN_ID}.${COMMIT_SHA}.ndjson"
+
+          mkdir -p "$TARGET_DIR"
+          mv "$SOURCE_FILE" "$TARGET_DIR/$TARGET_FILE"
+
+          cd "$AUDIT_REPO"
+          git config user.name "CI Ledger Bot"
+          git config user.email "ci-ledger@yourdomain.com"
+          git add "data/events/$DATE/$TARGET_FILE"
+
+          if git diff --cached --quiet; then
+            echo "No ledger updates detected; skipping commit."
+            exit 0
+          fi
+
+          git commit -m "ci: ledger commit for run $RUN_ID [skip ci]"
+          git push origin main
