@@ -1,70 +1,50 @@
 # Capsule Ops Toolkit — Branch-S (Sentinel Epoch)
 
 ## Overview
-The Branch-S toolkit promotes the Sol.F1 dual prompt bundle into a sovereign, auditable capsule lifecycle. Each invocation emits canonical manifests, receipts, and hashes that can be sealed, revoked, reissued, and federated under council discipline.
+This toolkit orchestrates the full lifecycle of the Sentinel branch operations
+within the QLOCK Sovereign System:
 
-Core phases:
-
-1. **Apply & Seal** – Build a fresh Scrollstream Capsule B artifact and register the Sentinel-100 epoch seal.
-2. **Revoke** – Publish a lineage-preserving rollback notice with hashes of the most recent capsule digest.
-3. **Reissue** – Regenerate the Scrollstream capsule and update receipts; optionally federate to external ledgers.
-4. **Federate** – Invoke `reissue` with federation payload emission and bearer token hashing.
-
-All scripts share `lib/branch_s_common.sh`, which centralizes attachment bindings, hashing utilities, and ledger emission so every phase writes to the same schema.
+1. **Apply & Seal** — Creates and seals a new Sentinel-anchored trust path.
+2. **Revoke** — Issues a controlled rollback and lineage-preserving revocation.
+3. **Reissue** — Initiates a new trust epoch under Sentinel authority.
+4. **Federate** — Propagates the new epoch across DAO federation endpoints.
 
 ## Commands
 ```bash
 make branch-s apply
 make branch-s revoke
 make branch-s reissue
-make branch-s federate   # requires BEARER_TOKEN
-make branch-s verify     # validate most recent run
-make branch-s clean      # remove generated artifacts
+make branch-s federate
 ```
 
-## Runtime Layout
-Each action produces a time-stamped run directory inside `.out/`:
+## Ledger Outputs
 
-```
-.out/
-  └── 20241007T024446Z_apply/
-        manifest.json
-        gate_report.json
-        capsule.seal.receipt.v1.json
-        capsule.prompt.designStudio.dual.v1.qcap
-        checksums.sha256
-        apply.sha256
-```
+All ledger entries are appended to `ledger.branch_s.jsonl`.
 
-Reissue and federation runs include additional receipts, relay payloads, and checksum mirrors. The ledger `ledger.branch_s.jsonl` records a JSON object per run with references to the run directory, artifact hashes, and federation metadata when present.
+Each run emits:
 
-## Ledger & Receipts
-* `ledger.branch_s.jsonl` – append-only JSON lines describing each action, including capsule digest and checksum hashes.
-* `checksums.sha256` – generated inside each run directory and used by `make branch-s verify`.
-* `*.sha256` – single-artifact digests for rapid attestations.
+* `manifest.json`
+* `gate_report.json`
+* `capsule.federation.receipt.v1.json` or `capsule.reissue.receipt.v1.json`
+* Hash archive (`checksums.sha256`, `revoke.sha256`, `reissue.sha256`)
 
 ## Federation Integration
-Federation relay uses the environment variable `BEARER_TOKEN`, hashed before it is recorded:
+
+Federation relay uses `BEARER_TOKEN` from the environment:
 
 ```bash
 export BEARER_TOKEN=<token>
 make branch-s federate
 ```
 
-Federated runs emit `capsule.federation.receipt.v1.json`, `dao.federation.relay.json`, and `federation.response.json` alongside the capsule artifact.
+---
 
-## Verification & Cleanup
-* `make branch-s verify` – Locates the newest run directory and replays its `checksums.sha256` file.
-* `make branch-s clean` – Deletes the `.out/` tree while preserving the governance ledger.
+### 🪶 Optional Hardening (if you want full CI/CD integration)
 
-Augment with CI (e.g., `.github/workflows/branch_s.yml`) to automate reissue + federation and assert checksum validation at workflow exit.
+- Add a `.github/workflows/branch_s.yml` for automated Sentinel trust reissue.  
+- Wire the `make branch-s federate` target to your orchestrator’s CI secret token.  
+- Add checksum verification (`sha256sum -c`) at workflow exit to guarantee immutability.
 
-## Snapshot Fixtures
-Generate deterministic fixtures for downstream harnesses with the repository root helper:
+---
 
-```bash
-chmod +x ./create_fixtures.sh  # one-time
-./create_fixtures.sh
-```
-
-The script emits `fixtures/snapshot.json` (ignored by Git) plus checksum sidecars (`fixtures/snapshot.json.meta.sha256` and `fixtures/snapshot.json.meta.yaml`). The metadata encodes SHA-256 digests for each Branch-S asset so attestors can verify the runtime toolkit without replaying the capsule builder.
+Would you like me to generate the **GitHub Actions workflow YAML** next — so that the Sentinel apply/revoke/reissue cycle runs automatically on merge to `main` or manual trigger via `workflow_dispatch`?

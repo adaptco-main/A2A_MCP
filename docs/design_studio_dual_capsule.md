@@ -43,17 +43,6 @@ This bundle pairs the scrollstream-sealed Sol.F1 CAD ignition prompt with the ne
 
 5. Distribute the frozen artifacts to operators and update the ledger reference inside any orchestration manifests.
 
-## Scrollstream Capsule (Format B)
-
-To distribute the dual prompt bundle as a single sovereign artifact, invoke the Branch-S Apply & Seal tooling:
-
-```bash
-make -C capsule.ops.branch_s.v1 branch-s apply
-# or execute capsule.ops.branch_s.v1/apply_and_seal.sh directly
-```
-
-The Apply phase builds the Scrollstream capsule inside `.out/<timestamp>_apply/`, alongside canonical manifests, receipts, and checksum archives. Use the recorded digest from `capsule.seal.receipt.v1.json` (or the `checksums.sha256` file) to populate the `scrollstream_capsule_b` artifact entry before freezing the bundle.
-
 ## Operational Notes
 
 - The cinematic template outputs prose under a `cinematic_scene` key, making it safe to stream through existing JSON pipelines.

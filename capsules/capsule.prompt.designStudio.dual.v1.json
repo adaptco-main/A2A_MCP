@@ -24,21 +24,11 @@
       "intent": "Narrative-rich atmospheric rendering of the Sol.F1 design studio"
     }
   },
-  "packaging": {
-    "format": "ScrollstreamCapsuleB",
-    "artifact": "GENERATED_BY_branch_s_toolkit"
-  },
   "artifacts": [
     {
       "role": "bundle_manifest",
       "uri": "s3://REPLACE_WITH_BUNDLE_URI/design_studio_dual.manifest.json",
       "sha256": "sha256:REPLACE_WITH_BUNDLE_HASH",
-      "bytes": 0
-    },
-    {
-      "role": "scrollstream_capsule_b",
-      "uri": "s3://REPLACE_WITH_BUNDLE_URI/capsule.prompt.designStudio.dual.v1.qcap",
-      "sha256": "sha256:REPLACE_WITH_QCAP_HASH",
       "bytes": 0
     }
   ],

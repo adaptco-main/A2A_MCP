@@ -1,74 +1,52 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$DIR/lib/branch_s_common.sh"
+LEDGER="ledger.branch_s.jsonl"
+OUT_DIR=".out"
+MANIFEST_TEMPLATE="manifest.json"
 
-start_run "apply"
+mkdir -p "$OUT_DIR"
 
-qcap_filename="${CAPSULE_ID}.qcap"
-qcap_path="$RUN_DIR/$qcap_filename"
-build_dual_capsule "$qcap_path"
+if [[ ! -f "$MANIFEST_TEMPLATE" ]]; then
+  echo "Manifest template $MANIFEST_TEMPLATE not found" >&2
+  exit 1
+fi
 
-qcap_sha="$(file_sha "$qcap_path")"
-manifest_path="$RUN_DIR/manifest.json"
-cat >"$manifest_path" <<EOF_MAN
+timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+manifest_out="$OUT_DIR/manifest.apply.$timestamp.json"
+gate_report="$OUT_DIR/gate_report.$timestamp.json"
+receipt="$OUT_DIR/capsule.apply.receipt.v1.$timestamp.json"
+
+cp "$MANIFEST_TEMPLATE" "$manifest_out"
+
+cat > "$gate_report" <<JSON
 {
+  "capsule": "capsule.ops.branch_s.v1",
   "action": "apply",
-  "epoch": "$CAPSULE_EPOCH",
-  "timestamp": "$TIMESTAMP",
-  "capsule_id": "$CAPSULE_ID",
-  "qcap": {
-    "path": "$qcap_filename",
-    "sha256": "$qcap_sha"
-  }
-}
-EOF_MAN
-
-manifest_sha="$(file_sha "$manifest_path")"
-
-gate_report="$RUN_DIR/gate_report.json"
-cat >"$gate_report" <<EOF_GATE
-{
-  "stage": "apply",
-  "status": "sealed",
-  "timestamp": "$TIMESTAMP",
-  "artifacts": [
-    {
-      "name": "$qcap_filename",
-      "sha256": "$qcap_sha"
-    },
-    {
-      "name": "manifest.json",
-      "sha256": "$manifest_sha"
-    }
+  "timestamp": "$timestamp",
+  "status": "sentinel-seal-applied",
+  "notes": [
+    "Sentinel braid anchored",
+    "Shimmer lattice verified"
   ]
 }
-EOF_GATE
+JSON
 
-gate_sha="$(file_sha "$gate_report")"
-
-receipt_path="$RUN_DIR/capsule.seal.receipt.v1.json"
-cat >"$receipt_path" <<EOF_RECEIPT
+cat > "$receipt" <<JSON
 {
-  "capsule_id": "$CAPSULE_ID",
-  "epoch": "$CAPSULE_EPOCH",
-  "event": "apply",
-  "sealed_at": "$TIMESTAMP",
-  "digest": "$qcap_sha"
+  "capsule": "capsule.ops.branch_s.v1",
+  "action": "apply",
+  "timestamp": "$timestamp",
+  "artifact_manifest": "${manifest_out}",
+  "gate_report": "${gate_report}"
 }
-EOF_RECEIPT
+JSON
 
-receipt_sha="$(file_sha "$receipt_path")"
+sha256sum "$manifest_out" "$gate_report" "$receipt" > checksums.sha256
 
-write_checksums "manifest.json" "gate_report.json" "capsule.seal.receipt.v1.json" "$qcap_filename"
-write_single_checksum "$receipt_path" "$RUN_DIR/apply.sha256"
+cat >> "$LEDGER" <<JSON
+{"timestamp":"$timestamp","action":"apply","manifest":"$manifest_out","gate_report":"$gate_report","receipt":"$receipt"}
+JSON
 
-append_ledger "apply" \
-  epoch="$CAPSULE_EPOCH" \
-  manifest_sha="$manifest_sha" \
-  gate_report_sha="$gate_sha" \
-  receipt_sha="$receipt_sha" \
-  qcap_sha="$qcap_sha"
-
-echo "Apply & seal artifacts stored in $RUN_DIR"
+echo "Apply receipt generated at $receipt"
+echo "Ledger updated: $LEDGER"

@@ -1,80 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$DIR/lib/branch_s_common.sh"
+LEDGER="ledger.branch_s.jsonl"
+OUT_DIR=".out"
+MANIFEST_TEMPLATE="manifest.json"
 
-start_run "revoke"
+mkdir -p "$OUT_DIR"
 
-last_qcap="$(python - "$LEDGER_PATH" <<'PY'
-import json
-import os
-import sys
-path = sys.argv[1]
-digest = ""
-if os.path.exists(path):
-    with open(path, "r", encoding="utf-8") as handle:
-        for line in handle:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                payload = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            digest = payload.get("qcap_sha", digest)
-print(digest)
-PY
-)"
+if [[ ! -f "$MANIFEST_TEMPLATE" ]]; then
+  echo "Manifest template $MANIFEST_TEMPLATE not found" >&2
+  exit 1
+fi
 
-manifest_path="$RUN_DIR/manifest.json"
-cat >"$manifest_path" <<EOF_MAN
+timestamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+manifest_out="$OUT_DIR/manifest.revoke.$timestamp.json"
+cp "$MANIFEST_TEMPLATE" "$manifest_out"
+
+gate_report="$OUT_DIR/gate_report.revoke.$timestamp.json"
+cat > "$gate_report" <<JSON
 {
+  "capsule": "capsule.ops.branch_s.v1",
   "action": "revoke",
-  "epoch": "$CAPSULE_EPOCH",
-  "timestamp": "$TIMESTAMP",
-  "capsule_id": "$CAPSULE_ID",
-  "revoked_digest": "$last_qcap"
+  "timestamp": "$timestamp",
+  "status": "sentinel-seal-revoked",
+  "notes": [
+    "Lineage snapshot preserved"
+  ]
 }
-EOF_MAN
+JSON
 
-manifest_sha="$(file_sha "$manifest_path")"
-
-gate_report="$RUN_DIR/gate_report.json"
-cat >"$gate_report" <<EOF_GATE
+receipt="$OUT_DIR/capsule.revoke.receipt.v1.$timestamp.json"
+cat > "$receipt" <<JSON
 {
-  "stage": "revoke",
-  "status": "completed",
-  "timestamp": "$TIMESTAMP",
-  "context": {
-    "previous_qcap_sha": "$last_qcap"
-  }
+  "capsule": "capsule.ops.branch_s.v1",
+  "action": "revoke",
+  "timestamp": "$timestamp",
+  "artifact_manifest": "${manifest_out}",
+  "gate_report": "${gate_report}"
 }
-EOF_GATE
+JSON
 
-gate_sha="$(file_sha "$gate_report")"
+sha256sum "$manifest_out" "$gate_report" "$receipt" > revoke.sha256
 
-receipt_path="$RUN_DIR/capsule.revoke.receipt.v1.json"
-cat >"$receipt_path" <<EOF_RECEIPT
-{
-  "capsule_id": "$CAPSULE_ID",
-  "epoch": "$CAPSULE_EPOCH",
-  "event": "revoke",
-  "revoked_at": "$TIMESTAMP",
-  "previous_digest": "$last_qcap"
-}
-EOF_RECEIPT
+cat >> "$LEDGER" <<JSON
+{"timestamp":"$timestamp","action":"revoke","manifest":"$manifest_out","gate_report":"$gate_report","receipt":"$receipt"}
+JSON
 
-receipt_sha="$(file_sha "$receipt_path")"
-
-write_checksums "manifest.json" "gate_report.json" "capsule.revoke.receipt.v1.json"
-write_single_checksum "$receipt_path" "$RUN_DIR/revoke.sha256"
-
-append_ledger "revoke" \
-  epoch="$CAPSULE_EPOCH" \
-  manifest_sha="$manifest_sha" \
-  gate_report_sha="$gate_sha" \
-  receipt_sha="$receipt_sha" \
-  previous_qcap_sha="$last_qcap"
-
-echo "Revocation artifacts stored in $RUN_DIR"
+echo "Revocation receipt generated at $receipt"
+echo "Ledger updated: $LEDGER"

@@ -46,22 +46,37 @@
         {
           "id": "nova-trace.hub",
           "role": "origin",
-          "requires": ["sig:queen_boo_router"],
-          "actions": ["seed-remix", "emit-glyph-lock"],
+          "requires": [
+            "sig:queen_boo_router"
+          ],
+          "actions": [
+            "seed-remix",
+            "emit-glyph-lock"
+          ],
           "ledger_entry": "remix-seed"
         },
         {
           "id": "nova-trace.contrib",
           "role": "braid",
-          "requires": ["sig:cici_stabilizer"],
-          "actions": ["capture-feedback", "stream-ledger"],
+          "requires": [
+            "sig:cici_stabilizer"
+          ],
+          "actions": [
+            "capture-feedback",
+            "stream-ledger"
+          ],
           "ledger_entry": "braid-feedback"
         },
         {
           "id": "nova-trace.orbit",
           "role": "broadcast",
-          "requires": ["sig:axos_nav"],
-          "actions": ["fanout-telemetry", "record-replay"],
+          "requires": [
+            "sig:axos_nav"
+          ],
+          "actions": [
+            "fanout-telemetry",
+            "record-replay"
+          ],
           "ledger_entry": "orbit-fanout"
         }
       ]
@@ -88,11 +103,19 @@
     },
     "lineage_integrity": {
       "ledger_policy": "append_only",
-      "expected_entries": ["remix-seed", "braid-feedback", "orbit-fanout"],
+      "expected_entries": [
+        "remix-seed",
+        "braid-feedback",
+        "orbit-fanout"
+      ],
       "verification": {
         "hash_algorithm": "sha256",
         "on_mismatch": "halt_and_flag"
       }
+    },
+    "kinematics": {
+      "motion_ledger_ref": "clip.motion.ethereal_wrap.v1",
+      "lock": "ZERO_DRIFT"
     }
   },
   "controls": {

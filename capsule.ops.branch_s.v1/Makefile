@@ -8,20 +8,18 @@
 SHELL := /usr/bin/env bash
 LEDGER := ledger.branch_s.jsonl
 OUT := .out
+BIN := $(OUT)/capsule.ops.branch_s.v1
 LOG := $(OUT)/ops.log
 BEARER_TOKEN ?= unset
 
-.PHONY: branch-s branch-s-apply branch-s-revoke branch-s-reissue branch-s-federate apply revoke reissue federate verify clean
+.PHONY: branch-s apply revoke reissue federate branch-s-apply branch-s-revoke branch-s-reissue branch-s-federate verify clean
 
 branch-s: ## Print usage
 	@echo "Usage: make branch-s [apply|revoke|reissue|federate]"
 
 apply: branch-s-apply
-
 revoke: branch-s-revoke
-
 reissue: branch-s-reissue
-
 federate: branch-s-federate
 
 branch-s-apply:
@@ -50,9 +48,10 @@ branch-s-federate:
 
 # Verify integrity
 verify:
-	@./verify_latest.sh
+	@echo "🔍 Verifying manifests..."
+	sha256sum -c checksums.sha256
 
 # Clean workspace
 clean:
-	rm -rf $(OUT)
+	rm -rf $(OUT) revoke.sha256 reissue.sha256 checksums.sha256 .resp.json dao.federation.relay.*.json
 	@echo "🧹 Workspace cleaned."
