@@ -29,6 +29,25 @@ This repository coordinates automation and human operations around artifact mana
 - **Rollback Ready**: Every deploy has a tested rollback path
 - **Operator in the Loop**: No hidden automation
 
+## P3L Semantics (Proof → Flow → Execution)
+- **Proof**: Seals data to guarantee integrity and immutability using cryptographic hashing, Merkle tree anchoring, and council attestations.
+- **Flow**: Routes and governs operations through defined avatars, enforcing policies like `no_drift` and `quorum_check` so actions stay aligned with approved roles.
+- **Execution**: Manifests creative outputs by generating frame-accurate motion ledgers, assembling 5–10 second clips, and returning resulting fossils to the Single Source of Truth (SSOT).
+
+## QUBE Patent Draft Capsule Pipeline
+- Use `make qube-stage`, `make qube-seal`, and `make qube-export` to mirror the council path of stage → seal → export. Each target chains the shared `scripts/capsules/qube_patent_pipeline.py` helper so the staged capsule header, ledger, and export request stay deterministic.
+- Insert `make listener` after `make freeze` to activate the cockpit ingest shim before calling `make post` and `make verify`.
+- The packaging map follows **P3L → qLock/LiD → QBits → SR Gate → MoE → BLQB9X → R0P3** with gates G01–G04 captured in `capsules/doctrine/capsule.patentDraft.qube.v1/ledger.jsonl` alongside the dual-run delta check.
+- The proof binding recorded in the ledger is the SHA-256 digest of the export request stub (which retains the `sha256:REQUEST` placeholder), ensuring the seal and DAO ledger events reference the exact bytes that were staged for council review.
+- The export request produced by `make qube-export` anchors the DAO append target (`ledger/federation.jsonl`) and the council’s 2-of-3 attestation quorum, ready for `POST /runs/{id}/dao-export` once the seal is confirmed.
+- Pass `--force` to any stage, seal, or export command (e.g., `python scripts/capsules/qube_patent_pipeline.py seal --force`) to rebuild a ledger event without manual file edits. Additional flags expose overrides for timestamps, hashes, DAO metadata, and capsule fields so council review scenarios can be replayed precisely.
+
+## Fossil Body Stub (`capsule/body.json`)
+- The repository now ships with `capsule/body.json`, a canonical emission manifest for **Phase 1: Init Planning** that captures the Proof layer artifacts (charter, RACI roles, risk staging, and P3L lock) together with lineage pointers into `raci.plan.v1.1`.
+- Update the `payload.asset_location`, `payload.description`, and `payload.content_type` fields with the real scaffold you are about to publish, then refresh the `payload.content_sha256` and `asset_snapshot.commit_hash` once your artifact is frozen.
+- Run `make seal` after the payload is in place. The target hashes the normalized body, writes the digest back into `attestation.council_attested_fingerprint` and `proof_layer.manifest_sha256`, emits a sealed copy to `.out/capsule.metadata.finalizePublicAttestation.v1.sealed.json`, and appends freeze + seal ledger entries to `.out/ledger.jsonl`.
+- The original stub remains untouched so you can iterate freely; the sealed copy in `.out/` is what you deliver to the council alongside the ledger proofs for federation.
+
 ## Getting Started
 1. Clone repo and configure `.env` with GitHub token for dispatch events.
 2. Deploy cockpit overlay JSON to your Live Ops UI.
@@ -46,4 +65,14 @@ This repository coordinates automation and human operations around artifact mana
 - Stage the rehearsal capsule ledger entries with `npm run stage:rehearsal`.
 - Pass `--training` to emit deterministic timestamps for CI/CD smoke tests (or set `REHEARSAL_TRAINING=1`).
 - Override the ledger destination with `--ledger <path>` if you need to append to a non-default scrollstream ledger.
+
+## Contributor Echo Trace
+- Generate an echo trace ledger that mirrors the active avatar bindings with `npm run inscribe:echo`.
+- Pass `--seed <iso8601>` for deterministic timestamps or `--mode overwrite` to rebuild the ledger from scratch.
+- Use `--dry-run` to preview the contributor table without writing to disk.
+
+## Glyphstream Overlay Preview
+- Produce a glyphstream overlay scaffold for apprentice ignition arcs with `npm run preview:glyphstream`.
+- Combine with `--pretty` for human-readable JSON or `--dry-run` to limit the command to console output.
+- Provide an alternate avatar dataset via `--source` when evaluating experimental bindings.
 
