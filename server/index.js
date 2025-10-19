@@ -185,6 +185,44 @@ app.get('/ledger/snapshot', async (req, res) => {
   }
 });
 
+app.get('/scrollstream/ledger', (req, res) => {
+  try {
+    res.json({
+      ledger: ledgerClient.getScrollstreamLedger()
+    });
+  } catch (err) {
+    res.status(500).json({
+      error_code: 'SCROLLSTREAM_LEDGER_ERROR',
+      message: err.message
+    });
+  }
+});
+
+app.post('/scrollstream/rehearsal', async (req, res) => {
+  try {
+    const options = {};
+    if (req.body && typeof req.body.cycle_id === 'string') {
+      options.cycleId = req.body.cycle_id;
+    }
+    if (req.body && typeof req.body.now === 'string') {
+      options.now = req.body.now;
+    }
+    if (req.body && typeof req.body.cadence_ms !== 'undefined') {
+      options.cadenceMs = req.body.cadence_ms;
+    }
+    const events = await ledgerClient.runRehearsalLoop(options);
+    res.status(201).json({
+      status: 'ok',
+      events
+    });
+  } catch (err) {
+    res.status(500).json({
+      error_code: 'REHEARSAL_LOOP_ERROR',
+      message: err.message
+    });
+  }
+});
+
 app.post('/capsule/execute', gateMiddleware, async (req, res) => {
   const binding = req.qbus && req.qbus.binding ? req.qbus.binding.normalized : null;
   const manifestInfo = req.qbus ? req.qbus.manifest : null;

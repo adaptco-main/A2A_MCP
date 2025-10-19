@@ -9,6 +9,7 @@
 
 | Path | Purpose |
 | --- | --- |
+| `capsules/` | Council and rehearsal capsules that define quorum and scrollstream lifecycles. |
 | `governance/` | Canonical authority map and capsule remap manifests. |
 | `lib/` | Manifest bindings adapter (`bindings.js`) and QBus gate middleware (`qbusGates.js`). |
 | `public/hud/` | Heads-up display assets (`badges.js`) for policy verification badges. |
@@ -79,6 +80,8 @@ Key endpoints:
 * `GET /qbit/proof.latest.v1` &mdash; latest proof and policy tag for the HUD badge client.
 * `POST /ledger/freeze` &mdash; accept freeze artifacts (`name`, `hash`, `signature`, `canonical`).
 * `GET /ledger/snapshot` &mdash; snapshot combining latest proof and stored freeze artifacts.
+* `POST /scrollstream/rehearsal` &mdash; emit the deterministic Celine → Luma → Dot rehearsal loop into the scrollstream ledger.
+* `GET /scrollstream/ledger` &mdash; inspect the replayable scrollstream ledger events captured by rehearsal cycles.
 * `POST /capsule/execute` &mdash; protected endpoint enforced by QBus gates.
 
 Sample health check:
@@ -100,6 +103,35 @@ curl -s http://localhost:3000/health | jq
 ```
 
 Static HUD assets are served from `/public`. Include `public/hud/badges.js` in any page to render live badges sourced from `/qbit/proof.latest.v1`.
+
+### Scrollstream rehearsal loop
+
+Stage the rehearsal loop to populate the `scrollstream_ledger` with the deterministic Celine → Luma → Dot cycle:
+
+```bash
+curl -s -X POST http://localhost:3000/scrollstream/rehearsal | jq '.events[0]' 
+```
+
+Example response excerpt:
+
+```json
+{
+  "capsule_id": "capsule.rehearsal.scrollstream.v1",
+  "cycle_id": "cycle-2024-03-11T12:00:00.000Z",
+  "stage": "audit.summary",
+  "agent": { "name": "Celine", "role": "Architect" },
+  "output": "Celine threads the capsule brief into the braid summary.",
+  "emotive": ["irony shimmer", "spark trace"],
+  "glyph": "hud.shimmer",
+  "timestamp": "2024-03-11T12:00:00.000Z"
+}
+```
+
+Fetch the ledger to confirm the shimmer trail:
+
+```bash
+curl -s http://localhost:3000/scrollstream/ledger | jq '.ledger | length'
+```
 
 ## Pilot workflow runner
 

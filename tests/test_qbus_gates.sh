@@ -18,3 +18,10 @@ else
   echo "FAIL: ledger auto seal tests" >&2
   exit 1
 fi
+
+if node tests/scrollstream_rehearsal.test.js; then
+  echo "PASS: scrollstream rehearsal tests"
+else
+  echo "FAIL: scrollstream rehearsal tests" >&2
+  exit 1
+fi

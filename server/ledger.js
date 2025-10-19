@@ -8,6 +8,39 @@ const { promisify } = require('util');
 
 const execFileAsync = promisify(execFile);
 
+const REHEARSAL_CAPSULE_ID = 'capsule.rehearsal.scrollstream.v1';
+
+const DEFAULT_REHEARSAL_STAGES = [
+  {
+    stage: 'audit.summary',
+    agent: { name: 'Celine', role: 'Architect' },
+    output: 'Celine threads the capsule brief into the braid summary.',
+    emotive: ['irony shimmer', 'spark trace'],
+    glyph: 'hud.shimmer'
+  },
+  {
+    stage: 'audit.proof',
+    agent: { name: 'Luma', role: 'Sentinel' },
+    output: 'Luma validates proof lattice continuity for rehearsal replay.',
+    emotive: ['spark trace', 'glyph fidelity'],
+    glyph: 'sentinel.pulse'
+  },
+  {
+    stage: 'audit.execution',
+    agent: { name: 'Dot', role: 'Guardian' },
+    output: 'Dot confirms execution trace and primes replay glyph.',
+    emotive: ['glyph fidelity', 'empathy shimmer'],
+    glyph: 'guardian.echo'
+  }
+];
+
+function stageCount(stages) {
+  if (!Array.isArray(stages) || !stages.length) {
+    return 0;
+  }
+  return stages.length;
+}
+
 function computeMerkleRootFromArtifacts(artifacts) {
   if (!artifacts || artifacts.length === 0) {
     return null;
@@ -88,9 +121,66 @@ function createLedgerClient(manifestManager, policyTag, options = {}) {
   const sealHistoryLimit = 25;
   const sealCache = { missingWarned: false };
   const gateEvents = [];
+  const scrollstreamLedger = [];
+  const scrollstreamLimit = options.scrollstreamLimit || 90;
   const freezeArtifacts = new Map();
   const maxEvents = 50;
   let lastMerkleRoot = null;
+
+  function appendScrollstreamEvent(event) {
+    const safeAgent = event.agent && typeof event.agent === 'object' ? event.agent : {};
+    const entry = {
+      capsule_id: event.capsule_id || REHEARSAL_CAPSULE_ID,
+      cycle_id: event.cycle_id,
+      stage: event.stage,
+      agent: {
+        name: safeAgent.name || 'Unknown',
+        role: safeAgent.role || 'Unknown'
+      },
+      output: event.output,
+      emotive: Array.isArray(event.emotive) ? event.emotive.slice() : [],
+      glyph: event.glyph || null,
+      timestamp: event.timestamp || new Date().toISOString()
+    };
+
+    scrollstreamLedger.push(entry);
+    if (scrollstreamLedger.length > scrollstreamLimit) {
+      scrollstreamLedger.splice(0, scrollstreamLedger.length - scrollstreamLimit);
+    }
+
+    return entry;
+  }
+
+  async function runRehearsalLoop(options = {}) {
+    const stageDefinitions = Array.isArray(options.stages) && options.stages.length ? options.stages : DEFAULT_REHEARSAL_STAGES;
+
+    const now = options.now ? new Date(options.now) : new Date();
+    if (Number.isNaN(now.getTime())) {
+      throw new Error('Invalid rehearsal loop timestamp');
+    }
+
+    const cadenceMs = Number(options.cadenceMs || 275);
+    const cycleId = options.cycleId || `cycle-${now.toISOString()}`;
+    const events = [];
+
+    for (let index = 0; index < stageDefinitions.length; index += 1) {
+      const definition = stageDefinitions[index];
+      const timestamp = new Date(now.getTime() + cadenceMs * index).toISOString();
+      const event = appendScrollstreamEvent({
+        capsule_id: REHEARSAL_CAPSULE_ID,
+        cycle_id: cycleId,
+        stage: definition.stage,
+        agent: definition.agent,
+        output: definition.output,
+        emotive: definition.emotive,
+        glyph: definition.glyph,
+        timestamp
+      });
+      events.push(event);
+    }
+
+    return events;
+  }
 
   async function maybeSeal() {
     const artifacts = Array.from(freezeArtifacts.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -134,6 +224,7 @@ function createLedgerClient(manifestManager, policyTag, options = {}) {
     },
     async getLatestProof(manifestInfo) {
       const info = manifestInfo || (await manifestManager.getAuthorityMap());
+      const recentScrollstream = scrollstreamLedger.slice(-stageCount(DEFAULT_REHEARSAL_STAGES));
       return {
         manifest_hash: info.hash,
         expected_hash: info.expectedHash || null,
@@ -146,7 +237,12 @@ function createLedgerClient(manifestManager, policyTag, options = {}) {
         signature_artifact_present: Boolean(info.hasSignatureFile),
         policy_tag: policyTag,
         generated_at: new Date().toISOString(),
-        events: gateEvents.slice(-10)
+        events: gateEvents.slice(-10),
+        scrollstream: {
+          events: recentScrollstream,
+          shimmer: recentScrollstream.length ? 'engaged' : 'idle',
+          replay_glyph: recentScrollstream.length ? 'pulse' : 'idle'
+        }
       };
     },
     getEvents() {
@@ -173,7 +269,8 @@ function createLedgerClient(manifestManager, policyTag, options = {}) {
         proof,
         freeze_artifacts: client.getFreezeArtifacts(),
         merkle_root: lastMerkleRoot,
-        seal_history: sealHistory.slice(-5)
+        seal_history: sealHistory.slice(-5),
+        scrollstream_ledger: scrollstreamLedger.slice()
       };
     },
     getMerkleRoot() {
@@ -181,7 +278,11 @@ function createLedgerClient(manifestManager, policyTag, options = {}) {
     },
     getSealHistory() {
       return sealHistory.slice();
-    }
+    },
+    getScrollstreamLedger() {
+      return scrollstreamLedger.slice();
+    },
+    runRehearsalLoop
   };
 
   return client;
@@ -189,5 +290,7 @@ function createLedgerClient(manifestManager, policyTag, options = {}) {
 
 module.exports = {
   computeMerkleRootFromArtifacts,
-  createLedgerClient
+  createLedgerClient,
+  REHEARSAL_CAPSULE_ID,
+  DEFAULT_REHEARSAL_STAGES
 };

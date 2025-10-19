@@ -151,6 +151,34 @@
     };
   }
 
+  function describeShimmer(proof) {
+    if (!proof || !proof.scrollstream) {
+      return { status: 'offline', text: 'Offline' };
+    }
+    const shimmer = proof.scrollstream.shimmer;
+    if (shimmer === 'engaged') {
+      return { status: 'match', text: 'Shimmer ON' };
+    }
+    if (shimmer === 'idle') {
+      return { status: 'info', text: 'Shimmer idle' };
+    }
+    return { status: 'info', text: shimmer || 'Unknown' };
+  }
+
+  function describeReplay(proof) {
+    if (!proof || !proof.scrollstream) {
+      return { status: 'offline', text: 'Offline' };
+    }
+    const replay = proof.scrollstream.replay_glyph;
+    if (replay === 'pulse') {
+      return { status: 'match', text: 'Replay pulse' };
+    }
+    if (replay === 'idle') {
+      return { status: 'info', text: 'Replay idle' };
+    }
+    return { status: 'info', text: replay || 'Unknown' };
+  }
+
   function updateBadges(badges, proof, localInfo) {
     const hashBadgeState = describeHash(proof, localInfo);
     setBadge(badges.hash, hashBadgeState.status, hashBadgeState.text);
@@ -160,6 +188,12 @@
 
     const policyText = proof && proof.policy_tag ? proof.policy_tag : 'n/a';
     setBadge(badges.policy, 'info', policyText);
+
+    const shimmerState = describeShimmer(proof);
+    setBadge(badges.scrollstream, shimmerState.status, shimmerState.text);
+
+    const replayState = describeReplay(proof);
+    setBadge(badges.replay, replayState.status, replayState.text);
 
     if (!proof) {
       setBadge(badges.status, 'offline', 'Offline');
@@ -176,11 +210,15 @@
         hash: createBadge('Hash'),
         duo: createBadge('Duo'),
         policy: createBadge('Policy'),
+        scrollstream: createBadge('Shimmer'),
+        replay: createBadge('Replay'),
         status: createBadge('Status')
       };
       root.appendChild(state.badges.hash);
       root.appendChild(state.badges.duo);
       root.appendChild(state.badges.policy);
+      root.appendChild(state.badges.scrollstream);
+      root.appendChild(state.badges.replay);
       root.appendChild(state.badges.status);
       root.appendChild(createControls(() => refreshBadges({ force: true }), () => refreshBadges({ force: true, rehash: true })));
     }
