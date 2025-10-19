@@ -46,6 +46,7 @@ This repository coordinates automation and human operations around artifact mana
 - The repository now ships with `capsule/body.json`, a canonical emission manifest for **Phase 1: Init Planning** that captures the Proof layer artifacts (charter, RACI roles, risk staging, and P3L lock) together with lineage pointers into `raci.plan.v1.1`.
 - Update the `payload.asset_location`, `payload.description`, and `payload.content_type` fields with the real scaffold you are about to publish, then refresh the `payload.content_sha256` and `asset_snapshot.commit_hash` once your artifact is frozen.
 - Run `make seal` after the payload is in place. The target hashes the normalized body, writes the digest back into `attestation.council_attested_fingerprint` and `proof_layer.manifest_sha256`, emits a sealed copy to `.out/capsule.metadata.finalizePublicAttestation.v1.sealed.json`, and appends freeze + seal ledger entries to `.out/ledger.jsonl`.
+- Follow with `make verify-seal` to recompute the body hash and assert that the sealed manifest and ledger freeze record carry the same digest while the ledger seal entry reports `SEALED`.
 - The original stub remains untouched so you can iterate freely; the sealed copy in `.out/` is what you deliver to the council alongside the ledger proofs for federation.
 
 ## Getting Started
