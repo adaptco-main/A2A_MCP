@@ -1,0 +1,67 @@
+{
+  "capsule_id": "capsule.metadata.finalizePublicAttestation.v1",
+  "capsule_type": "fossil.emission",
+  "status": "DRAFT",
+  "p3l": {
+    "phase": "phase-1",
+    "name": "Init Planning",
+    "layer": "Proof",
+    "objective": "Establish the integrated planning foundation for all downstream execution artifacts."
+  },
+  "lineage": {
+    "capsule_ref": "raci.plan.v1.1",
+    "parent_capsule": "raci.plan.v1",
+    "fossil_ref": "capsules/doctrine/raci.plan.v1.1/fossils/phase-1.init-planning.fossil.json",
+    "scrollstream_ledger": "capsules/doctrine/raci.plan.v1.1/ledger.jsonl"
+  },
+  "payload": {
+    "asset_location": "s3://path/to/phase-1-scaffold.zip",
+    "description": "Init planning fossil payload (replace with project-specific details).",
+    "content_type": "application/zip",
+    "content_length": 0,
+    "content_sha256": "sha256:TO_BE_FILLED"
+  },
+  "attestation": {
+    "attestation_status": "PENDING",
+    "council_attested_fingerprint": "sha256:MANIFEST_HASH",
+    "quorum": "2-of-3",
+    "council": [
+      "CouncilNode_01",
+      "CouncilNode_02",
+      "CouncilNode_03"
+    ]
+  },
+  "asset_snapshot": {
+    "repository": "git@github.com:adaptco/core-orchestrator.git",
+    "commit_hash": "HEAD",
+    "path": "capsule/body.json"
+  },
+  "proof_layer": {
+    "sealed_at": null,
+    "manifest_sha256": "sha256:MANIFEST_HASH",
+    "dual_run_delta": "0",
+    "ab_seed": "SEED:TBD"
+  },
+  "artifacts": [
+    {
+      "name": "project_charter",
+      "status": "COMPLETE",
+      "details": "Project scope, SMART goals, and constraints finalized."
+    },
+    {
+      "name": "governance_roles",
+      "status": "DEFINED",
+      "details": "RACI chart for QBOT agents and council members."
+    },
+    {
+      "name": "risk_assessment",
+      "status": "STAGED",
+      "details": "Preliminary risk assessment documented."
+    },
+    {
+      "name": "process_design",
+      "status": "LOCKED",
+      "details": "P3L lock and WORLD OS timeline confirmed."
+    }
+  ]
+}

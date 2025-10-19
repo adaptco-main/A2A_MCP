@@ -42,6 +42,12 @@ This repository coordinates automation and human operations around artifact mana
 - The export request produced by `make qube-export` anchors the DAO append target (`ledger/federation.jsonl`) and the council’s 2-of-3 attestation quorum, ready for `POST /runs/{id}/dao-export` once the seal is confirmed.
 - Pass `--force` to any stage, seal, or export command (e.g., `python scripts/capsules/qube_patent_pipeline.py seal --force`) to rebuild a ledger event without manual file edits. Additional flags expose overrides for timestamps, hashes, DAO metadata, and capsule fields so council review scenarios can be replayed precisely.
 
+## Fossil Body Stub (`capsule/body.json`)
+- The repository now ships with `capsule/body.json`, a canonical emission manifest for **Phase 1: Init Planning** that captures the Proof layer artifacts (charter, RACI roles, risk staging, and P3L lock) together with lineage pointers into `raci.plan.v1.1`.
+- Update the `payload.asset_location`, `payload.description`, and `payload.content_type` fields with the real scaffold you are about to publish, then refresh the `payload.content_sha256` and `asset_snapshot.commit_hash` once your artifact is frozen.
+- Run `make seal` after the payload is in place. The target hashes the normalized body, writes the digest back into `attestation.council_attested_fingerprint` and `proof_layer.manifest_sha256`, emits a sealed copy to `.out/capsule.metadata.finalizePublicAttestation.v1.sealed.json`, and appends freeze + seal ledger entries to `.out/ledger.jsonl`.
+- The original stub remains untouched so you can iterate freely; the sealed copy in `.out/` is what you deliver to the council alongside the ledger proofs for federation.
+
 ## Getting Started
 1. Clone repo and configure `.env` with GitHub token for dispatch events.
 2. Deploy cockpit overlay JSON to your Live Ops UI.
