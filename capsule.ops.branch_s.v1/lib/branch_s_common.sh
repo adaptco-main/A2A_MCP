@@ -74,7 +74,7 @@ write_single_checksum() {
 append_ledger() {
   local action="$1"
   shift
-  python - "$LEDGER_PATH" "$action" "$TIMESTAMP" "$RUN_DIR" "$CAPSULE_ID" <<'PY'
+  python - "$LEDGER_PATH" "$action" "$TIMESTAMP" "$RUN_DIR" "$CAPSULE_ID" "$@" <<'PY'
 import json
 import os
 import sys
