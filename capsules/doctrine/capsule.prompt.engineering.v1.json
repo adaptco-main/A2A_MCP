@@ -13,6 +13,18 @@
         "format": "string"
       },
       {
+        "name": "Model",
+        "description": "Identifies the target model, version, and capability tier the prompt must address.",
+        "required": true,
+        "format": "object"
+      },
+      {
+        "name": "AutoPatch",
+        "description": "Captures automated patch directives for maintaining prompt compatibility across releases.",
+        "required": false,
+        "format": "object"
+      },
+      {
         "name": "Goal",
         "description": "States the objective of the invocation.",
         "required": true,
@@ -48,6 +60,6 @@
     "sealed_by": "Scrollsmith",
     "status": "STAGED",
     "sealed_at": "2025-09-25T19:59:00Z",
-    "content_hash": "sha256:d01e943a4cd9a528e2d2a786e4db45636fada25c027995f3550586ca8510f918"
+    "content_hash": "sha256:86080ecfed35a1ac334c809920271a4543bb013070539d5e97b75e7c171d5c33"
   }
 }
