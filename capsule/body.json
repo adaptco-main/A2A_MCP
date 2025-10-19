@@ -1,0 +1,54 @@
+{
+  "capsule_id": "capsule.prompt.designStudio.dual.v1",
+  "schema": "p3l://capsule.emission@1",
+  "version": "1.0.0",
+  "status": "DRAFT",
+  "metadata": {
+    "name": "Sol.F1 Design Studio Dual Capsule",
+    "description": "Lineage-valid fossil bundling the Sol.F1 CAD ignition and cinematic scene prompts for Scrollstream deployment.",
+    "environment": "scrollstream",
+    "interfaces": ["cockpit_hud", "storyforge"],
+    "constraints": ["deterministic", "license_gate", "refusal_guard"],
+    "tags": ["branch-s", "sentinel", "qlock"],
+    "issued_at": "REPLACE_WITH_ISSUED_AT_ISO8601"
+  },
+  "payload": {
+    "asset_location": "REPLACE_WITH_ARTIFACT_URI/solf1_design_studio_bundle.zip",
+    "description": "Scrollstream capsule bundle attachment produced by the Branch-S toolkit.",
+    "content_type": "application/zip",
+    "bytes": 0,
+    "sha256": "sha256:REPLACE_WITH_PAYLOAD_HASH"
+  },
+  "asset_snapshot": {
+    "origin": "git",
+    "repository": "REPLACE_WITH_REPOSITORY_URI",
+    "branch": "work",
+    "commit_hash": "REPLACE_WITH_COMMIT_HASH",
+    "tooling": {
+      "builder": "capsule.ops.branch_s.v1",
+      "build_script": "scripts/build_scrollstream_capsule_b.py",
+      "build_arguments": [
+        "--manifest",
+        "capsules/capsule.prompt.designStudio.dual.v1.json",
+        "--output",
+        "capsules/capsule.prompt.designStudio.dual.v1.qcap"
+      ]
+    }
+  },
+  "attestation": {
+    "maker": "Earl Q Han",
+    "checker": "Council",
+    "attestation_status": "UNSEALED",
+    "council_attested_fingerprint": "sha256:REPLACE_WITH_MANIFEST_HASH",
+    "sealed_at": null,
+    "ledger_ref": "REPLACE_WITH_LEDGER_ENTRY_ID"
+  },
+  "lineage": {
+    "parent_capsule": "capsule.prompt.designStudio.dual.v1",
+    "derivation": "Scrollstream Capsule B bundle containing Sol.F1 CAD and cinematic fossils",
+    "dependencies": [
+      "capsule.metaagent.solf1.oneshot.v1",
+      "capsule.scene.designStudio.v1"
+    ]
+  }
+}
