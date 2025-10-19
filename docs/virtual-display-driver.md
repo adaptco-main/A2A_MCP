@@ -23,6 +23,28 @@ Driver downloads supply the operating system with the exact instructions require
 - Runtime settings are stored in `C:\\VirtualDisplayDriver\\vdd_settings.xml`. Modify this file to register or adjust virtual outputs, resolutions, and refresh cadence.
 - Community-supplied PowerShell automations are available in the upstream repository for scripted provisioning.
 
+## Pipeline Alignment: Photo → Prompt → Print → P3L
+
+The sandbox manufacturing pipeline can rely on virtual displays to stage design reviews, capture artifacts, and validate telemetry without requiring physical monitors. The driver slots into each phase as follows:
+
+### 1. Photo → Prompt
+- Host the reference imagery, CAD snapshots, or concept art on a virtual display so remote reviewers can annotate assets without local peripherals.
+- Use capture tooling (OBS, Teams, etc.) pointed at the virtual output to record the object descriptors—e.g.
+  ```json
+  { "subject": "GT3 race car", "scale": "1:7", "materials": ["PLA", "resin"], "style": "studio model" }
+  ```
+- Archive the captured prompt JSON alongside the photo hash to begin the proof chain.
+
+### 2. Prompt → Print
+- Leverage the virtual monitor as a headless workstation for procedural CAD (OpenSCAD, Fusion 360) or slicing UIs when running inside a build pipeline or remote VM.
+- Stream the print preview and watertightness checks over the virtual display so stakeholders can sign off on STL exports prior to slicing (0.15 mm layer height, 0.4 mm nozzle parameters, tolerance test modules, etc.).
+
+### 3. Print → P3L
+- Use the virtual display as the visualization surface for logging dashboards that track the Proof → Flow → Execution records.
+- Surface the JSON ledger output, sensor telemetry, and photographic validation frames on the virtual output for automated capture by orchestration agents before anchoring into the SSOT ledger.
+
+When requesting a starter sandbox template, specify whether the target subject is a car, mecha, or environment so that the prompt scaffolding and CAD presets generated in stage 1 match the intended build.
+
 ## Operational Notes
 - Virtual displays can be leveraged by streaming/recording agents, VR previews, or any workflow requiring deterministic off-screen rendering targets.
 - HDR pipelines should confirm consumer application support for 10/12-bit surfaces when enabling high dynamic range output.
