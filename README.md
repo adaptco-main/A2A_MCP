@@ -40,6 +40,11 @@ This repository coordinates automation and human operations around artifact mana
 3. Connect GitHub webhooks to cockpit event listener.
 4. Test with a Freeze Artifact quick-action.
 
+## Capsule Preview Utility
+- Run `npm run preview` to list the staged capsules along with their type, version, and attestation status.
+- Pass a capsule id or filename (for example `npm run preview -- capsule.broadcast.worldengine.v1`)
+  to inspect the detailed payload, routing, and governance metadata for a specific artifact.
+
 ## Mock Telemetry Server
 - Run `npm install` to ensure dependencies are available.
 - Start the simulated HUD stream with `npm run start:mock-telemetry`.
