@@ -1,0 +1,6 @@
+{
+  "docs/CHANGELOG.md": "5f2fcf8e2f8e01160ee00ae5f626a4e613d95d39ebf0c6b85c38611499b9d157",
+  "docs/CODEX.md": "023eae426a8c2b711f1341b84686971586bc20cbe4424d2e3e9a223f1436fb81",
+  "runtime/frozen/capsule.registry.runtime.v1.json": "3744dc147ce45fbce10fa8d4b9d559219dea373d42cf3f98a55756ddac72ee8c",
+  "scripts/hash_manifest.py": "fbbcea2a365286592808eddd1b68a8206b6efcbfe9cc7c36369bfcadbdc8d7ec"
+}
