@@ -29,6 +29,11 @@ This repository coordinates automation and human operations around artifact mana
 - **Rollback Ready**: Every deploy has a tested rollback path
 - **Operator in the Loop**: No hidden automation
 
+## P3L Semantics (Proof → Flow → Execution)
+- **Proof**: Seals data to guarantee integrity and immutability using cryptographic hashing, Merkle tree anchoring, and council attestations.
+- **Flow**: Routes and governs operations through defined avatars, enforcing policies like `no_drift` and `quorum_check` so actions stay aligned with approved roles.
+- **Execution**: Manifests creative outputs by generating frame-accurate motion ledgers, assembling 5–10 second clips, and returning resulting fossils to the Single Source of Truth (SSOT).
+
 ## Getting Started
 1. Clone repo and configure `.env` with GitHub token for dispatch events.
 2. Deploy cockpit overlay JSON to your Live Ops UI.
@@ -51,4 +56,14 @@ This repository coordinates automation and human operations around artifact mana
 - Stage the rehearsal capsule ledger entries with `npm run stage:rehearsal`.
 - Pass `--training` to emit deterministic timestamps for CI/CD smoke tests (or set `REHEARSAL_TRAINING=1`).
 - Override the ledger destination with `--ledger <path>` if you need to append to a non-default scrollstream ledger.
+
+## Contributor Echo Trace
+- Generate an echo trace ledger that mirrors the active avatar bindings with `npm run inscribe:echo`.
+- Pass `--seed <iso8601>` for deterministic timestamps or `--mode overwrite` to rebuild the ledger from scratch.
+- Use `--dry-run` to preview the contributor table without writing to disk.
+
+## Glyphstream Overlay Preview
+- Produce a glyphstream overlay scaffold for apprentice ignition arcs with `npm run preview:glyphstream`.
+- Combine with `--pretty` for human-readable JSON or `--dry-run` to limit the command to console output.
+- Provide an alternate avatar dataset via `--source` when evaluating experimental bindings.
 
