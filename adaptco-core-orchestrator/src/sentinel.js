@@ -8,7 +8,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const logger = require('./log');
 
-const REQUIRED_DESCRIPTOR_FIELDS = ['id', 'name', 'type', 'sourcePath'];
+const REQUIRED_DESCRIPTOR_FIELDS = ['id', 'name', 'type', 'sourcePath', 'params'];
 const REQUIRED_ASSET_FIELDS = ['id', 'name', 'kind', 'uri'];
 
 class SentinelAgent {
@@ -59,10 +59,14 @@ class SentinelAgent {
     };
 
     logger.debug({ command, outDir }, 'Dispatching PreViz render request');
-    const result = await this.runCommand(command, commandOptions);
 
-    if (shouldCleanup && !options.persistDescriptor) {
-      await safeUnlink(descriptorPath);
+    let result;
+    try {
+      result = await this.runCommand(command, commandOptions);
+    } finally {
+      if (shouldCleanup && !options.persistDescriptor) {
+        await safeUnlink(descriptorPath);
+      }
     }
 
     if (result.exitCode !== 0) {
@@ -133,7 +137,17 @@ class SentinelAgent {
   }
 
   #validateDescriptor(descriptor) {
-    const missing = REQUIRED_DESCRIPTOR_FIELDS.filter((key) => !descriptor[key]);
+    const missing = REQUIRED_DESCRIPTOR_FIELDS.filter((key) => {
+      if (key === 'params') {
+        return (
+          typeof descriptor.params !== 'object' ||
+          descriptor.params === null ||
+          Array.isArray(descriptor.params)
+        );
+      }
+
+      return !descriptor[key];
+    });
     if (missing.length > 0) {
       throw new Error(`Descriptor missing required fields: ${missing.join(', ')}`);
     }
@@ -234,9 +248,7 @@ function createDescriptorWriter(baseDir) {
     const targetPath = explicitPath ? path.resolve(explicitPath) : await createDescriptorPath(baseDir, descriptor);
     const payload = JSON.stringify(descriptor, null, 2);
 
-    if (!explicitPath) {
-      await fsp.mkdir(path.dirname(targetPath), { recursive: true });
-    }
+    await fsp.mkdir(path.dirname(targetPath), { recursive: true });
 
     await fsp.writeFile(targetPath, payload, 'utf8');
     return targetPath;

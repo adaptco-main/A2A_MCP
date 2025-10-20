@@ -2,7 +2,6 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 const request = require('supertest');
 const createApp = require('../src/index');
 const { ledgerFile } = require('../src/ledger');
@@ -196,10 +195,16 @@ describe('POST /capsule/register', () => {
 
     expect(response.status).toBe(200);
     expect(sentinelStub.renderPreview).toHaveBeenCalledTimes(1);
-    expect(sentinelStub.renderPreview).toHaveBeenCalledWith(payload.operations.preview.descriptor, {
-      outDir: '/tmp/previews',
-      persistDescriptor: true
-    });
+    expect(sentinelStub.renderPreview).toHaveBeenCalledWith(
+      {
+        ...payload.operations.preview.descriptor,
+        params: {}
+      },
+      {
+        outDir: '/tmp/previews',
+        persistDescriptor: true
+      }
+    );
     expect(sentinelStub.registerAsset).toHaveBeenCalledTimes(1);
     expect(sentinelStub.registerAsset).toHaveBeenCalledWith(payload.operations.asset.payload, {
       path: '/assets',

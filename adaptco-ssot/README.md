@@ -5,7 +5,7 @@ Adaptco SSoT is a Node.js 20 REST API that centralizes asset metadata, exposing 
 
 ## Features
 
-- Health and readiness endpoint.
+- Health endpoint for uptime monitoring.
 - JSON Schema validation for asset CRUD operations.
 - In-memory store backed by a persisted catalog file.
 - Structured logging with Pino.

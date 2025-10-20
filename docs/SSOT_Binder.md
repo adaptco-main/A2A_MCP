@@ -113,10 +113,9 @@ Each step is auditable; skipping any stage invalidates `replay.authorized` check
 
 1. Confirm you are operating in an air-gapped or read-only network segment before handling sealed bundles.
 2. Use the provided CLI (`registry seal <payload.json>`) to normalize, hash, and enroll payloads—manual edits after hashing are prohibited.
-3. Run `./scripts/freeze_ssot_registry.sh` inside the core orchestrator repo whenever the capsule packet changes; this canonicalizes the registry capsule, refreshes the runtime ledger entry, and propagates the hash to `capsule.registry.runtime.v1`.
-4. Verify signatures with `registry attestation verify --artifact <id>` prior to pushing manifests.
-5. Update lineage references atomically: parent linkage, fork declarations, and immutability flags must match the governance decision log.
-6. Publish updated manifests to both online mirror and offline vault, keeping checksums identical.
+3. Verify signatures with `registry attestation verify --artifact <id>` prior to pushing manifests.
+4. Update lineage references atomically: parent linkage, fork declarations, and immutability flags must match the governance decision log.
+5. Publish updated manifests to both online mirror and offline vault, keeping checksums identical.
 
 ---
 
@@ -124,48 +123,16 @@ Each step is auditable; skipping any stage invalidates `replay.authorized` check
 
 * **Core Orchestrator (`qube.orchestrator.v1`)** uses checkpoint capsules to resume flows and validates every payload against `canonical_sha256` + `merkle_root`.
 * **PreViz Executor (`sol.f1.previz.v1`)** requires asset and storyboard capsules to match the SSOT manifest before rendering animatics or ledgers.
-* **SSOT Registry API (`adaptco-ssot`)** now enforces the full `ssot.registry.v1` packet on every asset mutation, guaranteeing the orchestrator receives lineage-bound hashes, attestation signatures, and replay conditions directly from the proof layer.
-* **Artifact Checkpoint Vault (`relay.artifacts.v1`)** mirrors rendered clips, motion ledgers, and orchestrator checkpoints. It subscribes to SSOT updates, confirms hashes, and exposes immutable bundles that downstream editors or playback agents can mount without hitting production repos.
 * **CI Automation**: Every commit triggers a manifest diff check ensuring no sealed capsule has been mutated. Diffs are blocked until a superseding capsule with new lineage is registered.
 * **Telemetry Hooks**: Emit `registry.event` logs whenever a new capsule is sealed or replayed; downstream systems subscribe for governance dashboards.
 
 ---
 
-## 7. Relay Stack & Workflow Coordination
+## 7. Reference Bundle Layout
 
-| Repo | Capsule Focus | Responsibilities | Key Interfaces |
-| --- | --- | --- | --- |
-| **`ssot.registry.v1`** | Proof & lineage | Merkle enrollment, council attestation, manifest export | FastAPI `/artifacts`, `/lineage`, `/attestations`; CLI `registry seal` |
-| **`qube.orchestrator.v1`** | Flow governance | Maker–checker enforcement, checkpointing, relay routing | FastAPI `/capsules/dispatch`, `/checkpoints`, `/governance/seal`; event bus `governance.event` |
-| **`sol.f1.previz.v1`** | Execution | Generate motion ledgers and animatic frames from storyboard + asset capsules | FastAPI `/scenes/generate`, `/ledgers/{id}`, `/scenes/{id}/frames`; webhook `capsule.complete` |
-| **`relay.artifacts.v1`** | Artifact checkpoints | Store derived outputs (renders, ledgers, orchestrator snapshots) with SSOT hashes; publish replay bundles | Static manifest `/vault/manifest.json`, bundle endpoints `/vault/bundles/{id}`; CLI `vault sync` |
-
-### Coordination Flow
-
-1. **Authoring & Proof**
-   * Contributors craft script/storyboard/asset capsules.
-   * `ssot.registry.v1` seals each payload, emits canonical hashes, and writes manifest entries.
-2. **Governance Dispatch**
-   * `qube.orchestrator.v1` ingests the sealed manifest references, verifies hashes with the registry, and routes work through Queen Boo (router) and CiCi (stabilizer) policies.
-   * Checkpoint capsules produced during flow execution are sealed back into the registry and mirrored to `relay.artifacts.v1` for resumable state.
-3. **Execution & Capture**
-   * `sol.f1.previz.v1` subscribes to orchestrator dispatch events, consumes storyboard + asset capsules, and generates motion ledgers plus preview frames.
-   * Each generated artifact is immediately hashed, logged with SSOT identifiers, and pushed into the artifact vault repository alongside the orchestrator checkpoint that produced it.
-4. **Vault Synchronization**
-   * `relay.artifacts.v1` maintains immutable bundles (`capsule_bundle.tgz`, `ledger.json`, `frames/`) keyed by the checkpoint ID. Bundles include the registry manifest slice so air-gapped teams can verify provenance without live access.
-   * CI/CD pipelines run `vault sync` to confirm the vault matches the latest sealed manifest before promoting builds or distributing assets.
-5. **Replay & Audit**
-   * When a replay is requested, the orchestrator pulls the relevant checkpoint capsule from the vault, verifies the SSOT hashes, and resumes flow execution. Any divergence triggers a drift alert and requires a new maker–checker approval cycle.
-
-This four-repo braid keeps the **proof → flow → execution → vault** loop deterministic. Each hand-off is hash-validated against the SSOT registry, preventing unsealed artifacts from entering production workflows.
-
----
-
-## 8. Reference Bundle Layout
-
-```
+```text
 ssot/
-├── registry.manifest.json        # Consolidated list of sealed artifacts
+├── registry.manifest.json   # Consolidated list of sealed artifacts
 ├── capsules/
 │   ├── storyboards/
 │   │   └── storyboard.monza.v1.json
@@ -188,4 +155,5 @@ This structure mirrors the Git repository and the offline vault so manifests, pa
 
 ---
 
-By adopting this binder, any contributor or autonomous agent can register, verify, or replay capsules without threatening the sovereign lineage of the F1 Lego project. All five entry classes remain anchored to the same Merkle root, delivering tamper-evident provenance across the expanded relay braid.
+By adopting this binder, any contributor or autonomous agent can register, verify, or replay capsules without threatening the sovereign lineage of the F1 Lego project.
+All five entry classes remain anchored to the same Merkle root, delivering tamper-evident provenance across the **expanded relay braid (Proof → Flow → Execution → Vault)**.

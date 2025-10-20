@@ -11,6 +11,7 @@
 
 ## 2025-09-25
 - add ADAPTCO OS wrapper capsule, freeze workflow, and scrollstream ledger hook
+- align ethereal wrap assets, storyboard, motion, and checkpoints through runtime registry links
 
 ## 2025-08-23
 - add PowerShell bootstrap doc

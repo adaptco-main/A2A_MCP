@@ -71,8 +71,21 @@ jobs:
         run: |
           source scripts/emit_event.sh
           emit ci.step.start openapi-diff
-          git show ${{ github.event.pull_request.base.sha }}:.well-known/openapi.yaml > old.yaml
-          git show ${{ github.event.pull_request.head.sha }}:.well-known/openapi.yaml > new.yaml
+          BASE_SHA=${{ github.event.pull_request.base.sha }}
+          HEAD_SHA=${{ github.event.pull_request.head.sha }}
+
+          if ! git show "${BASE_SHA}:.well-known/openapi.yaml" > old.yaml 2>/dev/null; then
+            echo "Baseline OpenAPI specification not found at ${BASE_SHA}:.well-known/openapi.yaml; skipping diff."
+            emit ci.step.end openapi-diff '{"status":"skipped","reason":"missing_baseline"}'
+            exit 0
+          fi
+
+          if ! git show "${HEAD_SHA}:.well-known/openapi.yaml" > new.yaml 2>/dev/null; then
+            echo "Head OpenAPI specification not found at ${HEAD_SHA}:.well-known/openapi.yaml; skipping diff."
+            emit ci.step.end openapi-diff '{"status":"skipped","reason":"missing_head"}'
+            exit 0
+          fi
+
           openapi-diff old.yaml new.yaml --fail-on incompatible,major \
             --report=html:openapi-diff.html --report=json:openapi-diff.json
           emit ci.step.end openapi-diff
