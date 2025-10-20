@@ -6,6 +6,39 @@ const request = require('supertest');
 const createApp = require('../src/index');
 const { ledgerFile } = require('../src/ledger');
 
+function createRegistryPacket(artifactId, type, author = 'ops@adaptco.io') {
+  return {
+    capsule_id: 'ssot.registry.v1',
+    registry: {
+      name: 'Qube Sovereign Archive',
+      version: '1.0.0',
+      maintainer: 'Q.Enterprise Council'
+    },
+    entry: {
+      artifact_id: artifactId,
+      type,
+      author,
+      created_at: '2024-09-04T12:00:00Z',
+      canonical_sha256: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      merkle_root: 'merkle:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      council_attestation: {
+        signatures: ['sig:queen_boo', 'sig:cici'],
+        quorum_rule: '2-of-3'
+      }
+    },
+    lineage: {
+      parent: null,
+      forks: [],
+      immutable: true
+    },
+    replay: {
+      authorized: true,
+      conditions: ['capsule.integrity == valid', 'council.attestation == quorum'],
+      override_protocol: 'maker_checker'
+    }
+  };
+}
+
 describe('POST /capsule/register', () => {
   beforeEach(() => {
     if (fs.existsSync(ledgerFile)) {
@@ -133,7 +166,8 @@ describe('POST /capsule/register', () => {
             kind: 'image',
             uri: 'https://cdn.adaptco.io/assets/ops.png',
             tags: ['ops'],
-            meta: { owner: 'ops@adaptco.io' }
+            meta: { owner: 'ops@adaptco.io' },
+            registry: createRegistryPacket('asset-ops-1', 'image')
           },
           path: '/assets',
           method: 'POST',
@@ -161,10 +195,16 @@ describe('POST /capsule/register', () => {
 
     expect(response.status).toBe(200);
     expect(sentinelStub.renderPreview).toHaveBeenCalledTimes(1);
-    expect(sentinelStub.renderPreview).toHaveBeenCalledWith(payload.operations.preview.descriptor, {
-      outDir: '/tmp/previews',
-      persistDescriptor: true
-    });
+    expect(sentinelStub.renderPreview).toHaveBeenCalledWith(
+      {
+        ...payload.operations.preview.descriptor,
+        params: {}
+      },
+      {
+        outDir: '/tmp/previews',
+        persistDescriptor: true
+      }
+    );
     expect(sentinelStub.registerAsset).toHaveBeenCalledTimes(1);
     expect(sentinelStub.registerAsset).toHaveBeenCalledWith(payload.operations.asset.payload, {
       path: '/assets',

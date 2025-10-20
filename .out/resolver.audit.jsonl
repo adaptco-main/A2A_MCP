@@ -4,3 +4,4 @@
 {"ts":"2025-09-25T02:52:43Z","event":"resolver.patch.v1","resolver_id":"resolver.runtime.v1","cockpit":"capsule.map.qube.endtoend.v1"}
 {"ts":"2025-09-25T02:52:54Z","event":"resolver.patch.v1","resolver_id":"resolver.runtime.v1","cockpit":"capsule.map.qube.endtoend.v1"}
 {"ts":"2025-09-25T02:53:13Z","event":"ledger.normalize.v1","input":".out/scrollstream_ledger.jsonl","output":".out/scrollstream_ledger.normalized.jsonl"}
+{"ts":"2025-09-25T10:33:39Z","event":"ledger.normalize.v1","input":".out/scrollstream_ledger.jsonl","output":".out/scrollstream_ledger.normalized.jsonl"}

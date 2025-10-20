@@ -1,10 +1,11 @@
 openapi: 3.0.3
 info:
   title: Core Orchestrator API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     HTTP interface for the Core Orchestrator capsule. Provides service health
-    introspection consumed by smoke tests in continuous delivery.
+    introspection along with branch merge planning metadata, automation hooks,
+    and middleware contract discovery for cockpit and CI consumers.
   contact:
     name: Protocol Automation Team
     url: https://example.com/core-orchestrator
@@ -14,6 +15,8 @@ servers:
 tags:
   - name: health
     description: Liveness and readiness status endpoints.
+  - name: txtordr
+    description: Txtordr intake and routing endpoints.
 paths:
   /health:
     get:
@@ -37,3 +40,42 @@ paths:
                     description: Service status indicator.
                     enum:
                       - ok
+  /txtordr/intake:
+    post:
+      summary: Submit a Txtordr payload
+      description: Receive and route structured Txtordr payloads.
+      operationId: postTxtordrIntake
+      tags:
+        - txtordr
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: 'https://q.enterprises/schemas/txtordr.v1.json'
+      responses:
+        '202':
+          description: Accepted and routed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  order_id:
+                    type: string
+        '400':
+          description: Invalid payload or HMAC
+        '409':
+          description: Duplicate idempotency key
+        '500':
+          description: Internal error
+      security:
+        - hmacAuth: []
+components:
+  securitySchemes:
+    hmacAuth:
+      type: apiKey
+      in: header
+      name: X-Txtordr-HMAC
