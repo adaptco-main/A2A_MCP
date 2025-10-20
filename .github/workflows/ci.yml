@@ -1,3 +1,4 @@
+name: Orchestrator CI (V7)
 name: Core Orchestrator Pipeline
 
 on:
@@ -7,6 +8,17 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+
+jobs:
+  build_govern_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
 
 permissions:
   contents: write
@@ -34,11 +46,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node (tooling cache)
       - name: Set up Node.js with dependency cache
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+
+      - name: Install tooling
+        run: npm ci
+
+      - name: Lint OpenAPI (Spectral)
+        run: npx spectral lint openapi/openapi.yaml
+
+      - name: Diff OpenAPI against main
+        run: npx openapi-diff --fail-on-changed --fail-on-breaking openapi/openapi.yaml origin/main:openapi/openapi.yaml
           cache-dependency-path: package-lock.json
 
       - name: Install workflow toolchain
