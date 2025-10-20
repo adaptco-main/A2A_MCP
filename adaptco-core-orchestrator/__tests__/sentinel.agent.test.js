@@ -1,7 +1,9 @@
 // adaptco-core-orchestrator/__tests__/sentinel.agent.test.js
-'use strict';
+"use strict";
 
 const path = require('path');
+const os = require('os');
+const { promises: fsp } = require('fs');
 const SentinelAgent = require('../src/sentinel');
 
 function createFetchStub(response = {}) {
@@ -76,7 +78,8 @@ describe('SentinelAgent', () => {
       id: 'asset-123',
       name: 'Sample Asset',
       type: 'image',
-      sourcePath: 'assets/sample.gltf'
+      sourcePath: 'assets/sample.gltf',
+      params: {}
     };
 
     await sentinel.renderPreview(descriptor);
@@ -85,8 +88,47 @@ describe('SentinelAgent', () => {
     expect(descriptorWriter).toHaveBeenCalledWith(descriptor, undefined);
 
     await expect(sentinel.renderPreview({ id: 'missing-fields' })).rejects.toThrow(
-      'Descriptor missing required fields: name, type, sourcePath'
+      'Descriptor missing required fields: name, type, sourcePath, params'
     );
+
+    await expect(
+      sentinel.renderPreview({
+        id: 'bad-params',
+        name: 'Invalid Params',
+        type: 'image',
+        sourcePath: 'assets/sample.gltf',
+        params: []
+      })
+    ).rejects.toThrow('Descriptor missing required fields: params');
+  });
+
+  it('writes descriptor payloads to explicit nested paths', async () => {
+    const tmpRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'sentinel-explicit-'));
+    const explicitPath = path.join(tmpRoot, 'nested', 'descriptors', 'custom.json');
+    const sentinel = new SentinelAgent({
+      runCommand: async () => ({ stdout: '', stderr: '', exitCode: 0 }),
+      fetch: noopFetch
+    });
+
+    const descriptor = {
+      id: 'asset-321',
+      name: 'Nested Descriptor',
+      type: 'image',
+      sourcePath: 'assets/nested.gltf'
+    };
+
+    try {
+      const result = await sentinel.renderPreview(descriptor, {
+        descriptorPath: explicitPath,
+        persistDescriptor: true
+      });
+
+      expect(result.stdout).toBe('');
+      const stored = await fsp.readFile(explicitPath, 'utf8');
+      expect(JSON.parse(stored)).toEqual(descriptor);
+    } finally {
+      await fsp.rm(tmpRoot, { recursive: true, force: true });
+    }
   });
 
   it('surfaces non-zero exit codes from the PreViz command', async () => {

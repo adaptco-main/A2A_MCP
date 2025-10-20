@@ -1,0 +1,31 @@
+[project]
+name = "middleware"
+version = "0.1.0"
+description = "Task synchronization middleware"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "sqlalchemy[asyncio]",
+    "aiosqlite",
+    "pydantic",
+    "pydantic-settings",
+]
+
+[project.optional-dependencies]
+development = [
+    "ruff",
+    "black",
+    "pytest",
+    "pytest-asyncio",
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88
