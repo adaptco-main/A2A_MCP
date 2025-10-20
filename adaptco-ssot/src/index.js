@@ -39,6 +39,13 @@ app.post('/assets', (req, res, next) => {
 app.put('/assets/:id', (req, res, next) => {
   try {
     const asset = validateAsset(req.body);
+    if (asset.id !== req.params.id) {
+      res.status(400).json({
+        status: 'error',
+        message: 'asset id must match request parameter'
+      });
+      return;
+    }
     const updated = store.update(req.params.id, asset);
     if (!updated) {
       res.status(404).json({ status: 'error', message: 'asset not found' });

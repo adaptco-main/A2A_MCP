@@ -15,6 +15,47 @@ function createFetchStub(response = {}) {
   });
 }
 
+function createRegistryPacket(overrides = {}) {
+  const {
+    artifactId = 'asset-999',
+    type = 'image',
+    author = 'qa@adaptco.io',
+    canonical = 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    merkle = 'merkle:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+  } = overrides;
+
+  return {
+    capsule_id: 'ssot.registry.v1',
+    registry: {
+      name: 'Qube Sovereign Archive',
+      version: '1.0.0',
+      maintainer: 'Q.Enterprise Council'
+    },
+    entry: {
+      artifact_id: artifactId,
+      type,
+      author,
+      created_at: '2024-09-04T12:00:00Z',
+      canonical_sha256: canonical,
+      merkle_root: merkle,
+      council_attestation: {
+        signatures: ['sig:queen_boo', 'sig:cici'],
+        quorum_rule: '2-of-3'
+      }
+    },
+    lineage: {
+      parent: null,
+      forks: [],
+      immutable: true
+    },
+    replay: {
+      authorized: true,
+      conditions: ['capsule.integrity == valid', 'council.attestation == quorum'],
+      override_protocol: 'maker_checker'
+    }
+  };
+}
+
 describe('SentinelAgent', () => {
   const noopFetch = createFetchStub();
 
@@ -165,7 +206,8 @@ describe('SentinelAgent', () => {
       kind: 'image',
       uri: 'https://cdn.adaptco.io/assets/integration.png',
       tags: ['test'],
-      meta: { owner: 'qa@adaptco.io' }
+      meta: { owner: 'qa@adaptco.io' },
+      registry: createRegistryPacket({ artifactId: 'asset-999', type: 'image' })
     };
 
     const response = await sentinel.registerAsset(asset);
@@ -184,7 +226,7 @@ describe('SentinelAgent', () => {
     });
 
     await expect(sentinel.registerAsset({ id: 'asset-1' })).rejects.toThrow(
-      'Asset payload missing or invalid fields: name, kind, uri, tags, meta'
+      'Asset payload missing or invalid fields: name, kind, uri, tags, meta, registry'
     );
   });
 
@@ -206,7 +248,8 @@ describe('SentinelAgent', () => {
       kind: 'image',
       uri: 'https://cdn.adaptco.io/assets/duplicate.png',
       tags: ['test'],
-      meta: { owner: 'qa@adaptco.io' }
+      meta: { owner: 'qa@adaptco.io' },
+      registry: createRegistryPacket({ artifactId: 'asset-100', type: 'image' })
     };
 
     await expect(sentinel.registerAsset(asset)).rejects.toMatchObject({

@@ -8,6 +8,45 @@ const store = require('../src/store');
 
 const originalCatalog = fs.readFileSync(store.catalogPath, 'utf8');
 
+function buildRegistryPacket({
+  artifactId,
+  type,
+  author,
+  parent = null,
+  forks = []
+}) {
+  return {
+    capsule_id: 'ssot.registry.v1',
+    registry: {
+      name: 'Qube Sovereign Archive',
+      version: '1.0.0',
+      maintainer: 'Q.Enterprise Council'
+    },
+    entry: {
+      artifact_id: artifactId,
+      type,
+      author,
+      created_at: '2024-09-04T12:00:00Z',
+      canonical_sha256: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      merkle_root: 'merkle:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      council_attestation: {
+        signatures: ['sig:queen_boo', 'sig:cici'],
+        quorum_rule: '2-of-3'
+      }
+    },
+    lineage: {
+      parent,
+      forks,
+      immutable: true
+    },
+    replay: {
+      authorized: true,
+      conditions: ['capsule.integrity == valid', 'council.attestation == quorum'],
+      override_protocol: 'maker_checker'
+    }
+  };
+}
+
 describe('Assets API', () => {
   beforeEach(() => {
     fs.writeFileSync(store.catalogPath, originalCatalog);
@@ -59,7 +98,8 @@ describe('Assets API', () => {
       kind: 'image',
       uri: 'https://cdn.adaptco.io/assets/integration.png',
       tags: ['test'],
-      meta: { owner: 'qa@adaptco.io' }
+      meta: { owner: 'qa@adaptco.io' },
+      registry: buildRegistryPacket({ artifactId: 'asset-999', type: 'image', author: 'qa@adaptco.io' })
     };
 
     const response = await request(app)

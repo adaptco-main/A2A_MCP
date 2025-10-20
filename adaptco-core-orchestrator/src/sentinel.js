@@ -168,6 +168,45 @@ class SentinelAgent {
       missing.push('meta');
     }
 
+    const registry = asset.registry;
+    if (!registry || typeof registry !== 'object') {
+      missing.push('registry');
+    } else {
+      if (registry.capsule_id !== 'ssot.registry.v1') {
+        missing.push('registry.capsule_id');
+      }
+
+      const entry = registry.entry;
+      if (!entry || typeof entry !== 'object') {
+        missing.push('registry.entry');
+      } else {
+        if (!entry.canonical_sha256) {
+          missing.push('registry.entry.canonical_sha256');
+        }
+        if (!entry.merkle_root) {
+          missing.push('registry.entry.merkle_root');
+        }
+        const attestation = entry.council_attestation;
+        if (!attestation || !Array.isArray(attestation.signatures) || attestation.signatures.length === 0) {
+          missing.push('registry.entry.council_attestation.signatures');
+        }
+      }
+
+      const lineage = registry.lineage;
+      if (!lineage || typeof lineage !== 'object') {
+        missing.push('registry.lineage');
+      } else if (typeof lineage.immutable !== 'boolean') {
+        missing.push('registry.lineage.immutable');
+      }
+
+      const replay = registry.replay;
+      if (!replay || typeof replay !== 'object') {
+        missing.push('registry.replay');
+      } else if (!Array.isArray(replay.conditions) || replay.conditions.length === 0) {
+        missing.push('registry.replay.conditions');
+      }
+    }
+
     if (missing.length > 0) {
       throw new Error(`Asset payload missing or invalid fields: ${missing.join(', ')}`);
     }
