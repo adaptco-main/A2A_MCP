@@ -26,6 +26,22 @@ describe('Assets API', () => {
     expect(response.body.length).toBeGreaterThan(0);
   });
 
+  it('does not leak internal catalog references', async () => {
+    const response = await request(app).get('/assets');
+    expect(response.status).toBe(200);
+    const asset = response.body[0];
+    expect(asset).toBeDefined();
+
+    asset.tags.push('mutated-from-test');
+    asset.meta.injected = true;
+
+    const freshCatalog = store.getAll();
+    const original = freshCatalog.find((entry) => entry.id === asset.id);
+
+    expect(original.tags).not.toContain('mutated-from-test');
+    expect(original.meta.injected).toBeUndefined();
+  });
+
   it('rejects invalid payloads on POST', async () => {
     const response = await request(app)
       .post('/assets')
@@ -57,5 +73,31 @@ describe('Assets API', () => {
 
     const catalog = store.getAll();
     expect(catalog.some((asset) => asset.id === 'asset-999')).toBe(true);
+  });
+
+  it('rejects updates that would introduce duplicate asset ids', async () => {
+    const payload = {
+      id: 'asset-002',
+      name: 'Conflicting Asset',
+      kind: 'image',
+      uri: 'https://cdn.adaptco.io/assets/conflict.png',
+      tags: ['conflict'],
+      meta: { owner: 'qa@adaptco.io' }
+    };
+
+    const response = await request(app)
+      .put('/assets/asset-001')
+      .send(payload)
+      .set('Accept', 'application/json');
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      status: 'error',
+      message: 'Asset with id asset-002 already exists'
+    });
+
+    const catalog = store.getAll();
+    const duplicates = catalog.filter((asset) => asset.id === 'asset-002');
+    expect(duplicates).toHaveLength(1);
   });
 });

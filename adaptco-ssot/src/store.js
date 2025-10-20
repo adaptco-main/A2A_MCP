@@ -8,6 +8,13 @@ const logger = require('./log');
 const catalogPath = path.join(__dirname, '..', 'data', 'catalog.json');
 let catalog = [];
 
+function clone(value) {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
 function loadCatalog() {
   try {
     const raw = fs.readFileSync(catalogPath, 'utf8');
@@ -23,7 +30,7 @@ function persist() {
 }
 
 function getAll() {
-  return catalog.map((asset) => ({ ...asset }));
+  return catalog.map((asset) => clone(asset));
 }
 
 function create(asset) {
@@ -32,9 +39,10 @@ function create(asset) {
     error.statusCode = 409;
     throw error;
   }
-  catalog.push({ ...asset });
+  const stored = clone(asset);
+  catalog.push(stored);
   persist();
-  return { ...asset };
+  return clone(stored);
 }
 
 function update(id, asset) {
@@ -42,9 +50,20 @@ function update(id, asset) {
   if (index === -1) {
     return null;
   }
+
+  const targetId = asset.id;
+  if (
+    typeof targetId === 'string' &&
+    targetId !== id &&
+    catalog.some((existing, existingIndex) => existingIndex !== index && existing.id === targetId)
+  ) {
+    const error = new Error(`Asset with id ${targetId} already exists`);
+    error.statusCode = 409;
+    throw error;
+  }
   catalog[index] = { ...asset };
   persist();
-  return { ...catalog[index] };
+  return clone(catalog[index]);
 }
 
 function reload() {

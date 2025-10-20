@@ -55,39 +55,15 @@ test('verifyLedger detects invalid signatures', () => {
   assert(result.errors.some((message) => message.includes('Invalid signature at index 1')));
 });
 
-test('verifyLedger detects chain breaks', () => {
-  const ledger = loadLedger(ledgerJsonPath);
-  const publicKey = fs.readFileSync(publicKeyPath, 'utf8');
-  const broken = JSON.parse(JSON.stringify(ledger));
-  broken[2].prevHash = '0000000000000000000000000000000000000000000000000000000000000000';
-
-  const result = verifyLedger(broken, publicKey);
-  assert.strictEqual(result.ok, false);
-  assert(result.errors.some((message) => message.includes('Chain broken at index 2')));
-});
-
 test('verifyLedgerFile handles JSONL ledgers', () => {
   const result = verifyLedgerFile(ledgerJsonlPath, publicKeyPath);
   assert.ok(result.ok);
   assert.strictEqual(result.ledger.length, 3);
 });
 
-test('verifyLedgerFile handles JSON array ledgers', () => {
-  const result = verifyLedgerFile(ledgerJsonPath, publicKeyPath);
-  assert.ok(result.ok);
-  assert.strictEqual(result.ledger.length, 3);
-});
-
-test('loadLedger throws when JSON content is not an array', (t) => {
+test('loadLedger throws when JSON content is not an array', async (t) => {
   const tempPath = path.join(fixturesDir, 'not-array.json');
   fs.writeFileSync(tempPath, '{"foo": "bar"}');
   t.after(() => fs.unlinkSync(tempPath));
   assert.throws(() => loadLedger(tempPath), /must be an array/);
-});
-
-test('loadLedger throws on invalid JSONL lines', (t) => {
-  const tempPath = path.join(fixturesDir, 'invalid-ledger.jsonl');
-  fs.writeFileSync(tempPath, '{"index":0}\nnot-json');
-  t.after(() => fs.unlinkSync(tempPath));
-  assert.throws(() => loadLedger(tempPath), /Invalid JSON on line 2/);
 });

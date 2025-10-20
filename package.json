@@ -1,13 +1,36 @@
 {
   "name": "core-orchestrator",
+  "version": "0.1.0",
+  "description": "Governance cutover orchestration server and tooling",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "npm run test:freeze && npm run test:qbus",
+    "test:freeze": "tests/test_freeze_scripts.sh",
+    "test:qbus": "tests/test_qbus_gates.sh"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "lint:openapi": "spectral lint openapi/openapi.yaml",
     "verify:ledger": "node scripts/verify-ledger.js",
-    "rehearse:scrollstream": "node scripts/emit-scrollstream-rehearsal.js",
-    "test:ledger": "node --test tests/verify-ledger.test.js",
-    "test:scrollstream": "node --test tests/scrollstreamRehearsal.test.js"
+    "test:ledger": "node --test tests/verify-ledger.test.js"
+    "preview": "node scripts/previewCapsule.js",
+    "lint:openapi": "spectral lint openapi/openapi.yaml",
+    "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js",
+    "validate:telemetry": "node scripts/telemetry/validateTelemetryFixture.js",
+    "stage:rehearsal": "node scripts/rehearsal/stageRehearsalLoop.js",
+    "generate:arcSix:embedding": "node scripts/remix/computeArcSixEmbeddingProfile.js"
+  },
+  "dependencies": {
+    "ws": "^8.17.0",
+    "axios": "^1.7.7"
   },
   "devDependencies": {
     "@stoplight/spectral-cli": "^6.15.0",

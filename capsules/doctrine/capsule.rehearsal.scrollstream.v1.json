@@ -1,9 +1,9 @@
 {
-  "id": "rehearsal.scrollstream.v1",
+  "id": "capsule.rehearsal.scrollstream.v1",
   "version": "1.0.0",
-  "name": "Scrollstream Rehearsal Capsule",
-  "description": "Stages the Celine → Luma → Dot audit rehearsal cycle with deterministic ledger output and HUD feedback cues.",
-  "created": "2025-03-07T19:00:00Z",
+  "name": "Scrollstream Rehearsal Loop Capsule",
+  "description": "Simulates the audit braid cycle (Celine → Luma → Dot) with ledger emissions, HUD shimmer feedback, and replay glyph pulses.",
+  "created": "2025-02-18T00:00:00Z",
   "governance": {
     "author": "adaptco",
     "council": "council/adaptco",
@@ -11,34 +11,11 @@
   },
   "capsule": {
     "event": "capsule.rehearsal.scrollstream.v1",
-    "manifest_ref": "capsules/doctrine/capsule.rehearsal.scrollstream.v1.json",
-    "ledger_event_url": "/public/data/scrollstream_ledger.json",
+    "manifest_ref": "public/data/scrollstream_ledger.json",
+    "ledger_event_url": "/data/scrollstream_ledger.json",
     "path": "public/hud/capsules/scrollstream/index.html"
   },
-  "cycle": [
-    {
-      "stage": "audit.summary",
-      "agent": "Celine",
-      "call_sign": "Architect",
-      "signal": "HUD shimmer primes contributor view"
-    },
-    {
-      "stage": "audit.proof",
-      "agent": "Luma",
-      "call_sign": "Sentinel",
-      "signal": "Scrollstream rail stabilised"
-    },
-    {
-      "stage": "audit.execution",
-      "agent": "Dot",
-      "call_sign": "Guardian",
-      "signal": "Replay glyph pulses"
-    }
-  ],
-  "training": {
-    "mode": "rehearsal",
-    "deterministic": true,
-    "sabrina_spark_test": "pass"
+  "artifacts": {
+    "viewer_sha256": "676022b8961fd75f6a93ad4102e2b06389f7c455461ebaa6a72bd09f8470671e"
   }
 }
-
