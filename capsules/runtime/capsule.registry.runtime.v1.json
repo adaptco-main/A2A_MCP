@@ -65,6 +65,10 @@
       "replay": "replay:scrollsmith:20250924:000",
       "state": "FROZEN"
     },
+    "capsule.rehearsal.scrollstream.v1": {
+      "state": "STAGED",
+      "replay": "HUD.loop.selfie.dualroot.q.cici.v1.token.002"
+    },
     "capsule.timeline.checkpoints.v1": {
       "state": "STAGED"
     },
@@ -74,6 +78,34 @@
     "glyph.registry.qube.v1": {
       "state": "STAGED"
     },
+    "hud.overlay.arc.v1": {
+      "state": "ACTIVE"
+    "capsule.rehearsal.echo_bloom.v1": {
+      "state": "STAGED",
+      "overlay": "overlay.cici_sabrina.echo_bloom.v1"
+    },
+    "relay.artifacts.v1": {
+      "merkle": "TO_COMPUTE",
+      "state": "FROZEN"
+    },
+    "model.stable_diffusion.cici.v1": {
+      "state": "FROZEN"
+    },
+    "policy.guard.counterfactual.v1": {
+      "state": "FROZEN"
+    },
+    "tensor.semantic.cici.v1": {
+      "state": "FROZEN"
+    }
+  },
+  "health": {
+    "drift_tolerance_ms": 30,
+    "style_integrity_min": 0.95,
+    "telemetry_ws": {
+      "arc": "ws://localhost:8083/streams/telemetry/arc/v1",
+      "status": "OK"
+    }
+  },
     "hud.overlay.arc.v1": {
       "state": "ACTIVE"
     },
@@ -127,6 +159,11 @@
       "type": "overlay"
     },
     {
+      "from": "capsule.rehearsal.echo_bloom.v1",
+      "to": "overlay.cici_sabrina.echo_bloom.v1",
+      "type": "overlay"
+    },
+    {
       "from": "policy.guard.counterfactual.v1",
       "to": "capsule.audit.counterfactual.v1",
       "type": "audit"
@@ -150,6 +187,31 @@
       "from": "capsule.scene.ethereal_wrap.v1",
       "to": "clip.motion.ethereal_wrap.v1",
       "type": "motion"
+    },
+    {
+      "from": "capsule.scene.ethereal_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "checkpoint"
+    },
+    {
+      "from": "capsule.storyboard.ethereal_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
+    },
+    {
+      "from": "asset.costume.aurora_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
+    },
+    {
+      "from": "asset.prop.vault_glyph.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
+    },
+    {
+      "from": "clip.motion.ethereal_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
     },
     {
       "from": "sol.f1.previz.v1",
