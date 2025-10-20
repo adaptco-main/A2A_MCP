@@ -106,6 +106,16 @@
       "status": "OK"
     }
   },
+    }
+  },
+  "health": {
+    "drift_tolerance_ms": 30,
+    "style_integrity_min": 0.95,
+    "telemetry_ws": {
+      "arc": "ws://localhost:8083/streams/telemetry/arc/v1",
+      "status": "OK"
+    }
+  },
     "hud.overlay.arc.v1": {
       "state": "ACTIVE"
     },
