@@ -75,13 +75,37 @@
     "capsule.viewer.relay.v1": {
       "state": "STAGED"
     },
+    "glyph.registry.qube.v1": {
+      "state": "STAGED"
+    },
+    "hud.overlay.arc.v1": {
+      "state": "ACTIVE"
     "capsule.rehearsal.echo_bloom.v1": {
       "state": "STAGED",
       "overlay": "overlay.cici_sabrina.echo_bloom.v1"
     },
-    "glyph.registry.qube.v1": {
-      "state": "STAGED"
+    "relay.artifacts.v1": {
+      "merkle": "TO_COMPUTE",
+      "state": "FROZEN"
     },
+    "model.stable_diffusion.cici.v1": {
+      "state": "FROZEN"
+    },
+    "policy.guard.counterfactual.v1": {
+      "state": "FROZEN"
+    },
+    "tensor.semantic.cici.v1": {
+      "state": "FROZEN"
+    }
+  },
+  "health": {
+    "drift_tolerance_ms": 30,
+    "style_integrity_min": 0.95,
+    "telemetry_ws": {
+      "arc": "ws://localhost:8083/streams/telemetry/arc/v1",
+      "status": "OK"
+    }
+  },
     "hud.overlay.arc.v1": {
       "state": "ACTIVE"
     },
