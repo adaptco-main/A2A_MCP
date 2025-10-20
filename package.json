@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "lint:openapi": "spectral lint openapi/openapi.yaml",
+    "verify:ledger": "node scripts/verify-ledger.js",
+    "test:ledger": "node --test tests/verify-ledger.test.js"
     "preview": "node scripts/previewCapsule.js",
     "lint:openapi": "spectral lint openapi/openapi.yaml",
     "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js",
