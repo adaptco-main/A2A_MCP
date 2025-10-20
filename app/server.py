@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import mimetypes
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
@@ -16,6 +17,85 @@ logging.basicConfig(level=logging.INFO)
 BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG = QernelConfig.from_env(base_dir=BASE_DIR)
 QERNEL = CodexQernel(CONFIG)
+
+
+def _default_model_path() -> Path:
+    """Resolve the merge model path from environment or repository defaults."""
+
+    configured = os.environ.get("MERGE_MODEL_PATH")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parent.parent / "specs" / "branch-merge-model.v1.json"
+
+
+try:
+    MERGE_MODEL = MergeModel.from_file(_default_model_path())
+    logger.info("Loaded merge model with version %s", MERGE_MODEL.version)
+except (FileNotFoundError, json.JSONDecodeError) as exc:  # pragma: no cover - defensive
+    logger.error("Unable to load merge model: %s", exc)
+    MERGE_MODEL = MergeModel.empty()
+
+
+def _default_static_root() -> Path:
+    """Resolve the static asset root from environment or repo defaults."""
+
+    configured = os.environ.get("PORTAL_STATIC_ROOT")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parent.parent / "public"
+
+
+def _default_portal_entrypoint(static_root: Path) -> Path:
+    """Resolve the entrypoint HTML for the portal experience."""
+
+    configured = os.environ.get("PORTAL_ENTRYPOINT")
+    if configured:
+        candidate = Path(configured)
+        if not candidate.is_absolute():
+            candidate = static_root / candidate
+        return candidate
+    return static_root / "hud" / "capsules" / "avatar" / "index.html"
+
+
+STATIC_ROOT = _default_static_root().resolve()
+PORTAL_ENTRYPOINT = _default_portal_entrypoint(STATIC_ROOT).resolve()
+
+try:
+    PORTAL_ENTRYPOINT.relative_to(STATIC_ROOT)
+except ValueError:  # pragma: no cover - configuration safeguard
+    logger.warning(
+        "Portal entrypoint %s is not within the static root %s; falling back to default",
+        PORTAL_ENTRYPOINT,
+        STATIC_ROOT,
+    )
+    PORTAL_ENTRYPOINT = (STATIC_ROOT / "hud" / "capsules" / "avatar" / "index.html").resolve()
+
+if not PORTAL_ENTRYPOINT.exists():  # pragma: no cover - startup diagnostics
+    logger.warning("Portal entrypoint %s does not exist", PORTAL_ENTRYPOINT)
+
+mimetypes.add_type("application/json", ".json")
+
+
+def resolve_portal_asset(request_path: str) -> Optional[Path]:
+    """Map an HTTP request path to an on-disk portal asset if available."""
+
+    normalized = request_path or "/"
+    if normalized == "/":
+        candidate = PORTAL_ENTRYPOINT
+    else:
+        relative = normalized.lstrip("/")
+        candidate = (STATIC_ROOT / relative).resolve()
+        if candidate.is_dir():
+            candidate = (candidate / "index.html").resolve()
+
+    try:
+        candidate.relative_to(STATIC_ROOT)
+    except ValueError:
+        return None
+
+    if candidate.is_file():
+        return candidate
+    return None
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -106,7 +186,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _send_response(self, status_code: int, payload: Dict[str, Any]) -> None:
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status_code)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
