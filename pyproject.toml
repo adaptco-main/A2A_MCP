@@ -1,31 +1,23 @@
+[build-system]
+requires = ["setuptools>=67", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "middleware"
+name = "core-orchestrator"
 version = "0.1.0"
-description = "Task synchronization middleware"
+description = "Event router that connects Discord parsers with Notion, Google Calendar, and Shopify sinks."
+readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "fastapi",
-    "uvicorn",
-    "httpx",
-    "sqlalchemy[asyncio]",
-    "aiosqlite",
-    "pydantic",
-    "pydantic-settings",
-]
+dependencies = []
 
 [project.optional-dependencies]
-development = [
-    "ruff",
-    "black",
-    "pytest",
-    "pytest-asyncio",
-]
+dev = ["pytest>=7.4"]
 
-[tool.pytest.ini_options]
-addopts = "-q"
+[project.scripts]
+core-orchestrator = "core_orchestrator.cli:main"
 
-[tool.black]
-line-length = 88
+[tool.setuptools]
+package-dir = {"" = "src"}
 
-[tool.ruff]
-line-length = 88
+[tool.setuptools.packages.find]
+where = ["src"]
