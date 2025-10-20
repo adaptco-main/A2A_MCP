@@ -1,0 +1,34 @@
+[
+  {
+    "id": "asset-001",
+    "name": "Hero Render",
+    "kind": "image",
+    "uri": "https://cdn.adaptco.io/assets/hero.png",
+    "tags": ["marketing", "hero"],
+    "meta": {
+      "owner": "creative@adaptco.io",
+      "revision": 3
+    }
+  },
+  {
+    "id": "asset-002",
+    "name": "Storyboard Deck",
+    "kind": "document",
+    "uri": "https://cdn.adaptco.io/assets/storyboard.pdf",
+    "tags": ["storyboard"],
+    "meta": {
+      "owner": "producer@adaptco.io"
+    }
+  },
+  {
+    "id": "asset-003",
+    "name": "Previz Sequence",
+    "kind": "video",
+    "uri": "https://cdn.adaptco.io/assets/previz.mp4",
+    "tags": ["previz", "sequence"],
+    "meta": {
+      "owner": "pipeline@adaptco.io",
+      "duration": 85
+    }
+  }
+]
