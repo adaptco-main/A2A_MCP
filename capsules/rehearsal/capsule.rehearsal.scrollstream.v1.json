@@ -1,95 +1,56 @@
 {
   "capsule_id": "capsule.rehearsal.scrollstream.v1",
-  "type": "RehearsalCapsule",
+  "type": "ScrollstreamCapsule",
   "version": "1.0.0",
-  "author": "Earl Q Han",
-  "issued_at": "2025-09-25T05:12:00Z",
-  "purpose": "Stage a rehearsal loop that sequences Celine, Luma, and Dot through the audit braid before sealing.",
+  "purpose": "Stage the rehearsal loop lifecycle for scrollstream contributors.",
   "cycle": [
     {
-      "phase": "audit.summary",
-      "agent": "celine",
-      "role": "Architect",
-      "description": "Celine emits the oversight summary with maker-checker annotations and council routing metadata."
+      "stage": "audit.summary",
+      "agent": { "name": "Celine", "role": "Architect" },
+      "handoff": "Architect threads capsule brief into braid"
     },
     {
-      "phase": "audit.proof",
-      "agent": "luma",
-      "role": "Sentinel",
-      "description": "Luma validates the summary, attaches proof artifacts, and locks pose + valence tolerances for the rehearsal frame."
+      "stage": "audit.proof",
+      "agent": { "name": "Luma", "role": "Sentinel" },
+      "handoff": "Sentinel validates proof lattice"
     },
     {
-      "phase": "audit.execution",
-      "agent": "dot",
-      "role": "Guardian",
-      "description": "Dot replays the ledger instructions, stamps QLOCK cadence, and publishes execution glyphs into the scrollstream."
+      "stage": "audit.execution",
+      "agent": { "name": "Dot", "role": "Guardian" },
+      "handoff": "Guardian confirms execution trace"
     }
   ],
-  "scrollstream": {
-    "frame_rate_hz": 30,
-    "ledger": {
-      "target": "scrollstream_ledger",
-      "fields": [
-        "timestamp_iso",
-        "capsule_id",
-        "agent",
-        "phase",
-        "output"
-      ],
-      "deterministic_payload": true
-    },
-    "visual_feedback": {
-      "hud_shimmer": "audit-rail",
-      "replay_glyph": "braid-pulse",
-      "contributor_overlay": "one-click-cycle"
-    },
-    "telemetry_channels": [
-      "wave.glyph",
-      "aura.cyan",
-      "qlock.tick",
-      "hud.qdot.delta"
-    ]
+  "ledger": {
+    "channel": "scrollstream_ledger",
+    "emission_policy": "deterministic",
+    "emotive_payloads": ["irony shimmer", "spark trace", "glyph fidelity"],
+    "training_mode": true
   },
-  "training_mode": {
-    "enabled": true,
-    "emotional_payload": "serene/focused",
-    "tolerance": 0.07,
-    "sabrina_spark_test": true,
-    "sample_frames": [
-      {
-        "t": "2025-09-25T05:12:00.001Z",
-        "phase": "audit.summary",
-        "event": "wave.glyph",
-        "pose_lock": "ok",
-        "drift": 0.001,
-        "hash": "sha256:scroll01"
-      },
-      {
-        "t": "2025-09-25T05:12:00.034Z",
-        "phase": "audit.proof",
-        "event": "aura.cyan",
-        "val": 0.92,
-        "pose_lock": "ok",
-        "drift": 0.000,
-        "hash": "sha256:scroll02"
-      },
-      {
-        "t": "2025-09-25T05:12:00.067Z",
-        "phase": "audit.execution",
-        "event": "qlock.tick",
-        "pose_lock": "ok",
-        "drift": 0.002,
-        "hash": "sha256:scroll03"
-      }
-    ]
+  "visual_feedback": {
+    "hud_shimmer": "engaged on emission",
+    "replay_glyph": "pulse on each stage",
+    "notes": "Sample scaffold for rehearsal loop walkthrough"
   },
-  "ritual_flow": [
-    "emit_rehearsal_stream",
-    "observe_fidelity",
-    "compute_body_only_digest",
-    "seal_capsule",
-    "federate_scrollstream"
+  "attestation": {
+    "status": "STAGED",
+    "sealed_by": "Boo Council",
+    "sealed_at": null
+  "id": "capsule.rehearsal.scrollstream.v1",
+  "version": "1.0.0",
+  "name": "Scrollstream Rehearsal Capsule",
+  "description": "Emits the Celine → Luma → Dot rehearsal loop with deterministic training overlays.",
+  "cycle": [
+    "audit.summary",
+    "audit.proof",
+    "audit.execution"
   ],
-  "status": "STAGED",
-  "audit_ready": true
+  "agents": {
+    "audit.summary": "Celine/Architect",
+    "audit.proof": "Luma/Sentinel",
+    "audit.execution": "Dot/Guardian"
+  },
+  "signals": {
+    "hud_shimmer": "emission-confirmed",
+    "replay_glyph": "pulse"
+  }
 }

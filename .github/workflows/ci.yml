@@ -56,45 +56,25 @@ jobs:
       - name: Resolve base and head commits
         id: openapi_shas
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
-            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "base_sha=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
-            echo "head_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          fi
+          BASE_SPEC="${{ env.ARTIFACTS_DIR }}/openapi-base.yaml"
 
-      - name: Prepare OpenAPI specs for diff
-        id: openapi_prep
-        run: |
-          set -euo pipefail
-          BASE_SHA="${{ steps.openapi_shas.outputs.base_sha }}"
-          HEAD_SHA="${{ steps.openapi_shas.outputs.head_sha }}"
-          PATH_IN_REPO="${{ env.OPENAPI_PATH }}"
-          mkdir -p .openapi-diff
-
-          if [ ! -f "$PATH_IN_REPO" ]; then
-            echo "HEAD spec not found at $PATH_IN_REPO" >&2
-            exit 1
-          fi
-
-          cp "$PATH_IN_REPO" .openapi-diff/head.yaml
-
-          NO_BASE="false"
-          NULL_SHA="0000000000000000000000000000000000000000"
-
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "$NULL_SHA" ]; then
-            NO_BASE="true"
-          else
-            if git cat-file -e "${BASE_SHA}:${PATH_IN_REPO}" 2>/dev/null; then
-              git show "${BASE_SHA}:${PATH_IN_REPO}" > .openapi-diff/base.yaml
+          write_output() {
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+              printf 'path=%s\n' "$1" >> "$GITHUB_OUTPUT"
             else
-              FOUND=$(git rev-list -n 1 "${BASE_SHA}" -- "${PATH_IN_REPO}" || true)
-              if [ -n "$FOUND" ]; then
-                echo "Base spec not at base sha; using nearest ancestor commit $FOUND"
-                git show "${FOUND}:${PATH_IN_REPO}" > .openapi-diff/base.yaml
-              else
-                NO_BASE="true"
+              echo "GITHUB_OUTPUT is not set; skipping export of '$1'" >&2
+            fi
+          }
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch origin main --depth=1
+            if git show origin/main:${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
+              write_output "$BASE_SPEC"
+            fi
+          else
+            if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+              if git show "$BEFORE_SHA":${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
+                write_output "$BASE_SPEC"
               fi
             fi
           fi
