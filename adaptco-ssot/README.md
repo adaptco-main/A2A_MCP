@@ -1,51 +1,100 @@
-# core-orchestrator
+<!-- adaptco-ssot/README.md -->
+# Adaptco Single Source of Truth (SSoT)
 
-This branch hosts the preview-ready assets, helper snippets, and reference docs that power AdaptCo's core orchestrator video workflows.
+Adaptco SSoT is a Node.js 20 REST API that centralizes asset metadata, exposing CRUD operations backed by a JSON catalog.
 
-> **Note:** This README is duplicated across the packaged artifact directories in this branch (`adaptco-core-orchestrator/`, `adaptco-previz/`, and `adaptco-ssot/`) so that every bundle ships with the same documentation. Update this file to make changes everywhere.
+## Features
 
-## selector.preview.bundle.v1 overview
+- Health and readiness endpoint.
+- JSON Schema validation for asset CRUD operations.
+- In-memory store backed by a persisted catalog file.
+- Structured logging with Pino.
 
-The active preview bundle focuses on giving collaborators a shared rehearsal surface while feedback is collected.
+## Prerequisites
 
-### Modules currently live
-- **HUD Walkthrough** – Guided tour of the interactive overlay so reviewers can orient themselves quickly.
-- **Rehearsal Prompts** – Rotating prompt palette for exploring emotional or tonal variations before final capture.
-- **Compliance Overlay** – Lightweight checks that surface policy or brand guardrails directly inside the preview.
+- Node.js >= 20
+- npm >= 9
 
-### Rehearsal prompt palette
-Choose one of the prompt macros below when requesting a rehearsal render. Each macro pairs a thematic cue with sensory guidance the renderer will honor.
+## Setup
 
-| Prompt key          | Visual + emotive cues            |
-| ------------------- | -------------------------------- |
-| `rupture.flare`     | irony shimmer + spark trace      |
-| `restoration.loop`  | breath sync + glyph fidelity     |
-| `mesh.response`     | empathy shimmer + echo match     |
-
-## Requesting a rehearsal visualization
-1. **Select a prompt** – Start with one of the keys above to anchor the vibe of the pass you need.
-2. **Add scenario notes** – Provide any narrative beats, dialogue hints, or camera timing that should accompany the prompt.
-3. **Specify delivery context** – Note the target surface (HUD walkthrough, compliance overlay, etc.) so the correct module frames the render.
-4. **Confirm review timing** – Mention deadlines or live review slots so the orchestration bot can schedule the preview drop appropriately.
-
-## GitHub dispatch helper snippet
-If you need to freeze a generated artifact before sharing, you can trigger a GitHub repository dispatch by adapting the snippet below (replace the placeholder values before running it in Node.js 18+ or any fetch-capable runtime):
-
-```javascript
-// Example: Freeze button dispatch
-fetch("https://api.github.com/repos/your-org/your-repo/dispatches", {
-  method: "POST",
-  headers: {
-    "Authorization": "Bearer YOUR_TOKEN",
-    "Accept": "application/vnd.github.v3+json"
-  },
-  body: JSON.stringify({
-    event_type: "freeze_artifact",
-    client_payload: {
-      artifact_id: "abc123"
-    }
-  })
-});
+```bash
+npm install
 ```
 
-For convenience, the same example lives at `examples/freeze-dispatch.js` so you can edit and execute it locally.
+## Running Locally
+
+```bash
+npm start
+```
+
+The service listens on port 3000 by default.
+
+### Example Requests
+
+List assets:
+
+```bash
+curl http://localhost:3000/assets
+```
+
+Create an asset:
+
+```bash
+curl -X POST http://localhost:3000/assets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "asset-200",
+    "name": "Storyboard",
+    "kind": "document",
+    "uri": "s3://bucket/storyboard.pdf",
+    "tags": ["storyboard"],
+    "meta": {"owner": "creative@adaptco.io"}
+  }'
+```
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start with nodemon for live reload. |
+| `npm run start` | Start the API in production mode. |
+| `npm run build` | Placeholder build step. |
+| `npm run test` | Run Jest and Supertest suite. |
+| `npm run lint` | Run ESLint across the project. |
+| `npm run format` | Format files via Prettier. |
+
+## Testing
+
+```bash
+npm test
+```
+
+## Docker
+
+```bash
+docker build -t adaptco-ssot .
+docker run --rm -p 3000:3000 adaptco-ssot
+```
+
+## Data Model
+
+The API enforces [`schemas/asset.schema.json`](schemas/asset.schema.json) for all mutations. Initial catalog entries live in [`data/catalog.json`](data/catalog.json).
+
+## Project Structure
+
+```
+src/
+  index.js
+  server.js
+  log.js
+  validator.js
+  store.js
+schemas/
+  asset.schema.json
+data/
+  catalog.json
+```
+
+## License
+
+MIT

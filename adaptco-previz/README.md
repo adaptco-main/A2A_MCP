@@ -1,51 +1,99 @@
-# core-orchestrator
+<!-- adaptco-previz/README.md -->
+# Adaptco Previz CLI
 
-This branch hosts the preview-ready assets, helper snippets, and reference docs that power AdaptCo's core orchestrator video workflows.
+Adaptco Previz is a Node.js 20 command-line tool that validates asset descriptors and generates deterministic preview image stubs for pipeline testing.
 
-> **Note:** This README is duplicated across the packaged artifact directories in this branch (`adaptco-core-orchestrator/`, `adaptco-previz/`, and `adaptco-ssot/`) so that every bundle ships with the same documentation. Update this file to make changes everywhere.
+## Features
 
-## selector.preview.bundle.v1 overview
+- Validates asset descriptors with JSON Schema using Ajv.
+- Generates preview artifacts with predictable filenames.
+- Provides helpful CLI output suitable for automation.
 
-The active preview bundle focuses on giving collaborators a shared rehearsal surface while feedback is collected.
+## Prerequisites
 
-### Modules currently live
-- **HUD Walkthrough** – Guided tour of the interactive overlay so reviewers can orient themselves quickly.
-- **Rehearsal Prompts** – Rotating prompt palette for exploring emotional or tonal variations before final capture.
-- **Compliance Overlay** – Lightweight checks that surface policy or brand guardrails directly inside the preview.
+- Node.js >= 20
+- npm >= 9
 
-### Rehearsal prompt palette
-Choose one of the prompt macros below when requesting a rehearsal render. Each macro pairs a thematic cue with sensory guidance the renderer will honor.
+## Installation
 
-| Prompt key          | Visual + emotive cues            |
-| ------------------- | -------------------------------- |
-| `rupture.flare`     | irony shimmer + spark trace      |
-| `restoration.loop`  | breath sync + glyph fidelity     |
-| `mesh.response`     | empathy shimmer + echo match     |
-
-## Requesting a rehearsal visualization
-1. **Select a prompt** – Start with one of the keys above to anchor the vibe of the pass you need.
-2. **Add scenario notes** – Provide any narrative beats, dialogue hints, or camera timing that should accompany the prompt.
-3. **Specify delivery context** – Note the target surface (HUD walkthrough, compliance overlay, etc.) so the correct module frames the render.
-4. **Confirm review timing** – Mention deadlines or live review slots so the orchestration bot can schedule the preview drop appropriately.
-
-## GitHub dispatch helper snippet
-If you need to freeze a generated artifact before sharing, you can trigger a GitHub repository dispatch by adapting the snippet below (replace the placeholder values before running it in Node.js 18+ or any fetch-capable runtime):
-
-```javascript
-// Example: Freeze button dispatch
-fetch("https://api.github.com/repos/your-org/your-repo/dispatches", {
-  method: "POST",
-  headers: {
-    "Authorization": "Bearer YOUR_TOKEN",
-    "Accept": "application/vnd.github.v3+json"
-  },
-  body: JSON.stringify({
-    event_type: "freeze_artifact",
-    client_payload: {
-      artifact_id: "abc123"
-    }
-  })
-});
+```bash
+npm install
 ```
 
-For convenience, the same example lives at `examples/freeze-dispatch.js` so you can edit and execute it locally.
+## Usage
+
+Render a preview from a descriptor:
+
+```bash
+npm start -- render examples/descriptor.sample.json --out previews
+```
+
+The CLI prints the output path, and a `.png` stub will be created in the target directory.
+
+Show help:
+
+```bash
+npm start -- --help
+```
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Runs the CLI in watch mode (nodemon). |
+| `npm run start` | Invokes the CLI. |
+| `npm run build` | Placeholder build step. |
+| `npm run test` | Executes Jest unit tests. |
+| `npm run lint` | Lints the project with ESLint. |
+| `npm run format` | Formats source files via Prettier. |
+
+## Descriptor Schema
+
+Descriptors must conform to [`schemas/asset-descriptor.schema.json`](schemas/asset-descriptor.schema.json). Example descriptor:
+
+```json
+{
+  "id": "asset-42",
+  "name": "Explainer Animation",
+  "type": "video",
+  "sourcePath": "assets/explainer/source.blend",
+  "params": {
+    "camera": "cam1",
+    "duration": 120
+  }
+}
+```
+
+## Testing
+
+```bash
+npm test
+```
+
+## Docker
+
+```bash
+docker build -t adaptco-previz .
+docker run --rm adaptco-previz --help
+```
+
+The container image defaults to running the CLI with the `--help` flag.
+
+## Project Structure
+
+```
+src/
+  cli.js
+  render.js
+  validator.js
+schemas/
+  asset-descriptor.schema.json
+examples/
+  descriptor.sample.json
+previews/
+  (generated previews)
+```
+
+## License
+
+MIT
