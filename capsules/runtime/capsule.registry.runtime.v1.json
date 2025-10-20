@@ -75,6 +75,10 @@
     "capsule.viewer.relay.v1": {
       "state": "STAGED"
     },
+    "capsule.rehearsal.echo_bloom.v1": {
+      "state": "STAGED",
+      "overlay": "overlay.cici_sabrina.echo_bloom.v1"
+    },
     "glyph.registry.qube.v1": {
       "state": "STAGED"
     },
@@ -131,6 +135,11 @@
       "type": "overlay"
     },
     {
+      "from": "capsule.rehearsal.echo_bloom.v1",
+      "to": "overlay.cici_sabrina.echo_bloom.v1",
+      "type": "overlay"
+    },
+    {
       "from": "policy.guard.counterfactual.v1",
       "to": "capsule.audit.counterfactual.v1",
       "type": "audit"
@@ -154,6 +163,31 @@
       "from": "capsule.scene.ethereal_wrap.v1",
       "to": "clip.motion.ethereal_wrap.v1",
       "type": "motion"
+    },
+    {
+      "from": "capsule.scene.ethereal_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "checkpoint"
+    },
+    {
+      "from": "capsule.storyboard.ethereal_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
+    },
+    {
+      "from": "asset.costume.aurora_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
+    },
+    {
+      "from": "asset.prop.vault_glyph.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
+    },
+    {
+      "from": "clip.motion.ethereal_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
     },
     {
       "from": "sol.f1.previz.v1",

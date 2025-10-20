@@ -50,6 +50,10 @@ app.put('/assets/:id', (req, res, next) => {
       res.status(400).json({ status: 'error', errors: error.errors || [] });
       return;
     }
+    if (error.statusCode === 409) {
+      res.status(409).json({ status: 'error', message: error.message });
+      return;
+    }
     next(error);
   }
 });
