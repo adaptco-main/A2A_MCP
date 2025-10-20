@@ -65,6 +65,10 @@
       "replay": "replay:scrollsmith:20250924:000",
       "state": "FROZEN"
     },
+    "capsule.rehearsal.scrollstream.v1": {
+      "state": "STAGED",
+      "replay": "HUD.loop.selfie.dualroot.q.cici.v1.token.002"
+    },
     "capsule.timeline.checkpoints.v1": {
       "state": "STAGED"
     },
