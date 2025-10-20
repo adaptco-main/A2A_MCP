@@ -7,11 +7,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Copy application code and static artefacts required by the server.
 COPY app ./app
-COPY specs ./specs
-COPY public ./public
+COPY codex_qernel ./codex_qernel
+COPY capsules ./capsules
+COPY scripts ./scripts
+COPY README.md ./README.md
+
+RUN mkdir -p var/log
 
 EXPOSE 8080
 
-CMD ["python", "-m", "app.server"]
+CMD ["python", "app/server.py"]

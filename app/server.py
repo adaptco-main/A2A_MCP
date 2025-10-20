@@ -6,13 +6,17 @@ import mimetypes
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Any, Dict, Optional
-from urllib.parse import urlsplit
+from typing import Any, Dict
+from urllib.parse import parse_qs, urlparse
 
-from .merge_model import MergeModel
+from codex_qernel import CodexQernel, QernelConfig
 
 logger = logging.getLogger("core_orchestrator.server")
 logging.basicConfig(level=logging.INFO)
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+CONFIG = QernelConfig.from_env(base_dir=BASE_DIR)
+QERNEL = CodexQernel(CONFIG)
 
 
 def _default_model_path() -> Path:
@@ -95,125 +99,123 @@ def resolve_portal_asset(request_path: str) -> Optional[Path]:
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    """Serve merge-planning metadata and middleware introspection."""
+    """HTTP interface exposing the CODEX qernel primitives."""
 
-    server_version = "CoreOrchestratorHTTP/1.1"
-    merge_model: MergeModel = MERGE_MODEL
+    server_version = "CoreOrchestratorHTTP/2.0"
 
-    def do_GET(self) -> None:  # noqa: N802 (BaseHTTPRequestHandler API)
-        """Respond to GET requests with merge-planning artefacts."""
-
-        path = self._normalized_path()
+    def do_GET(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
         if path == "/health":
-            self._respond_json(200, {"status": "ok"})
-            logger.info("Responded to /health request")
+            self._send_response(200, QERNEL.health_status())
+            logger.info("Health probe served")
             return
-
-        if path == "/merge/branches":
-            payload = {
-                "version": self.merge_model.version,
-                "updated": self.merge_model.updated,
-                "branches": self.merge_model.branches_summary(),
-            }
-            self._respond_json(200, payload)
-            logger.info("Served merge branches metadata")
+        if path == "/capsules":
+            params = parse_qs(parsed.query)
+            refresh_requested = params.get("refresh", ["0"])[0].lower() in {"1", "true", "yes"}
+            if refresh_requested:
+                QERNEL.refresh()
+                logger.info("Capsule catalog refreshed via query parameter")
+            capsules = QERNEL.list_capsules()
+            self._send_response(200, {"capsules": capsules})
             return
-
-        if path == "/merge/plan":
-            payload = {
-                "version": self.merge_model.version,
-                "updated": self.merge_model.updated,
-                "waves": self.merge_model.plan_summary(),
-            }
-            self._respond_json(200, payload)
-            logger.info("Served merge plan summary")
+        if path.startswith("/capsules/"):
+            capsule_id = path.split("/", 2)[2]
+            manifest = QERNEL.get_capsule(capsule_id)
+            if manifest is None:
+                self._send_response(404, {"error": "capsule_not_found", "capsule_id": capsule_id})
+                return
+            self._send_response(200, manifest)
             return
-
-        if path == "/merge/automation":
-            payload = {
-                "version": self.merge_model.version,
-                "updated": self.merge_model.updated,
-                "automation": self.merge_model.automation_summary(),
-            }
-            self._respond_json(200, payload)
-            logger.info("Served automation summary")
+        if path == "/events":
+            events = [event.__dict__ for event in QERNEL.read_events(limit=50)]
+            self._send_response(200, {"events": events})
             return
-
-        if path == "/middleware/contract":
-            payload = {
-                "version": self.merge_model.version,
-                "updated": self.merge_model.updated,
-                "contract": self.merge_model.middleware_summary(),
-            }
-            self._respond_json(200, payload)
-            logger.info("Served middleware contract")
+        if path == "/scrollstream/ledger":
+            params = parse_qs(parsed.query)
+            try:
+                limit = int(params.get("limit", ["10"])[0])
+            except ValueError:
+                self._send_response(400, {"error": "invalid_limit"})
+                return
+            ledger = QERNEL.read_scrollstream_ledger(limit=max(1, min(limit, 100)))
+            self._send_response(200, {"entries": ledger})
             return
+        self._send_response(404, {"error": "not_found", "path": parsed.path})
 
-        if path == "/merge/model":
-            payload = self.merge_model.to_dict()
-            self._respond_json(200, payload)
-            logger.info("Served full merge model payload")
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        if path == "/capsules/refresh":
+            QERNEL.refresh()
+            self._send_response(200, {"status": "refreshed", "capsule_count": len(QERNEL.list_capsules())})
+            logger.info("Capsule catalog refreshed via POST")
             return
-
-        if self._serve_portal_asset(path):
+        if path == "/events":
+            payload = self._load_json_body()
+            if not isinstance(payload, dict):
+                self._send_response(400, {"error": "invalid_payload"})
+                return
+            event_name = str(payload.get("event", "")).strip()
+            event_payload = payload.get("payload", {})
+            if not event_name:
+                self._send_response(400, {"error": "missing_event_name"})
+                return
+            if not isinstance(event_payload, dict):
+                self._send_response(400, {"error": "payload_must_be_object"})
+                return
+            event = QERNEL.record_event(event_name, event_payload)
+            self._send_response(201, event.__dict__)
+            logger.info("Recorded event %s", event_name)
             return
-
-        self._respond_json(404, {"error": "not_found", "path": path})
-        logger.warning("Unhandled path requested: %s", self.path)
+        if path == "/scrollstream/rehearsal":
+            payload = self._load_json_body() or {}
+            training_mode = True
+            if isinstance(payload, dict):
+                training_mode = bool(payload.get("training_mode", True))
+            entries = QERNEL.emit_scrollstream_rehearsal(training_mode=training_mode)
+            self._send_response(201, {"entries": entries})
+            logger.info("Scrollstream rehearsal emitted (training_mode=%s)", training_mode)
+            return
+        self._send_response(404, {"error": "not_found", "path": parsed.path})
 
     def log_message(self, format: str, *args: object) -> None:  # noqa: A003
-        """Silence the default stdout logging to keep CI logs tidy."""
-
         logger.debug("Request: " + format, *args)
 
-    def _normalized_path(self) -> str:
-        """Normalize request path to support suffix slashes and query strings."""
-
-        raw_path = urlsplit(self.path).path
-        normalized = raw_path.rstrip("/")
-        return normalized or "/"
-
-    def _respond_json(self, status_code: int, payload: Dict[str, Any]) -> None:
-        """Helper to serialize payloads to JSON."""
-
+    # Helpers -------------------------------------------------------------
+    def _send_response(self, status_code: int, payload: Dict[str, Any]) -> None:
         body = json.dumps(payload).encode("utf-8")
-        self._send_response(status_code, body, "application/json")
-
-    def _serve_portal_asset(self, path: str) -> bool:
-        """Serve static assets backing the portal when available."""
-
-        asset_path = resolve_portal_asset(path)
-        if asset_path is None:
-            return False
-
-        try:
-            body = asset_path.read_bytes()
-        except OSError as exc:  # pragma: no cover - defensive IO guard
-            logger.error("Failed to read portal asset %s: %s", asset_path, exc)
-            return False
-
-        content_type = mimetypes.guess_type(asset_path.name)[0] or "application/octet-stream"
-        self._send_response(200, body, content_type)
-        try:
-            relative = asset_path.relative_to(STATIC_ROOT)
-        except ValueError:  # pragma: no cover - should not occur
-            relative = asset_path
-        logger.info("Served portal asset %s", relative)
-        return True
-
-    def _send_response(self, status_code: int, body: bytes, content_type: str) -> None:
         self.send_response(status_code)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
+    def _load_json_body(self) -> Any:
+        content_length = self.headers.get("Content-Length")
+        if not content_length:
+            return None
+        try:
+            length = int(content_length)
+        except ValueError:
+            return None
+        raw = self.rfile.read(length)
+        try:
+            return json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError:
+            return None
+
 
 def main() -> None:
     host = "0.0.0.0"
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer((host, port), RequestHandler)
-    logger.info("Starting Core Orchestrator HTTP server on %s:%s", host, port)
+    logger.info(
+        "Starting CODEX qernel HTTP server on %s:%s (capsules_dir=%s)",
+        host,
+        port,
+        CONFIG.capsules_dir,
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

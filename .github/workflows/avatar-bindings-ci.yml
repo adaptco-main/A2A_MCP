@@ -15,7 +15,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Detect Node lockfiles
+        id: node_lockfiles
+        shell: bash
+        run: |
+          set -euo pipefail
+          matches=$(find . -path '*/node_modules/*' -prune -o -name package-lock.json -print | sort)
+          if [ -n "$matches" ]; then
+            {
+              echo "paths<<'EOF'"
+              echo "$matches"
+              echo "EOF"
+            } >>"$GITHUB_OUTPUT"
+            echo "Detected npm lockfiles:"
+            echo "$matches"
+          else
+            echo "paths=" >>"$GITHUB_OUTPUT"
+            echo "No npm lockfiles found; skipping dependency cache."
+          fi
+
+      - name: Setup Node.js (with npm cache)
+        if: steps.node_lockfiles.outputs.paths != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ${{ steps.node_lockfiles.outputs.paths }}
+
+      - name: Setup Node.js (without cache)
+        if: steps.node_lockfiles.outputs.paths == ''
         uses: actions/setup-node@v4
         with:
           node-version: '18'

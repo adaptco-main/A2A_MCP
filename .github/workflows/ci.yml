@@ -60,15 +60,24 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
         run: |
           BASE_SPEC="${{ env.ARTIFACTS_DIR }}/openapi-base.yaml"
+
+          write_output() {
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+              printf 'path=%s\n' "$1" >> "$GITHUB_OUTPUT"
+            else
+              echo "GITHUB_OUTPUT is not set; skipping export of '$1'" >&2
+            fi
+          }
+
           if [ "$EVENT_NAME" = "pull_request" ]; then
             git fetch origin main --depth=1
             if git show origin/main:${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
-              echo "path=$BASE_SPEC" >> "$GITHUB_OUTPUT"
+              write_output "$BASE_SPEC"
             fi
           else
             if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
               if git show "$BEFORE_SHA":${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
-                echo "path=$BASE_SPEC" >> "$GITHUB_OUTPUT"
+                write_output "$BASE_SPEC"
               fi
             fi
           fi

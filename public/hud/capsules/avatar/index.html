@@ -63,11 +63,20 @@
 </head>
 <body class="antialiased text-stone-200">
 
+    <div class="dashboard-capture-target min-h-screen" data-dashboard-export-root>
     <main class="max-w-7xl mx-auto p-4 sm:p-8 space-y-16">
 
         <section class="text-center py-12">
             <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-stone-100">Sovereign Fleet Architect</h1>
             <p class="mt-4 text-lg md:text-xl max-w-4xl mx-auto text-stone-400">An interactive console for building and auditing the fleet. Filter by vessel type to inspect each avatar's core traits, geometry, and protocol bindings.</p>
+            <div class="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <button type="button" id="export-previz-shots" data-export-shots class="px-6 py-3 rounded-full bg-sky-500 text-stone-50 font-semibold shadow-lg shadow-sky-900/40 transition-transform duration-200 hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-sky-300">
+                    Export reviewer PNGs
+                </button>
+                <p class="max-w-xl text-sm text-stone-500 sm:text-left">
+                    Generates <code>Previz_R-2025-001742_1920x1080_dark.png</code> and <code>Previz_R-2025-001742_2560x1440_light.png</code> using the approved html2canvas exporter.
+                </p>
+            </div>
         </section>
 
         <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
@@ -92,6 +101,7 @@
         </section>
 
     </main>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -323,6 +333,153 @@
 
             loadAvatarData();
         });
+    </script>
+    <script>
+        (function () {
+            const EXPORT_SPECS = [
+                { width: 1920, height: 1080, theme: 'dark', name: 'Previz_R-2025-001742_1920x1080_dark.png' },
+                { width: 2560, height: 1440, theme: 'light', name: 'Previz_R-2025-001742_2560x1440_light.png' },
+            ];
+
+            const TARGET_SELECTOR = '[data-dashboard-export-root]';
+            const THEME_STYLE_ID = 'png-theme-override';
+            const EXPORT_BUTTON = document.querySelector('[data-export-shots]');
+
+            if (!EXPORT_BUTTON) {
+                return;
+            }
+
+            let loaderPromise = null;
+            let exporting = false;
+
+            function ensureHtml2Canvas() {
+                if (window.html2canvas) {
+                    return Promise.resolve(window.html2canvas);
+                }
+
+                if (!loaderPromise) {
+                    loaderPromise = new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+                        script.onload = () => resolve(window.html2canvas);
+                        script.onerror = () => reject(new Error('Failed to load html2canvas'));
+                        document.head.appendChild(script);
+                    });
+                }
+
+                return loaderPromise;
+            }
+
+            function injectTheme(theme) {
+                const existing = document.getElementById(THEME_STYLE_ID);
+                if (existing) {
+                    existing.remove();
+                }
+
+                if (theme !== 'light') {
+                    return;
+                }
+
+                const style = document.createElement('style');
+                style.id = THEME_STYLE_ID;
+                style.textContent = `
+                    :root{--bg:#F7FBFF;--card:#FFFFFF;--grid:#CFD8E3;--text:#0B1020;--sub:#355C6C;--accent:#0A7BBE;--plot:#0891B2}
+                    body{background:var(--bg)!important;color:var(--text)!important}
+                    ${TARGET_SELECTOR}{background:var(--bg)!important;color:var(--text)!important}
+                    ${TARGET_SELECTOR} .bg-stone-800,
+                    ${TARGET_SELECTOR} .bg-stone-900,
+                    ${TARGET_SELECTOR} .border-stone-700,
+                    ${TARGET_SELECTOR} .border-stone-600{background:var(--card)!important;border-color:var(--grid)!important;color:var(--text)!important}
+                    ${TARGET_SELECTOR} .text-stone-100,
+                    ${TARGET_SELECTOR} .text-stone-200,
+                    ${TARGET_SELECTOR} .text-stone-300{color:var(--text)!important}
+                    ${TARGET_SELECTOR} .text-stone-400,
+                    ${TARGET_SELECTOR} .text-stone-500{color:var(--sub)!important}
+                `;
+                document.head.appendChild(style);
+            }
+
+            async function exportPNG({ width, height, theme, name }) {
+                const html2canvas = await ensureHtml2Canvas();
+                const target = document.querySelector(TARGET_SELECTOR) || document.body;
+
+                const previousScroll = [window.scrollX, window.scrollY];
+
+                injectTheme(theme);
+                window.scrollTo(0, 0);
+
+                try {
+                    const rect = target.getBoundingClientRect();
+                    const baseWidth = rect.width || target.clientWidth || target.scrollWidth || width;
+                    const baseHeight = rect.height || target.clientHeight || target.scrollHeight || height;
+                    const scale = Math.max(width / baseWidth, height / baseHeight, 1);
+                    const capturedCanvas = await html2canvas(target, {
+                        scale,
+                        backgroundColor: null,
+                        useCORS: true,
+                    });
+
+                    const outputCanvas = document.createElement('canvas');
+                    outputCanvas.width = width;
+                    outputCanvas.height = height;
+                    const ctx = outputCanvas.getContext('2d');
+
+                    const sx = Math.max(0, Math.floor((capturedCanvas.width - width) / 2));
+                    const sy = Math.max(0, Math.floor((capturedCanvas.height - height) / 2));
+                    const sw = Math.min(width, capturedCanvas.width);
+                    const sh = Math.min(height, capturedCanvas.height);
+
+                    ctx.drawImage(capturedCanvas, sx, sy, sw, sh, 0, 0, width, height);
+
+                    await new Promise((resolve, reject) => {
+                        outputCanvas.toBlob((blob) => {
+                            if (!blob) {
+                                reject(new Error('Unable to encode PNG'));
+                                return;
+                            }
+                            const link = document.createElement('a');
+                            link.download = name;
+                            link.href = URL.createObjectURL(blob);
+                            link.click();
+                            setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+                            resolve();
+                        }, 'image/png', 1.0);
+                    });
+                } finally {
+                    injectTheme(null);
+                    window.scrollTo(previousScroll[0], previousScroll[1]);
+                }
+            }
+
+            async function handleExportClick() {
+                if (exporting) {
+                    return;
+                }
+
+                exporting = true;
+                const originalText = EXPORT_BUTTON.textContent;
+                EXPORT_BUTTON.disabled = true;
+                EXPORT_BUTTON.textContent = 'Exporting…';
+
+                try {
+                    for (const spec of EXPORT_SPECS) {
+                        await exportPNG(spec);
+                    }
+                } catch (error) {
+                    console.error('Failed to export dashboard PNGs', error);
+                    alert('Dashboard export failed. Check the console for details.');
+                } finally {
+                    injectTheme(null);
+                    EXPORT_BUTTON.disabled = false;
+                    EXPORT_BUTTON.textContent = originalText;
+                    exporting = false;
+                }
+            }
+
+            EXPORT_BUTTON.addEventListener('click', () => {
+                handleExportClick();
+            });
+        })();
     </script>
 </body>
 </html>

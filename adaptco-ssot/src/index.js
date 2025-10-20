@@ -39,6 +39,13 @@ app.post('/assets', (req, res, next) => {
 app.put('/assets/:id', (req, res, next) => {
   try {
     const asset = validateAsset(req.body);
+    if (asset.id !== req.params.id) {
+      res.status(400).json({
+        status: 'error',
+        message: 'asset id must match request parameter'
+      });
+      return;
+    }
     const updated = store.update(req.params.id, asset);
     if (!updated) {
       res.status(404).json({ status: 'error', message: 'asset not found' });
@@ -48,6 +55,10 @@ app.put('/assets/:id', (req, res, next) => {
   } catch (error) {
     if (error.statusCode === 400) {
       res.status(400).json({ status: 'error', errors: error.errors || [] });
+      return;
+    }
+    if (error.statusCode === 409) {
+      res.status(409).json({ status: 'error', message: error.message });
       return;
     }
     next(error);

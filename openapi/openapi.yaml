@@ -15,12 +15,8 @@ servers:
 tags:
   - name: health
     description: Liveness and readiness status endpoints.
-  - name: merges
-    description: Branch merge planning metadata surfaced by the middleware.
-  - name: automation
-    description: Automation hook and notification catalog.
-  - name: middleware
-    description: Middleware contract introspection.
+  - name: txtordr
+    description: Txtordr intake and routing endpoints.
 paths:
   /health:
     get:
@@ -44,445 +40,42 @@ paths:
                     description: Service status indicator.
                     enum:
                       - ok
-  /merge/branches:
-    get:
-      summary: List managed branches
-      operationId: listMergeBranches
-      description: Return metadata for each branch participating in orchestrated merges.
+  /txtordr/intake:
+    post:
+      summary: Submit a Txtordr payload
+      description: Receive and route structured Txtordr payloads.
+      operationId: postTxtordrIntake
       tags:
-        - merges
+        - txtordr
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: 'https://q.enterprises/schemas/txtordr.v1.json'
       responses:
-        '200':
-          description: Branch metadata for merge orchestration.
+        '202':
+          description: Accepted and routed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BranchListResponse'
-  /merge/plan:
-    get:
-      summary: Retrieve merge wave plan
-      operationId: getMergePlan
-      description: >-
-        Provide the ordered merge waves, their gating conditions, and source
-        branches required to land changes into integration targets.
-      tags:
-        - merges
-      responses:
-        '200':
-          description: Ordered merge waves with gating requirements.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MergePlanResponse'
-  /merge/automation:
-    get:
-      summary: Automation hooks and notifications
-      operationId: getMergeAutomation
-      description: List automation hooks and notification channels executed around merge waves.
-      tags:
-        - automation
-      responses:
-        '200':
-          description: Automation catalog powering merge workflows.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AutomationResponse'
-  /middleware/contract:
-    get:
-      summary: Middleware contract description
-      operationId: getMiddlewareContract
-      description: Describe middleware capabilities and HTTP routes for integrators.
-      tags:
-        - middleware
-      responses:
-        '200':
-          description: Middleware contract definition.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MiddlewareContractResponse'
-  /merge/model:
-    get:
-      summary: Retrieve full merge model
-      operationId: getMergeModel
-      description: Return the canonical merge model document for downstream systems.
-      tags:
-        - merges
-      responses:
-        '200':
-          description: Complete merge model payload.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MergeModelDocument'
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  order_id:
+                    type: string
+        '400':
+          description: Invalid payload or HMAC
+        '409':
+          description: Duplicate idempotency key
+        '500':
+          description: Internal error
+      security:
+        - hmacAuth: []
 components:
-  schemas:
-    BranchCI:
-      type: object
-      required:
-        - pipelines
-        - required_checks
-      properties:
-        pipelines:
-          type: array
-          description: Pipelines executed for the branch before merge.
-          items:
-            type: string
-        required_checks:
-          type: array
-          description: Status checks enforced prior to merge approval.
-          items:
-            type: string
-    Branch:
-      type: object
-      required:
-        - id
-        - name
-        - category
-        - primary_branch
-        - description
-        - owner
-        - status
-        - dependencies
-        - artifacts
-        - ci
-      properties:
-        id:
-          type: string
-          description: Identifier used by the merge planner.
-        name:
-          type: string
-          description: Repository or package name tracked by the orchestrator.
-        category:
-          type: string
-          description: Functional category of the branch (e.g., service, middleware).
-        primary_branch:
-          type: string
-          description: Default branch in the source repository.
-        description:
-          type: string
-          description: Narrative description of responsibilities for the branch.
-        owner:
-          type: string
-          description: Team accountable for the branch.
-        status:
-          type: string
-          description: Merge readiness indicator.
-        dependencies:
-          type: array
-          description: Other branch identifiers that must land first.
-          items:
-            type: string
-        artifacts:
-          type: array
-          description: Key outputs produced by the branch.
-          items:
-            type: string
-        ci:
-          $ref: '#/components/schemas/BranchCI'
-    BranchListResponse:
-      type: object
-      required:
-        - version
-        - updated
-        - branches
-      properties:
-        version:
-          type: string
-          description: Version of the merge model document.
-        updated:
-          type: string
-          description: ISO-8601 timestamp of the last model update.
-        branches:
-          type: array
-          description: Ordered list of branches included in the model.
-          items:
-            $ref: '#/components/schemas/Branch'
-    MergeWaveSource:
-      type: object
-      required:
-        - id
-        - name
-        - primary_branch
-        - status
-        - dependencies
-        - artifacts
-      properties:
-        id:
-          type: string
-          description: Branch identifier participating in the merge wave.
-        name:
-          type: string
-          description: Human-readable branch or repository name.
-        primary_branch:
-          type: string
-          description: Upstream branch name used for merging.
-        status:
-          type: string
-          description: Readiness status inherited from the branch metadata.
-        dependencies:
-          type: array
-          description: Branch dependencies that influence sequencing.
-          items:
-            type: string
-        artifacts:
-          type: array
-          description: Highlights of artifacts produced by the branch.
-          items:
-            type: string
-    MergeWave:
-      type: object
-      required:
-        - id
-        - order
-        - description
-        - target
-        - sources
-        - preconditions
-        - validation
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the merge wave.
-        order:
-          type: integer
-          description: Ordering index for merge execution.
-        description:
-          type: string
-          description: Summary of the wave objective.
-        target:
-          type: string
-          description: Target branch receiving merges in this wave.
-        sources:
-          type: array
-          description: Branch metadata objects referenced by the wave.
-          items:
-            $ref: '#/components/schemas/MergeWaveSource'
-        preconditions:
-          type: array
-          description: Conditions that must be satisfied before executing the wave.
-          items:
-            type: string
-        validation:
-          type: array
-          description: Validation steps executed after the merge wave.
-          items:
-            type: string
-    MergePlanResponse:
-      type: object
-      required:
-        - version
-        - updated
-        - waves
-      properties:
-        version:
-          type: string
-          description: Version of the merge model document.
-        updated:
-          type: string
-          description: ISO-8601 timestamp of the last model update.
-        waves:
-          type: array
-          description: Ordered merge waves with resolved branch metadata.
-          items:
-            $ref: '#/components/schemas/MergeWave'
-    AutomationHook:
-      type: object
-      required:
-        - id
-        - description
-        - entrypoint
-        - triggers
-      properties:
-        id:
-          type: string
-          description: Identifier of the automation hook.
-        description:
-          type: string
-          description: Purpose of the automation hook.
-        entrypoint:
-          type: string
-          description: Command or script invoked for the hook.
-        triggers:
-          type: array
-          description: Merge waves that trigger the hook.
-          items:
-            type: string
-    AutomationNotification:
-      type: object
-      required:
-        - channel
-        - events
-        - summary_template
-      properties:
-        channel:
-          type: string
-          description: Notification channel identifier.
-        events:
-          type: array
-          description: Events that emit notifications.
-          items:
-            type: string
-        summary_template:
-          type: string
-          description: Message template broadcast to the channel.
-    AutomationSummary:
-      type: object
-      required:
-        - hooks
-        - notifications
-      properties:
-        hooks:
-          type: array
-          description: Hooks executed around merge operations.
-          items:
-            $ref: '#/components/schemas/AutomationHook'
-        notifications:
-          type: array
-          description: Notification routes mirrored to operators.
-          items:
-            $ref: '#/components/schemas/AutomationNotification'
-    AutomationResponse:
-      type: object
-      required:
-        - version
-        - updated
-        - automation
-      properties:
-        version:
-          type: string
-          description: Version of the merge model document.
-        updated:
-          type: string
-          description: ISO-8601 timestamp of the last model update.
-        automation:
-          $ref: '#/components/schemas/AutomationSummary'
-    MiddlewareRoute:
-      type: object
-      required:
-        - method
-        - path
-        - purpose
-      properties:
-        method:
-          type: string
-          description: HTTP verb supported by the middleware route.
-        path:
-          type: string
-          description: Request path exposed by the middleware.
-        purpose:
-          type: string
-          description: Human-readable explanation of the route.
-    MiddlewareContract:
-      type: object
-      required:
-        - service_name
-        - description
-        - capabilities
-        - routes
-      properties:
-        service_name:
-          type: string
-          description: Name of the middleware service.
-        description:
-          type: string
-          description: Summary of middleware responsibilities.
-        capabilities:
-          type: array
-          description: Supported automation and orchestration features.
-          items:
-            type: string
-        routes:
-          type: array
-          description: HTTP routes exposed by the service.
-          items:
-            $ref: '#/components/schemas/MiddlewareRoute'
-    MiddlewareContractResponse:
-      type: object
-      required:
-        - version
-        - updated
-        - contract
-      properties:
-        version:
-          type: string
-          description: Version of the merge model document.
-        updated:
-          type: string
-          description: ISO-8601 timestamp of the last model update.
-        contract:
-          $ref: '#/components/schemas/MiddlewareContract'
-    MergeWaveRecord:
-      type: object
-      required:
-        - id
-        - order
-        - description
-        - target
-        - sources
-        - preconditions
-        - validation
-      properties:
-        id:
-          type: string
-        order:
-          type: integer
-        description:
-          type: string
-        target:
-          type: string
-        sources:
-          type: array
-          description: Branch identifiers merged in the wave.
-          items:
-            type: string
-        preconditions:
-          type: array
-          items:
-            type: string
-        validation:
-          type: array
-          items:
-            type: string
-    MergeModelAutomation:
-      type: object
-      required:
-        - hooks
-        - notifications
-      properties:
-        hooks:
-          type: array
-          items:
-            $ref: '#/components/schemas/AutomationHook'
-        notifications:
-          type: array
-          items:
-            $ref: '#/components/schemas/AutomationNotification'
-    MergeModelDocument:
-      type: object
-      required:
-        - version
-        - updated
-        - branches
-        - merge_waves
-        - automation
-        - middleware_contract
-      properties:
-        version:
-          type: string
-        updated:
-          type: string
-        branches:
-          type: array
-          items:
-            $ref: '#/components/schemas/Branch'
-        merge_waves:
-          type: array
-          items:
-            $ref: '#/components/schemas/MergeWaveRecord'
-        automation:
-          $ref: '#/components/schemas/MergeModelAutomation'
-        middleware_contract:
-          $ref: '#/components/schemas/MiddlewareContract'
-
+  securitySchemes:
+    hmacAuth:
+      type: apiKey
+      in: header
+      name: X-Txtordr-HMAC
