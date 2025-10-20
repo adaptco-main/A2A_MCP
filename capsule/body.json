@@ -84,7 +84,13 @@
     "attestation_status": "SEALED",
     "council_attested_fingerprint": "sha256:f1f89e4a77180f3638966a8c19b1b54ec447905f65ebc138b20823cf9f1f5893",
     "sealed_at": "2025-10-19T00:23:12Z",
-    "ledger_ref": "capsule.ops.branch_s.v1/ledger.branch_s.jsonl#2025-10-19T002312Z_apply"
+    "ledger_ref": "capsule.ops.branch_s.v1/ledger.branch_s.jsonl#2025-10-19T002312Z_apply",
+    "signature": {
+      "algorithm": "ed25519",
+      "public_key": "REPLACE_WITH_BASE58_ED25519_PUBLIC_KEY",
+      "signature": "REPLACE_WITH_BASE64_ED25519_SIGNATURE",
+      "signed_at": "REPLACE_WITH_ISO8601_UTC_TIMESTAMP"
+    }
   },
   "lineage": {
     "parent_capsule": "capsule.prompt.designStudio.dual.v1",
