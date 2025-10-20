@@ -36,15 +36,3 @@ Federation relay uses `BEARER_TOKEN` from the environment:
 export BEARER_TOKEN=<token>
 make branch-s federate
 ```
-
----
-
-### 🪶 Optional Hardening (if you want full CI/CD integration)
-
-- Add a `.github/workflows/branch_s.yml` for automated Sentinel trust reissue.  
-- Wire the `make branch-s federate` target to your orchestrator’s CI secret token.  
-- Add checksum verification (`sha256sum -c`) at workflow exit to guarantee immutability.
-
----
-
-Would you like me to generate the **GitHub Actions workflow YAML** next — so that the Sentinel apply/revoke/reissue cycle runs automatically on merge to `main` or manual trigger via `workflow_dispatch`?

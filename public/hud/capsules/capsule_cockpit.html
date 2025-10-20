@@ -21,7 +21,7 @@
         const firebaseApp = initializeApp(firebaseConfig);
         const db = getFirestore(firebaseApp);
         const auth = getAuth(firebaseApp);
-        setLogLevel('Debug');
+        setLogLevel('debug');
 
         let userId = null;
         let isAuthReady = false;

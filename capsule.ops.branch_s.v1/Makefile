@@ -5,14 +5,15 @@
 #   make branch-s reissue   → Reissue Sentinel Epoch
 #   make branch-s federate  → Reissue + Auto Federation Relay
 
+.SUFFIXES:
+
 SHELL := /usr/bin/env bash
 LEDGER := ledger.branch_s.jsonl
-OUT := .out
-BIN := $(OUT)/capsule.ops.branch_s.v1
-LOG := $(OUT)/ops.log
+OUT_DIR := .out
+LOG := $(OUT_DIR)/ops.log
 BEARER_TOKEN ?= unset
 
-.PHONY: branch-s apply revoke reissue federate branch-s-apply branch-s-revoke branch-s-reissue branch-s-federate verify clean
+.PHONY: branch-s branch-s-apply branch-s-revoke branch-s-reissue branch-s-federate apply revoke reissue federate verify clean
 
 branch-s: ## Print usage
 	@echo "Usage: make branch-s [apply|revoke|reissue|federate]"
@@ -22,26 +23,22 @@ revoke: branch-s-revoke
 reissue: branch-s-reissue
 federate: branch-s-federate
 
-branch-s-apply:
-	@mkdir -p $(OUT)
+branch-s-apply: | $(OUT_DIR)
 	@echo "🧊 Applying Sentinel seal..."
 	./apply_and_seal.sh | tee -a $(LOG)
 	@echo "✅ Apply & Seal complete."
 
-branch-s-revoke:
-	@mkdir -p $(OUT)
+branch-s-revoke: | $(OUT_DIR)
 	@echo "⚠️ Revoking Sentinel-100 seal..."
 	./revoke_branch_s.sh | tee -a $(LOG)
 	@echo "⚠️ Revocation completed and logged."
 
-branch-s-reissue:
-	@mkdir -p $(OUT)
+branch-s-reissue: | $(OUT_DIR)
 	@echo "↻ Reissuing Sentinel epoch..."
 	./reissue_branch_s.sh | tee -a $(LOG)
 	@echo "✅ Reissue complete."
 
-branch-s-federate:
-	@mkdir -p $(OUT)
+branch-s-federate: | $(OUT_DIR)
 	@echo "🌐 Reissuing and federating..."
 	BEARER_TOKEN=$(BEARER_TOKEN) ./reissue_branch_s.sh --federate | tee -a $(LOG)
 	@echo "🌐 Federation relay invoked."
@@ -53,5 +50,8 @@ verify:
 
 # Clean workspace
 clean:
-	rm -rf $(OUT) revoke.sha256 reissue.sha256 checksums.sha256 .resp.json dao.federation.relay.*.json
+	rm -rf $(OUT_DIR) revoke.sha256 reissue.sha256 checksums.sha256 .resp.json dao.federation.relay.*.json
 	@echo "🧹 Workspace cleaned."
+
+$(OUT_DIR):
+	mkdir -p $(OUT_DIR)
