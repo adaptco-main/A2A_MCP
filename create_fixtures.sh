@@ -1,104 +1,67 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-FIXTURE_DIR="${ROOT_DIR}/fixtures"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OUT_DIR="$ROOT_DIR/fixtures"
 
-mkdir -p "${FIXTURE_DIR}"
-
-python3 - <<'PY' "${FIXTURE_DIR}/snapshot.json"
+python3 - <<'PY' "$ROOT_DIR" "$OUT_DIR"
 import json
-import sys
-from pathlib import Path
+import pathlib
+import collections
 
-output_path = Path(sys.argv[1])
-output_path.parent.mkdir(parents=True, exist_ok=True)
+root = pathlib.Path(__import__('sys').argv[1])
+out = pathlib.Path(__import__('sys').argv[2])
+registry_path = root / "runtime" / "frozen" / "capsule.registry.runtime.v1.json"
+metaagent_path = root / "capsules" / "capsule.metaagent.solf1.oneshot.v1.json"
+
+registry = json.loads(registry_path.read_text(encoding="utf-8"))
+metaagent = json.loads(metaagent_path.read_text(encoding="utf-8"))
+
+capsules = registry.get("capsules", {})
+state_counts = collections.Counter(entry.get("state", "UNKNOWN") for entry in capsules.values())
+
+def sorted_capsules(predicate):
+    return sorted([
+        capsule_id
+        for capsule_id, entry in capsules.items()
+        if predicate(entry)
+    ])
+
+frozen_capsules = sorted_capsules(lambda entry: entry.get("state") == "FROZEN")
+
+link_summary = {}
+for link in registry.get("links", []):
+    bucket = link_summary.setdefault(link["type"], [])
+    bucket.append({"from": link["from"], "to": link["to"]})
+
+for link_type in list(link_summary.keys()):
+    link_summary[link_type] = sorted(link_summary[link_type], key=lambda item: (item["from"], item["to"]))
 
 snapshot = {
-    "sandbox": "photo_prompt_print_p3l",
-    "generated_at": "2025-10-11T22:00:00Z",
-    "subject": "GT3 race car sandbox model",
-    "photo_to_prompt": {
-        "reference": "assets/reference/gt3_race_car.jpg",
-        "vision_tags": [
-            {"label": "object", "value": "GT3 race car"},
-            {"label": "material", "value": "painted carbon fiber"},
-            {"label": "material", "value": "forged magnesium"},
-            {"label": "color", "value": "obsidian black"},
-            {"label": "accent", "value": "electric cyan"},
-            {"label": "proportion", "value": "wide track, low profile"},
-        ],
-        "prompt_schema": {
-            "subject": "GT3 race car",
-            "scale": "1:7",
-            "materials": ["PLA", "resin"],
-            "style": "studio model"
-        },
-        "enriched_context": [
-            "track-ready pose with aero kit deployed",
-            "display base with endurance series team logo"
-        ]
+    "snapshot_id": "registry-runtime-v1",
+    "captured_at": registry.get("issued_at"),
+    "source": registry_path.as_posix(),
+    "bundles": registry.get("bundles", []),
+    "capsule_summary": {
+        "total": len(capsules),
+        "states": dict(state_counts),
+        "frozen_capsules": frozen_capsules,
     },
-    "prompt_to_print": {
-        "cad_pipeline": {
-            "tool": "OpenSCAD",
-            "template": "parametric_gt3_sandbox.scad",
-            "parameters": {
-                "wheelbase_mm": 415,
-                "ride_height_mm": 22,
-                "splitter_offset_mm": 18
-            }
-        },
-        "manufacturing_steps": [
-            "convert parametric CAD to STL",
-            "validate watertightness of exported mesh",
-            "slice at 0.15 mm layer height with 0.4 mm nozzle",
-            "print tolerance module and measure fit",
-            "assemble sandbox scale model"
-        ]
-    },
-    "print_to_p3l": {
-        "proof": {
-            "photo_hash": "sha256:abc123",
-            "prompt_hash": "sha256:def456",
-            "stl_hash": "sha256:ghi789"
-        },
-        "flow": {
-            "printer": "PrusaMK4",
-            "duration_min": 320,
-            "material_g": 680,
-            "energy_kwh": 4.6,
-            "filament_batch": "CF-PLA-2210"
-        },
-        "execution": {
-            "result": "PASS",
-            "timestamp_utc": "2025-10-11T22:00:00Z",
-            "validation": "visual-inspection"
+    "link_summary": dict(sorted(link_summary.items())),
+    "health": registry.get("health", {}),
+    "metaagent_overrides": {
+        "capsule.metaagent.solf1.oneshot.v1": {
+            "status": metaagent.get("status"),
+            "schema": metaagent.get("schema"),
+            "anchors": metaagent.get("anchors", {}),
+            "inputs": metaagent.get("inputs", {}),
+            "outputs": metaagent.get("outputs", {}),
         }
     },
-    "p3l_protocol_record": {
-        "stage": "sandbox_model_v1",
-        "inputs": {
-            "photo_hash": "abc123...",
-            "prompt_hash": "def456...",
-            "stl_hash": "ghi789..."
-        },
-        "proof": "sha256:root-merkle-placeholder",
-        "flow": {
-            "printer": "PrusaMK4",
-            "duration_min": 320,
-            "material_g": 680
-        },
-        "execution": {
-            "result": "PASS",
-            "timestamp_utc": "2025-10-11T22:00:00Z"
-        }
-    }
 }
 
-with output_path.open("w", encoding="utf-8") as fh:
-    json.dump(snapshot, fh, indent=2)
-    fh.write("\n")
-PY
+out.mkdir(parents=True, exist_ok=True)
+(snapshot_path := out / "snapshot.json").write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
 
-printf 'Fixture snapshot written to %s\n' "${FIXTURE_DIR}/snapshot.json"
+print(f"wrote {snapshot_path.relative_to(root)}")
+PY
