@@ -1,7 +1,9 @@
 // adaptco-core-orchestrator/__tests__/sentinel.agent.test.js
-'use strict';
+"use strict";
 
 const path = require('path');
+const os = require('os');
+const { promises: fsp } = require('fs');
 const SentinelAgent = require('../src/sentinel');
 
 function createFetchStub(response = {}) {
@@ -98,6 +100,35 @@ describe('SentinelAgent', () => {
         params: []
       })
     ).rejects.toThrow('Descriptor missing required fields: params');
+  });
+
+  it('writes descriptor payloads to explicit nested paths', async () => {
+    const tmpRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'sentinel-explicit-'));
+    const explicitPath = path.join(tmpRoot, 'nested', 'descriptors', 'custom.json');
+    const sentinel = new SentinelAgent({
+      runCommand: async () => ({ stdout: '', stderr: '', exitCode: 0 }),
+      fetch: noopFetch
+    });
+
+    const descriptor = {
+      id: 'asset-321',
+      name: 'Nested Descriptor',
+      type: 'image',
+      sourcePath: 'assets/nested.gltf'
+    };
+
+    try {
+      const result = await sentinel.renderPreview(descriptor, {
+        descriptorPath: explicitPath,
+        persistDescriptor: true
+      });
+
+      expect(result.stdout).toBe('');
+      const stored = await fsp.readFile(explicitPath, 'utf8');
+      expect(JSON.parse(stored)).toEqual(descriptor);
+    } finally {
+      await fsp.rm(tmpRoot, { recursive: true, force: true });
+    }
   });
 
   it('surfaces non-zero exit codes from the PreViz command', async () => {

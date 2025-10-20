@@ -4,9 +4,14 @@
   "private": true,
   "scripts": {
     "lint:openapi": "spectral lint openapi/openapi.yaml",
+    "verify:ledger": "node scripts/verify-ledger.js",
+    "test:ledger": "node --test tests/verify-ledger.test.js"
+    "preview": "node scripts/previewCapsule.js",
+    "lint:openapi": "spectral lint openapi/openapi.yaml",
     "start:mock-telemetry": "node scripts/telemetry/mockTelemetryServer.js",
     "validate:telemetry": "node scripts/telemetry/validateTelemetryFixture.js",
-    "stage:rehearsal": "node scripts/rehearsal/stageRehearsalLoop.js"
+    "stage:rehearsal": "node scripts/rehearsal/stageRehearsalLoop.js",
+    "generate:arcSix:embedding": "node scripts/remix/computeArcSixEmbeddingProfile.js"
   },
   "dependencies": {
     "ws": "^8.17.0",
