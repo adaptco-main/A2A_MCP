@@ -8,14 +8,6 @@
   ],
   "capsule_id": "capsule.registry.runtime.v1",
   "capsules": {
-    "asset.costume.aurora_wrap.v1": {
-      "merkle": "TO_COMPUTE",
-      "state": "FROZEN"
-    },
-    "asset.prop.vault_glyph.v1": {
-      "merkle": "TO_COMPUTE",
-      "state": "FROZEN"
-    },
     "capsule.audit.counterfactual.v1": {
       "state": "STAGED"
     },
@@ -25,12 +17,6 @@
     },
     "capsule.federation.manifest.v1": {
       "state": "STAGED"
-    },
-    "capsule.os.genesis.v1": {
-      "digest": "sha256:a2fe0bf979aa6f0807f1b3df928487890f16c8bdc15d4239be336ccfd3c54190",
-      "merkle": "TO_COMPUTE",
-      "replay": "replay:os.genesis:20250925:000",
-      "state": "FROZEN"
     },
     "capsule.scene.archivist.v1": {
       "merkle": "TO_COMPUTE",
@@ -45,6 +31,23 @@
     "capsule.scene.ethereal_wrap.v1": {
       "merkle": "TO_COMPUTE",
       "replay": "replay:celine:20250924:000",
+      "state": "FROZEN"
+    },
+    "capsule.storyboard.ethereal_wrap.v1": {
+      "merkle": "TO_COMPUTE",
+      "state": "FROZEN"
+    },
+    "asset.costume.aurora_wrap.v1": {
+      "merkle": "TO_COMPUTE",
+      "state": "FROZEN"
+    },
+    "asset.prop.vault_glyph.v1": {
+      "merkle": "TO_COMPUTE",
+      "state": "FROZEN"
+    },
+    "clip.motion.ethereal_wrap.v1": {
+      "merkle": "TO_COMPUTE",
+      "replay": "replay:celine.motion:20250924:000",
       "state": "FROZEN"
     },
     "capsule.scene.fighter.v1": {
@@ -62,20 +65,15 @@
       "replay": "replay:scrollsmith:20250924:000",
       "state": "FROZEN"
     },
-    "capsule.storyboard.ethereal_wrap.v1": {
-      "merkle": "TO_COMPUTE",
-      "state": "FROZEN"
-    },
     "capsule.timeline.checkpoints.v1": {
       "state": "STAGED"
     },
     "capsule.viewer.relay.v1": {
       "state": "STAGED"
     },
-    "clip.motion.ethereal_wrap.v1": {
-      "merkle": "TO_COMPUTE",
-      "replay": "replay:celine.motion:20250924:000",
-      "state": "FROZEN"
+    "capsule.rehearsal.echo_bloom.v1": {
+      "state": "STAGED",
+      "overlay": "overlay.cici_sabrina.echo_bloom.v1"
     },
     "glyph.registry.qube.v1": {
       "state": "STAGED"
@@ -83,23 +81,18 @@
     "hud.overlay.arc.v1": {
       "state": "ACTIVE"
     },
+    "relay.artifacts.v1": {
+      "merkle": "TO_COMPUTE",
+      "state": "FROZEN"
+    },
     "model.stable_diffusion.cici.v1": {
       "state": "FROZEN"
     },
     "policy.guard.counterfactual.v1": {
       "state": "FROZEN"
     },
-    "relay.artifacts.v1": {
-      "merkle": "TO_COMPUTE",
-      "state": "FROZEN"
-    },
     "tensor.semantic.cici.v1": {
       "state": "FROZEN"
-    },
-    "capsule.selfie.dualroot.q.cici.v1.feedback.v1": {
-      "state": "ACTIVE",
-      "replay": "HUD.loop.selfie.dualroot.q.cici.v1.token.002",
-      "window": "OPEN"
     }
   },
   "health": {
@@ -138,6 +131,11 @@
       "type": "overlay"
     },
     {
+      "from": "capsule.rehearsal.echo_bloom.v1",
+      "to": "overlay.cici_sabrina.echo_bloom.v1",
+      "type": "overlay"
+    },
+    {
       "from": "policy.guard.counterfactual.v1",
       "to": "capsule.audit.counterfactual.v1",
       "type": "audit"
@@ -163,24 +161,34 @@
       "type": "motion"
     },
     {
-      "from": "sol.f1.previz.v1",
+      "from": "capsule.scene.ethereal_wrap.v1",
       "to": "relay.artifacts.v1",
       "type": "checkpoint"
     },
     {
-      "from": "capsule.selfie.dualroot.q.cici.v1.feedback.v1",
-      "to": "capsule.selfie.dualroot.q.cici.v1",
-      "type": "feedback"
+      "from": "capsule.storyboard.ethereal_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
     },
     {
-      "from": "capsule.selfie.dualroot.q.cici.v1.feedback.v1",
-      "to": "capsule.comment.trace.v1",
-      "type": "hook"
+      "from": "asset.costume.aurora_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
     },
     {
-      "from": "capsule.selfie.dualroot.q.cici.v1.feedback.v1",
-      "to": "delta.overlay.audit.v1",
-      "type": "hook"
+      "from": "asset.prop.vault_glyph.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
+    },
+    {
+      "from": "clip.motion.ethereal_wrap.v1",
+      "to": "relay.artifacts.v1",
+      "type": "archive"
+    },
+    {
+      "from": "sol.f1.previz.v1",
+      "to": "relay.artifacts.v1",
+      "type": "checkpoint"
     }
   ],
   "status": "STAGED",
