@@ -5,12 +5,67 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 import json
 import threading
 
 from .config import QernelConfig
 from .capsules import CapsuleManifest, discover_capsule_manifests, map_capsules_by_id
+
+
+SCROLLSTREAM_CAPSULE_ID = "capsule.rehearsal.scrollstream.v1"
+
+REHEARSAL_CYCLE = (
+    {
+        "cycle": "audit.summary",
+        "agent": "celine.architect",
+        "output": "Celine threads the summary braid, aligning architecture checkpoints for review.",
+        "emotion": "anticipation",
+    },
+    {
+        "cycle": "audit.proof",
+        "agent": "luma.sentinel",
+        "output": "Luma verifies integrity glyphs and seals the ledger proof for observers.",
+        "emotion": "assurance",
+    },
+    {
+        "cycle": "audit.execution",
+        "agent": "dot.guardian",
+        "output": "Dot executes rehearsal safeguards, projecting the replay glyph across the rail.",
+        "emotion": "momentum",
+    },
+)
+
+
+@dataclass(frozen=True)
+class ScrollstreamLedgerEntry:
+    """A single rehearsal ledger entry stored for replay."""
+
+    ts: str
+    capsule_id: str
+    cycle: str
+    agent: str
+    output: str
+    training_mode: bool
+    signals: Dict[str, Any]
+    emotion: str
+    validations: List[str]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "ts": self.ts,
+            "capsule_id": self.capsule_id,
+            "cycle": self.cycle,
+            "agent": self.agent,
+            "output": self.output,
+            "training_mode": self.training_mode,
+            "signals": self.signals,
+            "emotion": self.emotion,
+            "validations": self.validations,
+        }
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), ensure_ascii=False, separators=(",", ":"))
 
 
 @dataclass(frozen=True)
@@ -103,6 +158,83 @@ class CodexQernel:
             except json.JSONDecodeError:
                 continue
         return events
+
+    # Scrollstream rehearsal ----------------------------------------------
+    def emit_scrollstream_rehearsal(
+        self,
+        *,
+        training_mode: bool = True,
+        clock: Optional[Callable[[], datetime]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Emit the rehearsal scrollstream cycle and persist the ledger entries."""
+
+        clock_fn: Callable[[], datetime]
+        if clock is not None:
+            clock_fn = clock
+        else:
+            clock_fn = lambda: datetime.now(timezone.utc)
+
+        ledger_path = Path(self.config.scrollstream_ledger)
+        ledger_path.parent.mkdir(parents=True, exist_ok=True)
+
+        entries: List[ScrollstreamLedgerEntry] = []
+        for stage in REHEARSAL_CYCLE:
+            ts = clock_fn().isoformat()
+            signals = {
+                "hud_shimmer": "emission-confirmed",
+                "replay_glyph": "pulse",
+                "training_overlay": "deterministic" if training_mode else "live",
+            }
+            entry = ScrollstreamLedgerEntry(
+                ts=ts,
+                capsule_id=SCROLLSTREAM_CAPSULE_ID,
+                cycle=stage["cycle"],
+                agent=stage["agent"],
+                output=stage["output"],
+                training_mode=training_mode,
+                signals=signals,
+                emotion=stage["emotion"],
+                validations=["sabrina.spark"],
+            )
+            entries.append(entry)
+
+        with ledger_path.open("a", encoding="utf-8") as handle:
+            for entry in entries:
+                handle.write(entry.to_json() + "\n")
+
+        self.record_event(
+            "codex.scrollstream.rehearsal",
+            {
+                "capsule_id": SCROLLSTREAM_CAPSULE_ID,
+                "training_mode": training_mode,
+                "stages": [stage["cycle"] for stage in REHEARSAL_CYCLE],
+                "ledger_path": ledger_path.as_posix(),
+            },
+        )
+
+        return [entry.to_dict() for entry in entries]
+
+    def read_scrollstream_ledger(self, *, limit: int = 10) -> List[Dict[str, Any]]:
+        """Return recent rehearsal ledger entries for HUD replay."""
+
+        ledger_path = Path(self.config.scrollstream_ledger)
+        if not ledger_path.exists():
+            return []
+        with ledger_path.open("r", encoding="utf-8") as handle:
+            lines = handle.readlines()
+        entries: List[Dict[str, Any]] = []
+        for raw in lines[-limit:]:
+            raw = raw.strip()
+            if not raw:
+                continue
+            try:
+                entry = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(entry, dict):
+                continue
+            entries.append(entry)
+        return entries
 
     # Health -------------------------------------------------------------
     def health_status(self) -> Dict[str, Any]:

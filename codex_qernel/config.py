@@ -16,6 +16,7 @@ class QernelConfig:
     qernel_version: str = "1.0.0"
     capsules_dir: Path = Path("capsules")
     events_log: Path = Path("var/log/codex_qernel_events.ndjson")
+    scrollstream_ledger: Path = Path("var/log/scrollstream_ledger.ndjson")
     auto_refresh: bool = True
 
     @classmethod
@@ -36,6 +37,9 @@ class QernelConfig:
         qernel_version = os.getenv("CODEX_QERNEL_VERSION", "1.0.0")
         capsules_dir = _path_from_env("CODEX_CAPSULE_DIR", base / "capsules")
         events_log = _path_from_env("CODEX_EVENTS_LOG", base / "var/log/codex_qernel_events.ndjson")
+        scrollstream_ledger = _path_from_env(
+            "CODEX_SCROLLSTREAM_LEDGER", base / "var/log/scrollstream_ledger.ndjson"
+        )
         auto_refresh_env = os.getenv("CODEX_AUTO_REFRESH", "1").lower()
         auto_refresh = auto_refresh_env not in {"0", "false", "no"}
         return cls(
@@ -44,6 +48,7 @@ class QernelConfig:
             capsules_dir=capsules_dir,
             events_log=events_log,
             auto_refresh=auto_refresh,
+            scrollstream_ledger=scrollstream_ledger,
         )
 
     def ensure_directories(self) -> None:
@@ -51,3 +56,4 @@ class QernelConfig:
 
         self.capsules_dir.mkdir(parents=True, exist_ok=True)
         self.events_log.parent.mkdir(parents=True, exist_ok=True)
+        self.scrollstream_ledger.parent.mkdir(parents=True, exist_ok=True)

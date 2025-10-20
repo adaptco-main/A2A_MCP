@@ -45,6 +45,17 @@ def build_parser() -> argparse.ArgumentParser:
         default="{}",
         help="JSON payload describing the event context",
     )
+
+    rehearsal = sub.add_parser(
+        "rehearsal", help="Emit the rehearsal scrollstream ledger cycle"
+    )
+    rehearsal.add_argument(
+        "--live",
+        action="store_false",
+        dest="training_mode",
+        help="Emit the rehearsal in live mode (non-deterministic overlay)",
+    )
+    rehearsal.set_defaults(training_mode=True)
     return parser
 
 
@@ -96,6 +107,11 @@ def main(args: list[str] | None = None) -> int:
         payload = _load_payload(parsed.payload)
         event = qernel.record_event(parsed.event, payload)
         print(json.dumps(event.__dict__, indent=2))
+        return 0
+
+    if parsed.command == "rehearsal":
+        entries = qernel.emit_scrollstream_rehearsal(training_mode=parsed.training_mode)
+        print(json.dumps({"entries": entries}, indent=2))
         return 0
 
     parser.error(f"unsupported command: {parsed.command}")

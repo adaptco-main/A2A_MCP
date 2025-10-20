@@ -44,11 +44,14 @@ jobs:
       - name: Install workflow toolchain
         run: npm ci
 
+      - name: Install API-diff and Spectral
+        run: npm install -g @stoplight/spectral-cli openapi-diff
+
       - name: Prepare artifact workspace
         run: mkdir -p "${{ env.ARTIFACTS_DIR }}"
 
       - name: Lint OpenAPI specification
-        run: npx spectral lint "${{ env.OPENAPI_SPEC }}"
+        run: spectral lint "${{ env.OPENAPI_SPEC }}"
 
       - name: Determine OpenAPI baseline
         id: openapi_base
@@ -57,15 +60,24 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
         run: |
           BASE_SPEC="${{ env.ARTIFACTS_DIR }}/openapi-base.yaml"
+
+          write_output() {
+            if [ -n "${GITHUB_OUTPUT:-}" ]; then
+              printf 'path=%s\n' "$1" >> "$GITHUB_OUTPUT"
+            else
+              echo "GITHUB_OUTPUT is not set; skipping export of '$1'" >&2
+            fi
+          }
+
           if [ "$EVENT_NAME" = "pull_request" ]; then
             git fetch origin main --depth=1
             if git show origin/main:${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
-              echo "path=$BASE_SPEC" >> "$GITHUB_OUTPUT"
+              write_output "$BASE_SPEC"
             fi
           else
             if [ -n "$BEFORE_SHA" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
               if git show "$BEFORE_SHA":${{ env.OPENAPI_SPEC }} > "$BASE_SPEC" 2>/dev/null; then
-                echo "path=$BASE_SPEC" >> "$GITHUB_OUTPUT"
+                write_output "$BASE_SPEC"
               fi
             fi
           fi
@@ -74,7 +86,7 @@ jobs:
         if: steps.openapi_base.outputs.path != ''
         run: |
           set -o pipefail
-          npx openapi-diff "${{ steps.openapi_base.outputs.path }}" "${{ env.OPENAPI_SPEC }}" | tee "${{ env.DIFF_REPORT }}"
+          openapi-diff "${{ steps.openapi_base.outputs.path }}" "${{ env.OPENAPI_SPEC }}" | tee "${{ env.DIFF_REPORT }}"
 
       - name: Document absent OpenAPI baseline
         if: steps.openapi_base.outputs.path == ''

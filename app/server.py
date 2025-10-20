@@ -51,6 +51,16 @@ class RequestHandler(BaseHTTPRequestHandler):
             events = [event.__dict__ for event in QERNEL.read_events(limit=50)]
             self._send_response(200, {"events": events})
             return
+        if path == "/scrollstream/ledger":
+            params = parse_qs(parsed.query)
+            try:
+                limit = int(params.get("limit", ["10"])[0])
+            except ValueError:
+                self._send_response(400, {"error": "invalid_limit"})
+                return
+            ledger = QERNEL.read_scrollstream_ledger(limit=max(1, min(limit, 100)))
+            self._send_response(200, {"entries": ledger})
+            return
         self._send_response(404, {"error": "not_found", "path": parsed.path})
 
     def do_POST(self) -> None:  # noqa: N802
@@ -77,6 +87,15 @@ class RequestHandler(BaseHTTPRequestHandler):
             event = QERNEL.record_event(event_name, event_payload)
             self._send_response(201, event.__dict__)
             logger.info("Recorded event %s", event_name)
+            return
+        if path == "/scrollstream/rehearsal":
+            payload = self._load_json_body() or {}
+            training_mode = True
+            if isinstance(payload, dict):
+                training_mode = bool(payload.get("training_mode", True))
+            entries = QERNEL.emit_scrollstream_rehearsal(training_mode=training_mode)
+            self._send_response(201, {"entries": entries})
+            logger.info("Scrollstream rehearsal emitted (training_mode=%s)", training_mode)
             return
         self._send_response(404, {"error": "not_found", "path": parsed.path})
 

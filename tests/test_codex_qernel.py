@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from codex_qernel import CodexQernel, QernelConfig
@@ -74,6 +75,32 @@ class CodexQernelTests(unittest.TestCase):
         all_events = qernel.read_events(limit=10)
         self.assertEqual(all_events[-1].event, "codex.test.event")
 
+    def test_scrollstream_rehearsal_cycle(self) -> None:
+        qernel = CodexQernel(self.config)
+        timestamps = iter(
+            [
+                datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+                datetime(2024, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
+                datetime(2024, 1, 1, 0, 0, 2, tzinfo=timezone.utc),
+            ]
+        )
+
+        def fake_clock() -> datetime:
+            return next(timestamps)
+
+        entries = qernel.emit_scrollstream_rehearsal(clock=fake_clock)
+        self.assertEqual(len(entries), 3)
+        self.assertTrue(all(entry["capsule_id"] == "capsule.rehearsal.scrollstream.v1" for entry in entries))
+        self.assertTrue(all(entry["training_mode"] for entry in entries))
+        self.assertEqual([entry["cycle"] for entry in entries], ["audit.summary", "audit.proof", "audit.execution"])
+        ledger = qernel.read_scrollstream_ledger(limit=5)
+        self.assertEqual(len(ledger), 3)
+        self.assertEqual(ledger[0]["agent"], "celine.architect")
+        self.assertEqual(ledger[-1]["signals"]["replay_glyph"], "pulse")
+        last_event = qernel.read_events(limit=1)[-1]
+        self.assertEqual(last_event.event, "codex.scrollstream.rehearsal")
+        self.assertTrue(Path(self.config.scrollstream_ledger).exists())
+
 
 class ConfigFromEnvTests(unittest.TestCase):
     def test_environment_configuration(self) -> None:
@@ -84,18 +111,21 @@ class ConfigFromEnvTests(unittest.TestCase):
             os.environ["CODEX_CAPSULE_DIR"] = "relative_capsules"
             os.environ["CODEX_EVENTS_LOG"] = "logs/events.ndjson"
             os.environ["CODEX_AUTO_REFRESH"] = "false"
+            os.environ["CODEX_SCROLLSTREAM_LEDGER"] = "logs/scrollstream.ndjson"
             config = QernelConfig.from_env(base_dir=base)
             self.assertEqual(config.os_name, "EnvOS")
             self.assertEqual(config.qernel_version, "2.3.4")
             self.assertEqual(config.capsules_dir, base / "relative_capsules")
             self.assertEqual(config.events_log, base / "logs/events.ndjson")
             self.assertFalse(config.auto_refresh)
+            self.assertEqual(config.scrollstream_ledger, base / "logs/scrollstream.ndjson")
         for var in [
             "AXQXOS_NAME",
             "CODEX_QERNEL_VERSION",
             "CODEX_CAPSULE_DIR",
             "CODEX_EVENTS_LOG",
             "CODEX_AUTO_REFRESH",
+            "CODEX_SCROLLSTREAM_LEDGER",
         ]:
             os.environ.pop(var, None)
 
