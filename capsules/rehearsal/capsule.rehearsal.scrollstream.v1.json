@@ -1,0 +1,20 @@
+{
+  "id": "capsule.rehearsal.scrollstream.v1",
+  "version": "1.0.0",
+  "name": "Scrollstream Rehearsal Capsule",
+  "description": "Emits the Celine → Luma → Dot rehearsal loop with deterministic training overlays.",
+  "cycle": [
+    "audit.summary",
+    "audit.proof",
+    "audit.execution"
+  ],
+  "agents": {
+    "audit.summary": "Celine/Architect",
+    "audit.proof": "Luma/Sentinel",
+    "audit.execution": "Dot/Guardian"
+  },
+  "signals": {
+    "hud_shimmer": "emission-confirmed",
+    "replay_glyph": "pulse"
+  }
+}
