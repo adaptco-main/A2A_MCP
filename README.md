@@ -369,13 +369,6 @@ This repository coordinates automation and human operations around artifact mana
 - **Drift Detectors**: Compare SSOT vs deployed artifacts
 - **Rollback Validators**: Check readiness and compliance
 
-## How It Works
-1. Operator triggers an action in the cockpit (e.g., Freeze Artifact).
-2. Cockpit dispatches a GitHub event with payload (artifact ID, notes).
-3. GitHub Action runs the corresponding script (e.g., `freeze.py`).
-4. Script updates the artifact state, validates against SSOT, logs to ledger.
-5. Cockpit updates in real time via ledger feed + state tracker.
-
 ## Governance Principles
 - **SSOT Enforcement**: All artifacts hash-verified
 - **Audit-First**: Every action logged with timestamp, actor, and hash
