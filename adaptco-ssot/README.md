@@ -5,7 +5,7 @@ Adaptco SSoT is a Node.js 20 REST API that centralizes asset metadata, exposing 
 
 ## Features
 
-- Health and readiness endpoint.
+- Health endpoint for uptime monitoring.
 - JSON Schema validation for asset CRUD operations.
 - In-memory store backed by a persisted catalog file.
 - Structured logging with Pino.
@@ -78,7 +78,15 @@ docker run --rm -p 3000:3000 adaptco-ssot
 
 ## Data Model
 
-The API enforces [`schemas/asset.schema.json`](schemas/asset.schema.json) for all mutations. Initial catalog entries live in [`data/catalog.json`](data/catalog.json).
+The API enforces [`schemas/asset.schema.json`](schemas/asset.schema.json) for all mutations. Assets must include a `registry` packet that mirrors the `ssot.registry.v1` capsule structure:
+
+- `capsule_id` — fixed to `ssot.registry.v1` for archive alignment.
+- `registry` — sovereign archive metadata (`name`, `version`, `maintainer`).
+- `entry` — canonical artifact facts (author, created_at, `canonical_sha256`, `merkle_root`, and council attestation signatures).
+- `lineage` — immutable parent/fork references with maker–checker provenance.
+- `replay` — authorization envelope describing integrity gates and override protocol.
+
+Initial catalog entries live in [`data/catalog.json`](data/catalog.json) and demonstrate the required structure.
 
 ## Project Structure
 
