@@ -10,6 +10,7 @@ from typing import Any, Iterable
 
 TRACE_PATH = Path("ledger/concept_arch_review.jsonl")
 DEFAULT_MANIFEST = Path("capsules/governance/capsule.concept.arch.review.v1.json")
+DEFAULT_SCHEMA = Path("specs/capsule.concept.arch.review.v1.schema.json")
 DEFAULT_SCENARIO_ROOT = Path("manifests/concept_architecture")
 ABS_TOLERANCE = 1e-9
 
@@ -35,6 +36,25 @@ def ensure(condition: bool, message: str) -> None:
 
 def nearly_equal(value: float, target: float) -> bool:
     return abs(value - target) <= ABS_TOLERANCE
+
+
+def validate_manifest_schema(manifest: dict[str, Any], schema_path: Path) -> None:
+    schema = load_json(schema_path)
+    try:
+        from jsonschema import Draft7Validator
+    except ModuleNotFoundError as exc:  # pragma: no cover - dependency resolution issue
+        raise ReviewError(
+            "jsonschema dependency missing – install with `pip install jsonschema`"
+        ) from exc
+
+    validator = Draft7Validator(schema)
+    errors = sorted(validator.iter_errors(manifest), key=lambda err: err.path)
+    if errors:
+        formatted = ", ".join(
+            f"{'/'.join(str(segment) for segment in error.absolute_path) or '<root>'}: {error.message}"
+            for error in errors
+        )
+        raise ReviewError(f"Manifest violates schema: {formatted}")
 
 
 def validate_manifest(manifest: dict[str, Any]) -> None:
@@ -271,6 +291,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=str(DEFAULT_MANIFEST),
         help="Path to the Conceptual Architecture Review manifest",
     )
+    parser.add_argument(
+        "--schema",
+        default=str(DEFAULT_SCHEMA),
+        help="Path to the JSON schema used to validate the manifest",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     def add_subparser(name: str, default_scenario: str) -> argparse.ArgumentParser:
@@ -296,6 +321,8 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest_path = Path(args.manifest)
     manifest = load_json(manifest_path)
+    schema_path = Path(args.schema)
+    validate_manifest_schema(manifest, schema_path)
     validate_manifest(manifest)
 
     handlers = {
