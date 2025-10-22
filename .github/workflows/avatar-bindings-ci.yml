@@ -23,7 +23,7 @@ jobs:
           matches=$(find . -path '*/node_modules/*' -prune -o -name package-lock.json -print | sort)
           if [ -n "$matches" ]; then
             {
-              echo "paths<<'EOF'"
+              echo "paths<<EOF"
               echo "$matches"
               echo "EOF"
             } >>"$GITHUB_OUTPUT"
