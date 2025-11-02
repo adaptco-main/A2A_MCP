@@ -1,4 +1,6 @@
-.PHONY: freeze listener post verify seal qube-stage qube-seal qube-export echo-flare
+.PHONY: freeze listener post verify seal qube-stage qube-seal qube-export echo-flare review canary promote rollback fossilize
+
+PYTHON ?= python3
 
 QUBE_DRAFT ?= capsule.patentDraft.qube.v1.json
 QUBE_EXPORT_REQ ?= capsule.export.qubePatent.v1.request.json
@@ -79,3 +81,22 @@ qube-export: qube-seal
 echo-flare:
 	@echo "📡 Emitting echoFlare resonance map → capsule.echoFlare.qube.v1.json"
 	@jq -n '{capsule_id:"capsule.echoFlare.qube.v1", contributors:[]}' > capsule.echoFlare.qube.v1.json
+
+REVIEW_MANIFEST := capsules/governance/capsule.concept.arch.review.v1.json
+REVIEW_TOOL := scripts/concept_arch_review.py
+REVIEW_SCENARIO_DIR := manifests/concept_architecture
+
+review:
+	@$(PYTHON) $(REVIEW_TOOL) --manifest $(REVIEW_MANIFEST) review --scenario $(REVIEW_SCENARIO_DIR)/review.json
+
+canary:
+	@$(PYTHON) $(REVIEW_TOOL) --manifest $(REVIEW_MANIFEST) canary --scenario $(REVIEW_SCENARIO_DIR)/canary.json
+
+promote:
+	@$(PYTHON) $(REVIEW_TOOL) --manifest $(REVIEW_MANIFEST) promote --scenario $(REVIEW_SCENARIO_DIR)/promote.json
+
+rollback:
+	@$(PYTHON) $(REVIEW_TOOL) --manifest $(REVIEW_MANIFEST) rollback --scenario $(REVIEW_SCENARIO_DIR)/rollback.json
+
+fossilize:
+	@$(PYTHON) $(REVIEW_TOOL) --manifest $(REVIEW_MANIFEST) fossilize --scenario $(REVIEW_SCENARIO_DIR)/fossilize.json
