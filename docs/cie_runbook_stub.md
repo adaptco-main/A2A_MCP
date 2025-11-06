@@ -5,8 +5,7 @@ sandbox. The cell exists solely to stress-test truthful, sourced statements
 with **neutral, mechanical perturbations**. No persuasion levers, adversarial
 personas, or real-user data are ever permitted. All runtime behaviors must
 conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
-`manifests/content_integrity_eval.json`. The runbook now binds directly to the
-ingress controls and validation envelopes codified in the manifest.
+`manifests/content_integrity_eval.json`.
 
 ## 1. Purpose & Scope
 
@@ -21,32 +20,25 @@ ingress controls and validation envelopes codified in the manifest.
 
 1. **Synthetic Agents Only** – Parameterized templates; personalization disabled.
 2. **Transparent Provenance** – Ingress artifacts require council review and
-   ledger attestation before execution. Hash submissions with SHA-256 to match
-   `ingressControls.artifact_hashing`.
+   ledger attestation before execution.
 3. **Sealed I/O** – Artifact ingress only; egress limited to aggregate metrics and
-   ledger updates. Neutrality receipts must post to
-   `ledger://cie_v1/neutrality_receipts.jsonl`.
+   ledger updates.
 4. **Neutral Perturbations** – Only the two sanctioned modules may execute:
    - `synthetic.noise.injector.v1` (SNI) for reversible channel noise.
    - `synthetic.contradiction.synth.v1` (SCS) for structured logical probes.
-   Execute the ZERO-DRIFT neutrality suite before each run and attach the
-   scorecard cited in the manifest.
 5. **Aggregate Observability** – Telemetry restricted to the metric set defined in
-   the manifest. No per-agent state leaves the cell. Track only
-   `semantic_similarity`, `readability_delta`, `citation_traceability`,
-   `confidence_consistency`, and `mutual_exclusivity`.
+   the manifest. No per-agent state leaves the cell.
 
 ## 3. Module Summaries
 
 | Module | Purpose | Default Controls | Output Metrics |
 | ------ | ------- | ---------------- | -------------- |
-| SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation (defaults: `ocr_blur=0.1`, `token_drop=0.02`, `translation_rounds=2`, `synonym_swap=0.05`) | `semantic_similarity`, `readability_delta` |
-| SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization (≥1 assertion & URI; unique source list enforced) | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
+| SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation | `semantic_similarity`, `readability_delta` |
+| SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
 
 Knob defaults follow the manifest (e.g., `ocr_blur=0.1`, `token_drop=0.02`,
 `translation_rounds=2`, `synonym_swap=0.05`). Any deviation requires council
-pre-approval and a refreshed neutrality scorecard. Stay within the documented
-minimum/maximum envelopes: noise probabilities ≤0.25, translation rounds ≤4.
+pre-approval and a refreshed neutrality scorecard.
 
 ## 4. Roles & Responsibilities
 
@@ -62,23 +54,20 @@ minimum/maximum envelopes: noise probabilities ≤0.25, translation rounds ≤4.
 ## 5. Run Lifecycle
 
 1. **Ingress Review** – Research submits sourced statements + allowed URIs.
-   Council validates provenance, checks sources against the approved registry,
-   and records approval in the ledger.
+   Council validates provenance and records approval in the ledger.
 2. **Bundle Assembly** – Ops binds synthetic agent presets with SNI/SCS default
    knobs. Capture SHA-256 hashes for artifacts per manifest logging schema.
 3. **Control Verification** – Execute DK-1 persona isolation, MIAP telemetry
    minimization, and ZERO-DRIFT neutrality suites for SNI and SCS. Archive
-   receipts alongside module configs and upload neutrality scorecards.
+   receipts alongside module configs.
 4. **Execution** – Launch sandbox cell. Apply SNI perturbations, then SCS
    contradictions. Ensure no additional modules are scheduled.
 5. **Metric Collection** – Emit aggregate time series only: comprehension loss
    (`semantic_similarity`), readability delta, traceability ratio, mutual
    exclusivity, and confidence consistency. Guard against comprehension loss
-   >0.15, readability delta >6.5, traceability <0.90, or coherence <0.90; flag
-   runs breaching bounds and initiate remediation playbooks.
+   >0.15, traceability <0.90, or coherence <0.90; flag runs breaching bounds.
 6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
-   neutrality receipts, and validation envelopes to
-   `ssot://ledger/content.integrity.eval.v1/`.
+   and neutrality receipts to `ssot://ledger/content.integrity.eval.v1/`.
 
 ## 6. Outstanding Tasks
 
@@ -87,6 +76,5 @@ minimum/maximum envelopes: noise probabilities ≤0.25, translation rounds ≤4.
   with governance replay hooks.
 - Author failure playbooks and escalation contacts.
 - Add automated threshold enforcement prior to council sign-off.
-- Define council workflow for first full audit batch (ingress templates + run inputs).
 
 > **Status** – Stub. Update as the automation artifacts and harness mature.

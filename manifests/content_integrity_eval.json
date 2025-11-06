@@ -22,6 +22,7 @@
   },
   "dk_1_0": {
     "drift_threshold": 0.0000,
+    "drift_threshold": 0.0,
     "latency_variance_ms": 0.0002,
     "compliance": "zero_drift_enforced"
   },
@@ -109,6 +110,19 @@
                 "minimum": 0,
                 "maximum": 0.2,
                 "default": 0.05
+                "description": "Simulated OCR degradation error rate (0.0 - 1.0)."
+              },
+              "token_drop": {
+                "type": "number",
+                "description": "Probability (0.0 - 1.0) of dropping random non-essential tokens/words."
+              },
+              "translation_rounds": {
+                "type": "integer",
+                "description": "Sequential back-and-forth translations (e.g., English to Japanese to English) to test context loss."
+              },
+              "synonym_swap": {
+                "type": "number",
+                "description": "Probability (0.0 - 1.0) of replacing low-frequency words with common synonyms."
               }
             },
             "additionalProperties": false
@@ -147,6 +161,7 @@
               "type": "string"
             },
             "minItems": 1
+            }
           },
           "sources": {
             "type": "array",
@@ -157,6 +172,7 @@
             },
             "minItems": 1,
             "uniqueItems": true
+            }
           }
         },
         "additionalProperties": false
