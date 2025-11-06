@@ -7,8 +7,7 @@ fetch("https://api.github.com/repos/your-org/your-repo/dispatches", {
   method: "POST",
   headers: {
     Authorization: "Bearer YOUR_TOKEN",
-    Accept: "application/vnd.github+json",
-    // GitHub's repository dispatch endpoint expects explicit JSON content type headers.
+    Accept: "application/vnd.github.v3+json",
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
