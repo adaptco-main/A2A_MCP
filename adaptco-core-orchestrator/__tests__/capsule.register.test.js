@@ -4,7 +4,7 @@
 const fs = require('fs');
 const request = require('supertest');
 const createApp = require('../src/index');
-const { ledgerFile } = require('../src/ledger');
+const { ledgerFile, ledgerAnchorFile, ZERO_HASH } = require('../src/ledger');
 
 function createRegistryPacket(artifactId, type, author = 'ops@adaptco.io') {
   return {
@@ -43,6 +43,9 @@ describe('POST /capsule/register', () => {
   beforeEach(() => {
     if (fs.existsSync(ledgerFile)) {
       fs.unlinkSync(ledgerFile);
+    }
+    if (fs.existsSync(ledgerAnchorFile)) {
+      fs.unlinkSync(ledgerAnchorFile);
     }
   });
 
@@ -97,6 +100,15 @@ describe('POST /capsule/register', () => {
     expect(entry.payload.preview).toBeNull();
     expect(entry.payload.asset).toBeNull();
     expect(entry.payload.hash).toBeNull();
+    expect(entry.prev_hash).toBe(ZERO_HASH);
+    expect(entry.hash).toMatch(/^[0-9a-f]{64}$/);
+
+    expect(fs.existsSync(ledgerAnchorFile)).toBe(true);
+    const anchor = JSON.parse(fs.readFileSync(ledgerAnchorFile, 'utf8'));
+    expect(anchor.file).toBe(ledgerFile);
+    expect(anchor.last_hash).toBe(entry.hash);
+    expect(anchor.last_offset).toBeGreaterThan(0);
+    expect(anchor.updated_at).toBeDefined();
   });
 
   it('returns 400 when schema validation fails', async () => {
@@ -247,5 +259,7 @@ describe('POST /capsule/register', () => {
     expect(entry.payload.asset).toEqual(response.body.asset);
     expect(entry.payload.hash).toEqual(response.body.hash);
     expect(entry.payload.capsule.operations).toBeUndefined();
+    expect(entry.prev_hash).toBe(ZERO_HASH);
+    expect(entry.hash).toMatch(/^[0-9a-f]{64}$/);
   });
 });
