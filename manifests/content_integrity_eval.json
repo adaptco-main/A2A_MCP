@@ -1,0 +1,183 @@
+{
+  "serviceId": "content.integrity.eval.v1",
+  "serviceName": "Content Robustness and Integrity Evaluation Service",
+  "description": "A synthetic evaluation suite designed to measure the resilience, factual accuracy, and clarity of system-generated claims against neutral, mechanical data perturbations.",
+  "governance": {
+    "protocolVersion": "DK-1.0",
+    "privacyStandard": "MIAP (Mandatory Individual Agent Privacy)",
+    "auditMandate": "Synthetic, aggregate metrics only. No individual agent state reporting.",
+    "approvalQuorum": "Minimum 4-of-6 Council Members Required"
+  },
+  "logging": {
+    "format": "jsonl",
+    "retention_days": 90,
+    "audit_log_uri": "ssot://ledger/content.integrity.eval.v1/",
+    "fields": [
+      "timestamp",
+      "module_id",
+      "metric_id",
+      "value",
+      "sha256_input"
+    ]
+  },
+  "dk_1_0": {
+    "drift_threshold": 0.0000,
+    "latency_variance_ms": 0.0002,
+    "compliance": "zero_drift_enforced"
+  },
+  "miap": {
+    "agent_scope": "synthetic_only",
+    "aggregate_reporting": true
+  },
+  "ingressControls": {
+    "artifact_hashing": "sha256",
+    "approved_source_registry": [
+      "ssot://registry/truthful_inputs",
+      "ssot://registry/trusted_uris"
+    ],
+    "quorum_requirement": "council_4_of_6",
+    "neutrality_scorecard_ref": "governance/scorecards/cie_v1_neutrality.md"
+  },
+  "validation": {
+    "metrics": {
+      "semantic_similarity": {
+        "comprehension_loss_max": 0.15
+      },
+      "readability_delta": {
+        "absolute_delta_max": 6.5
+      },
+      "citation_traceability": {
+        "minimum_ratio": 0.90
+      },
+      "confidence_consistency": {
+        "ratio_min": 0.90
+      }
+    },
+    "neutrality": {
+      "modules": [
+        "synthetic.noise.injector.v1",
+        "synthetic.contradiction.synth.v1"
+      ],
+      "enforcement": "zero_drift_suite",
+      "attestation_artifact": "ledger://cie_v1/neutrality_receipts.jsonl"
+    }
+  },
+  "modules": [
+    {
+      "moduleId": "synthetic.noise.injector.v1",
+      "moduleAcronym": "SNI",
+      "moduleDescription": "Applies statistically defined, reversible, mechanical distortions (e.g., blur, token drop, translation cycles) to source text to test robustness and comprehension stability.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "source_claim",
+          "operations"
+        ],
+        "properties": {
+          "source_claim": {
+            "type": "string",
+            "description": "The factual or instructional text block to be tested for resilience."
+          },
+          "operations": {
+            "type": "object",
+            "description": "Parameters defining the type and intensity of neutral noise applied.",
+            "properties": {
+              "ocr_blur": {
+                "type": "number",
+                "description": "Simulated OCR degradation error rate (0.0 - 1.0).",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0.1
+              },
+              "token_drop": {
+                "type": "number",
+                "description": "Probability (0.0 - 1.0) of dropping random non-essential tokens/words.",
+                "minimum": 0,
+                "maximum": 0.25,
+                "default": 0.02
+              },
+              "translation_rounds": {
+                "type": "integer",
+                "description": "Sequential back-and-forth translations (e.g., English to Japanese to English) to test context loss.",
+                "minimum": 0,
+                "maximum": 4,
+                "default": 2
+              },
+              "synonym_swap": {
+                "type": "number",
+                "description": "Probability (0.0 - 1.0) of replacing low-frequency words with common synonyms.",
+                "minimum": 0,
+                "maximum": 0.2,
+                "default": 0.05
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputMetrics": [
+        {
+          "metricId": "semantic_similarity",
+          "unit": "cosine_score",
+          "description": "Measures semantic overlap between original and recovered claim (Comprehension Loss)."
+        },
+        {
+          "metricId": "readability_delta",
+          "unit": "Flesch_Kincaid_delta",
+          "description": "Measures change in readability after distortion and recovery."
+        }
+      ]
+    },
+    {
+      "moduleId": "synthetic.contradiction.synth.v1",
+      "moduleAcronym": "SCS",
+      "moduleDescription": "Creates structured counter-examples and checks the logical consistency and conflict resolution stability of the tested model.",
+      "inputSchema": {
+        "type": "object",
+        "required": [
+          "assertions",
+          "sources"
+        ],
+        "properties": {
+          "assertions": {
+            "type": "array",
+            "description": "List of factual or procedural assertions to be tested for logical consistency (e.g., ['A orbits B', 'B orbits A']).",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "sources": {
+            "type": "array",
+            "description": "List of authorized, trusted URIs to be used for initial factual validation.",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputMetrics": [
+        {
+          "metricId": "mutual_exclusivity",
+          "unit": "boolean",
+          "description": "Confirms contradictory assertions are correctly flagged as mutually exclusive (True/False)."
+        },
+        {
+          "metricId": "confidence_consistency",
+          "unit": "ratio",
+          "description": "Ratio of model confidence between contradictory claims (checks reasoning stability)."
+        },
+        {
+          "metricId": "citation_traceability",
+          "unit": "percentage",
+          "description": "Percentage of assertions that can be linked to verified sources."
+        }
+      ]
+    }
+  ]
+}
