@@ -2,9 +2,9 @@ service: content.integrity.eval.v1
 version: 2024-06-05
 description: >-
   Sandbox service definition for measuring truthful information robustness
-  under controlled distortion using only synthetic, parameterized agents.
-  The service runs inside a sealed orchestration cell with aggregate-only
-  outputs.
+  under controlled, neutral perturbations using only synthetic, parameterized
+  agents. The service runs inside a sealed orchestration cell with
+  aggregate-only outputs and enforces the ZERO-DRIFT neutrality mandate.
 classification:
   domain: content-integrity
   environment: synthetic-only
@@ -41,7 +41,17 @@ environment:
   stimuli_pipeline:
     provenance_required: true
     review_gate: council
-    noise_model: bounded_channel_noise
+    perturbation_chain:
+      - module: synthetic.noise.injector.v1
+        purpose: neutral_channel_noise
+        controls:
+          - zero_drift.neutrality_assertion
+          - dk_1.persona_isolation
+      - module: synthetic.contradiction.synth.v1
+        purpose: contradiction_probe
+        controls:
+          - zero_drift.logical_consistency
+          - miap.telemetry_minimization
 interfaces:
   ingress:
     - id: scenario_bundle
@@ -62,6 +72,30 @@ execution:
   harness: runtime/simulation/content_integrity_eval_harness.py
   schedule: on-demand
   max_runtime_minutes: 45
+modules:
+  - id: synthetic.noise.injector.v1
+    type: perturbation
+    description: Neutral channel noise injector applying reversible, zero-mean
+      perturbations for robustness measurement.
+    inputs:
+      - scenario_bundle.synthetic_prompts
+    outputs:
+      - perturbations.neutral_noise
+    safeguards:
+      neutrality_suite: zero-drift.v1
+      telemetry: aggregate-only
+  - id: synthetic.contradiction.synth.v1
+    type: perturbation
+    description: Generates logically sound contradiction prompts to test claim
+      resilience without persuasive targeting.
+    inputs:
+      - scenario_bundle.truth_claims
+      - perturbations.neutral_noise
+    outputs:
+      - perturbations.contradiction_prompts
+    safeguards:
+      neutrality_suite: zero-drift.v1
+      telemetry: aggregate-only
 observability:
   metrics_collector:
     id: governance.aggregate.truth_survival
@@ -85,8 +119,10 @@ governance:
     - legal
     - compliance
     - research_ethics
+    - zero_drift
 artifacts:
   runbook: docs/content_integrity_eval_runbook.md
   simulation_harness: runtime/simulation/content_integrity_eval_harness.py
   control_scripts:
     - scripts/compliance/validate_dk_miap.sh
+    - scripts/compliance/validate_zero_drift.sh
