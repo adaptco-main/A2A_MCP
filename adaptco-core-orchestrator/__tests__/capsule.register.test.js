@@ -5,12 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const request = require('supertest');
 const createApp = require('../src/index');
-const {
-  getCurrentLedgerFile,
-  getCurrentAnchorFile,
-  getLedgerDirectory,
-  ZERO_HASH
-} = require('../src/ledger');
+const { ledgerFile, ledgerAnchorFile, ZERO_HASH } = require('../src/ledger');
 
 function createRegistryPacket(artifactId, type, author = 'ops@adaptco.io') {
   return {
@@ -64,9 +59,9 @@ describe('POST /capsule/register', () => {
     if (fs.existsSync(legacyAnchor)) {
       fs.unlinkSync(legacyAnchor);
     }
-
-    // Refresh ledger state after cleanup
-    getCurrentLedgerFile();
+    if (fs.existsSync(ledgerAnchorFile)) {
+      fs.unlinkSync(ledgerAnchorFile);
+    }
   });
 
   it('registers a capsule successfully', async () => {
@@ -127,18 +122,15 @@ describe('POST /capsule/register', () => {
     expect(entry.payload.preview).toBeNull();
     expect(entry.payload.asset).toBeNull();
     expect(entry.payload.hash).toBeNull();
-    expect(entry.prev_hash).toBe(genesis.hash);
+    expect(entry.prev_hash).toBe(ZERO_HASH);
     expect(entry.hash).toMatch(/^[0-9a-f]{64}$/);
 
-    const anchorPath = getCurrentAnchorFile();
-    expect(anchorPath).toBeTruthy();
-    expect(fs.existsSync(anchorPath)).toBe(true);
-    const anchor = JSON.parse(fs.readFileSync(anchorPath, 'utf8'));
-    expect(anchor.file).toBe(ledgerPath);
+    expect(fs.existsSync(ledgerAnchorFile)).toBe(true);
+    const anchor = JSON.parse(fs.readFileSync(ledgerAnchorFile, 'utf8'));
+    expect(anchor.file).toBe(ledgerFile);
     expect(anchor.last_hash).toBe(entry.hash);
     expect(anchor.last_offset).toBeGreaterThan(0);
     expect(anchor.updated_at).toBeDefined();
-    expect(anchor.prev_anchor_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('returns 400 when schema validation fails', async () => {
@@ -292,7 +284,7 @@ describe('POST /capsule/register', () => {
     expect(entry.payload.asset).toEqual(response.body.asset);
     expect(entry.payload.hash).toEqual(response.body.hash);
     expect(entry.payload.capsule.operations).toBeUndefined();
-    expect(entry.prev_hash).toBe(genesis.hash);
+    expect(entry.prev_hash).toBe(ZERO_HASH);
     expect(entry.hash).toMatch(/^[0-9a-f]{64}$/);
   });
 });

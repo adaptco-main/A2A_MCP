@@ -1,41 +1,80 @@
-# CIE-V1 Operational Runbook
+# CIE-V1 Synthetic Perturbation Runbook (Stub)
 
-## Overview
-The Content Integrity Evaluation service (CIE-V1) validates narrative payloads using **neutral perturbation** techniques that preserve the ZERO-DRIFT mandate. The stack now runs exclusively on two synthetic modules:
+This stub documents the operational boundary for the `content.integrity.eval.v1`
+sandbox. The cell exists solely to stress-test truthful, sourced statements
+with **neutral, mechanical perturbations**. No persuasion levers, adversarial
+personas, or real-user data are ever permitted. All runtime behaviors must
+conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
+`manifests/content_integrity_eval.json`.
 
-1. `synthetic.noise.injector.v1` — generates distribution-preserving neutral noise samples.
-2. `synthetic.contradiction.synth.v1` — builds minimally divergent contradiction narratives for resilience checks.
+## 1. Purpose & Scope
 
-Both modules emit deterministic hashes into the ledger anchor declared in `manifests/services/content_integrity_eval.json` to keep audits replayable.
+- **Objective** – Quantify comprehension loss, citation traceability, and logical
+  coherence after controlled perturbations.
+- **Audience** – Research (scenario design), Platform Ops (runtime), Governance
+  Council (approvals), Trust & Safety (control attestation).
+- **Excluded** – Antagonist, memetic, or behavioral-influence models; any
+  scenario touching personal data or unsourced claims.
 
-## Pre-flight Checklist
-- Confirm the anchor ledger `ledger/content_integrity_eval` is writable and hash-chain verified.
-- Load the council-approved neutral perturbation presets (`clamp_sigma`, `neutrality_score_threshold`, `neutrality_floor`).
-- Validate the operator keypair for attestation signing (`ecdsa-secp256k1`).
-- Ensure ZERO-DRIFT monitors are green in the cockpit dashboard.
+## 2. Core Safeguards
 
-## Execution Flow
-1. **Ingest** the narrative payload and bind a `noise_seed` plus `nonce`.
-2. **Noise Injection**
-   - Dispatch to `synthetic.noise.injector.v1` with configured perturbation budget.
-   - Collect `samples` (JSONL) and the `variance_report` summary.
-   - Verify the canonical hash matches ledger expectations before proceeding.
-3. **Contradiction Synthesis**
-   - Feed the baseline payload plus curated `knowledge_refs` into `synthetic.contradiction.synth.v1`.
-   - Capture the `contradiction_set` and `consistency_metrics`.
-   - Confirm neutrality floor and drift monitor readings stay within policy bounds.
-4. **Aggregate Metrics**
-   - Compute `entropy_ldi`, `coherence_chrono_mi`, and `yield_kl_gain` for reporting.
-   - Write the attested result bundle with the module output hashes.
+1. **Synthetic Agents Only** – Parameterized templates; personalization disabled.
+2. **Transparent Provenance** – Ingress artifacts require council review and
+   ledger attestation before execution.
+3. **Sealed I/O** – Artifact ingress only; egress limited to aggregate metrics and
+   ledger updates.
+4. **Neutral Perturbations** – Only the two sanctioned modules may execute:
+   - `synthetic.noise.injector.v1` (SNI) for reversible channel noise.
+   - `synthetic.contradiction.synth.v1` (SCS) for structured logical probes.
+5. **Aggregate Observability** – Telemetry restricted to the metric set defined in
+   the manifest. No per-agent state leaves the cell.
 
-## Post-run Attestation
-- Append the run metadata to the ledger with `prev_hash` linkage.
-- Sign the `.anchor.json` entry using the service ECDSA key.
-- Store both module output manifests alongside the run record for replay.
+## 3. Module Summaries
 
-## Incident Response
-- **Neutrality breach detected:** Pause both modules, reset seeds, notify Ethics Desk, and rerun the latest batch after calibration.
-- **Ledger mismatch:** Trigger a replay job; if divergence persists, invalidate the run and restore from the last trusted anchor.
-- **Module failure:** Fail closed, redeploy the affected module from the sealed artifact store, and re-verify hashes before resuming operations.
+| Module | Purpose | Default Controls | Output Metrics |
+| ------ | ------- | ---------------- | -------------- |
+| SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation | `semantic_similarity`, `readability_delta` |
+| SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
 
-Maintain this runbook within the SSOT pipeline; any edits require Ethics Desk sign-off before deployment.
+Knob defaults follow the manifest (e.g., `ocr_blur=0.1`, `token_drop=0.02`,
+`translation_rounds=2`, `synonym_swap=0.05`). Any deviation requires council
+pre-approval and a refreshed neutrality scorecard.
+
+## 4. Roles & Responsibilities
+
+- **Platform Ops** – Maintain sandbox cell, enforce sealed ingress/egress,
+  triage incidents.
+- **Research** – Draft factual statements, configure perturbation envelopes,
+  interpret aggregate metrics.
+- **Governance Council** – Approve ingress artifacts, sign ledger entries,
+  enforce quorum (≥4 of 6) per manifest.
+- **Trust & Safety** – Verify DK-1.0 / MIAP attestations, confirm neutral module
+  scorecards.
+
+## 5. Run Lifecycle
+
+1. **Ingress Review** – Research submits sourced statements + allowed URIs.
+   Council validates provenance and records approval in the ledger.
+2. **Bundle Assembly** – Ops binds synthetic agent presets with SNI/SCS default
+   knobs. Capture SHA-256 hashes for artifacts per manifest logging schema.
+3. **Control Verification** – Execute DK-1 persona isolation, MIAP telemetry
+   minimization, and ZERO-DRIFT neutrality suites for SNI and SCS. Archive
+   receipts alongside module configs.
+4. **Execution** – Launch sandbox cell. Apply SNI perturbations, then SCS
+   contradictions. Ensure no additional modules are scheduled.
+5. **Metric Collection** – Emit aggregate time series only: comprehension loss
+   (`semantic_similarity`), readability delta, traceability ratio, mutual
+   exclusivity, and confidence consistency. Guard against comprehension loss
+   >0.15, traceability <0.90, or coherence <0.90; flag runs breaching bounds.
+6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
+   and neutrality receipts to `ssot://ledger/content.integrity.eval.v1/`.
+
+## 6. Outstanding Tasks
+
+- Automate ZERO-DRIFT neutrality scorecards for SNI and SCS.
+- Publish simulation harness (`runtime/simulation/content_integrity_eval_harness.py`)
+  with governance replay hooks.
+- Author failure playbooks and escalation contacts.
+- Add automated threshold enforcement prior to council sign-off.
+
+> **Status** – Stub. Update as the automation artifacts and harness mature.
