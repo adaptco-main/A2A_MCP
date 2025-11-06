@@ -1,0 +1,82 @@
+{
+  "service_id": "content.integrity.eval.v1",
+  "title": "Content Integrity Evaluation (CIE-V1)",
+  "revision": "2025-11-07",
+  "mission": "Evaluate narrative payloads using strictly neutral perturbation models that preserve ZERO-DRIFT guarantees.",
+  "governance": {
+    "owner": "World Engine Ops",
+    "integrity_committee": ["Council Relay", "Ethics Desk"],
+    "zero_drift": {
+      "mandate": "Neutral perturbations only; no persuasive or amplifying transforms",
+      "auditable": true
+    }
+  },
+  "modules": [
+    {
+      "id": "synthetic.noise.injector.v1",
+      "role": "neutral_perturbation",
+      "replaces": ["content_noise_enricher", "feature_shift_validator"],
+      "description": "Applies calibrated, distribution-preserving noise to submitted payloads for robustness scoring without directional drift.",
+      "inputs": {
+        "payload": "application/json",
+        "noise_seed": "uint64",
+        "perturbation_budget": "float" 
+      },
+      "outputs": {
+        "samples": "jsonl",
+        "variance_report": "application/json"
+      },
+      "controls": {
+        "clamp_sigma": 1.0,
+        "max_batches": 5,
+        "neutrality_score_threshold": 0.97
+      },
+      "validation": {
+        "canonical_hash": "sha256",
+        "deterministic_key_schedule": true
+      }
+    },
+    {
+      "id": "synthetic.contradiction.synth.v1",
+      "role": "counterfactual_generation",
+      "replaces": ["fact_stream_validator"],
+      "description": "Synthesizes minimally divergent contradiction narratives to test claim resilience while honoring neutral stance requirements.",
+      "inputs": {
+        "payload": "application/json",
+        "knowledge_refs": "array<string>",
+        "nonce": "uuid"
+      },
+      "outputs": {
+        "contradiction_set": "jsonl",
+        "consistency_metrics": "application/json"
+      },
+      "controls": {
+        "max_contradictions": 8,
+        "neutrality_floor": 0.95,
+        "drift_monitor": "zero_drift.monitor.v1"
+      },
+      "validation": {
+        "semantic_symmetry_check": true,
+        "hash_chain_enforced": true
+      }
+    }
+  ],
+  "runtime": {
+    "queue": "cie.neutral.audit",
+    "max_parallel_jobs": 3,
+    "retry_policy": {
+      "max_attempts": 2,
+      "backoff": "exponential"
+    },
+    "metrics": [
+      "entropy_ldi",
+      "coherence_chrono_mi",
+      "yield_kl_gain"
+    ]
+  },
+  "attestation": {
+    "signing_key": "ecdsa-secp256k1",
+    "anchor_ledger": "ledger/content_integrity_eval",
+    "hash_algorithm": "sha256"
+  }
+}
