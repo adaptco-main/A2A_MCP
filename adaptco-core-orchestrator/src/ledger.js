@@ -15,7 +15,7 @@ let currentOffset = 0;
 let lastHash = ZERO_HASH;
 
 function ensureStorage() {
-  fs.mkdirSync(storageDir, { recursive: true });
+  fs.mkdirSync(ledgerDir, { recursive: true });
 }
 
 function canonicalize(value) {
