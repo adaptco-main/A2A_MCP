@@ -21,6 +21,7 @@
     ]
   },
   "dk_1_0": {
+    "drift_threshold": 0.0000,
     "drift_threshold": 0.0,
     "latency_variance_ms": 0.0002,
     "compliance": "zero_drift_enforced"
@@ -28,6 +29,39 @@
   "miap": {
     "agent_scope": "synthetic_only",
     "aggregate_reporting": true
+  },
+  "ingressControls": {
+    "artifact_hashing": "sha256",
+    "approved_source_registry": [
+      "ssot://registry/truthful_inputs",
+      "ssot://registry/trusted_uris"
+    ],
+    "quorum_requirement": "council_4_of_6",
+    "neutrality_scorecard_ref": "governance/scorecards/cie_v1_neutrality.md"
+  },
+  "validation": {
+    "metrics": {
+      "semantic_similarity": {
+        "comprehension_loss_max": 0.15
+      },
+      "readability_delta": {
+        "absolute_delta_max": 6.5
+      },
+      "citation_traceability": {
+        "minimum_ratio": 0.90
+      },
+      "confidence_consistency": {
+        "ratio_min": 0.90
+      }
+    },
+    "neutrality": {
+      "modules": [
+        "synthetic.noise.injector.v1",
+        "synthetic.contradiction.synth.v1"
+      ],
+      "enforcement": "zero_drift_suite",
+      "attestation_artifact": "ledger://cie_v1/neutrality_receipts.jsonl"
+    }
   },
   "modules": [
     {
@@ -51,6 +85,31 @@
             "properties": {
               "ocr_blur": {
                 "type": "number",
+                "description": "Simulated OCR degradation error rate (0.0 - 1.0).",
+                "minimum": 0,
+                "maximum": 1,
+                "default": 0.1
+              },
+              "token_drop": {
+                "type": "number",
+                "description": "Probability (0.0 - 1.0) of dropping random non-essential tokens/words.",
+                "minimum": 0,
+                "maximum": 0.25,
+                "default": 0.02
+              },
+              "translation_rounds": {
+                "type": "integer",
+                "description": "Sequential back-and-forth translations (e.g., English to Japanese to English) to test context loss.",
+                "minimum": 0,
+                "maximum": 4,
+                "default": 2
+              },
+              "synonym_swap": {
+                "type": "number",
+                "description": "Probability (0.0 - 1.0) of replacing low-frequency words with common synonyms.",
+                "minimum": 0,
+                "maximum": 0.2,
+                "default": 0.05
                 "description": "Simulated OCR degradation error rate (0.0 - 1.0)."
               },
               "token_drop": {
@@ -100,6 +159,8 @@
             "description": "List of factual or procedural assertions to be tested for logical consistency (e.g., ['A orbits B', 'B orbits A']).",
             "items": {
               "type": "string"
+            },
+            "minItems": 1
             }
           },
           "sources": {
@@ -108,6 +169,9 @@
             "items": {
               "type": "string",
               "format": "uri"
+            },
+            "minItems": 1,
+            "uniqueItems": true
             }
           }
         },
