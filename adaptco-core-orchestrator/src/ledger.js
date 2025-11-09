@@ -13,15 +13,15 @@ const ledgerAnchorFile = `${ledgerFile}.anchor.json`;
 
 let currentOffset = 0;
 let lastHash = ZERO_HASH;
-let appendQueue = Promise.resolve();
+let appendQueueTail = Promise.resolve();
 
 function runSerialized(operation) {
-  const run = appendQueue.then(() => operation());
-  appendQueue = run.catch((error) => {
-    appendQueue = Promise.resolve();
-    throw error;
-  });
-  return appendQueue;
+  const run = appendQueueTail.then(() => operation());
+  appendQueueTail = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
 }
 
 function ensureStorage() {
