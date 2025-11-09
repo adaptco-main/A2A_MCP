@@ -74,15 +74,27 @@ minimum/maximum envelopes: noise probabilities ≤0.25, translation rounds ≤4.
 4. **Execution** – Launch sandbox cell. Apply SNI perturbations, then SCS
    contradictions. Ensure no additional modules are scheduled.
 5. **Metric Collection** – Emit aggregate time series only: comprehension loss
-   (`semantic_similarity`), readability delta, traceability ratio, mutual
-   exclusivity, and confidence consistency. Guard against comprehension loss
-   >0.15, readability delta >6.5, traceability <0.90, or coherence <0.90; flag
-   runs breaching bounds and initiate remediation playbooks.
+  (`semantic_similarity`), readability delta, traceability ratio, mutual
+  exclusivity, and confidence consistency. Guard against comprehension loss
+  >0.15, readability delta >6.5, traceability <0.90, or coherence <0.90; flag
+  runs breaching bounds and initiate remediation playbooks. Capture the
+  attestation trace ID emitted by the Triadic Backbone flow controller in
+  `src/core_orchestrator/jcs.py` so downstream audits can stitch the run into
+  the ZERO-DRIFT ledger narrative.
 6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
    neutrality receipts, and validation envelopes to
    `ssot://ledger/content.integrity.eval.v1/`.
 
-## 6. Outstanding Tasks
+## 6. Attestation Alignment
+
+Every execution must anchor into the tri-layer backbone described in
+`docs/triadic_backbone_visualization.md`. Platform Ops should reference the
+`TriadicBackbone` definition in `src/core_orchestrator/jcs.py` when registering
+new perturbation batches to ensure the Codex (operational), ChatGPT workspace
+(creative), and P3L (philosophical) layers stay phase-locked. Record the
+resulting `attestation_cycle_id` next to the ledger entry for traceability.
+
+## 7. Outstanding Tasks
 
 - Automate ZERO-DRIFT neutrality scorecards for SNI and SCS.
 - Publish simulation harness (`runtime/simulation/content_integrity_eval_harness.py`)
@@ -116,6 +128,13 @@ registry.
     "source_uri": "https://www.usgs.gov/programs/VHP/basalt",
     "confidence": 0.94,
     "justification": "USGS overview on volcanic rock distribution."
+  },
+  {
+    "statement_id": "cie-audit-0003",
+    "source_claim": "The International Space Station completes about 15.5 Earth orbits per day.",
+    "source_uri": "https://www.nasa.gov/international-space-station/facts-and-figures/",
+    "confidence": 0.96,
+    "justification": "NASA fact sheet quantifying ISS orbital cadence."
   }
 ]
 ```

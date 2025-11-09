@@ -97,6 +97,11 @@
       "attestation_artifact": "ledger://cie_v1/neutrality_receipts.jsonl"
     }
   },
+  "attestation": {
+    "backbone_module": "src/core_orchestrator/jcs.py",
+    "default_flow": "DEFAULT_TRIADIC_BACKBONE",
+    "required_trace_field": "attestation_cycle_id"
+  },
   "modules": [
     {
       "moduleId": "synthetic.noise.injector.v1",

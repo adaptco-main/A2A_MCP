@@ -11,6 +11,8 @@ runs.
 - MIAP telemetry sampling summary demonstrating aggregate-only outputs.
 - ZERO-DRIFT neutrality suite execution logs with pass/fail counts.
 - Hash-linked references to ingress templates validated by the council.
+- Triadic backbone attestation packet including the `attestation_cycle_id`
+  issued by `src/core_orchestrator/jcs.py`.
 
 ## Open Actions
 
