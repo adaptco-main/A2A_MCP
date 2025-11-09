@@ -13,6 +13,16 @@ const ledgerAnchorFile = `${ledgerFile}.anchor.json`;
 
 let currentOffset = 0;
 let lastHash = ZERO_HASH;
+let appendQueue = Promise.resolve();
+
+function runSerialized(operation) {
+  const run = appendQueue.then(() => operation());
+  appendQueue = run.catch((error) => {
+    appendQueue = Promise.resolve();
+    throw error;
+  });
+  return appendQueue;
+}
 
 function ensureStorage() {
   fs.mkdirSync(storageDir, { recursive: true });
@@ -126,39 +136,41 @@ async function writeAnchor() {
 }
 
 async function appendEvent(type, payload) {
-  ensureLedgerState();
+  return runSerialized(async () => {
+    ensureLedgerState();
 
-  const recordedAt = new Date().toISOString();
-  const recordWithoutHash = {
-    at: recordedAt,
-    payload,
-    prev_hash: lastHash,
-    type
-  };
+    const recordedAt = new Date().toISOString();
+    const recordWithoutHash = {
+      at: recordedAt,
+      payload,
+      prev_hash: lastHash,
+      type
+    };
 
-  const hash = computeHash(lastHash, recordWithoutHash);
-  const entry = {
-    ...recordWithoutHash,
-    hash
-  };
+    const hash = computeHash(lastHash, recordWithoutHash);
+    const entry = {
+      ...recordWithoutHash,
+      hash
+    };
 
-  const line = `${canonJson(entry)}\n`;
+    const line = `${canonJson(entry)}\n`;
 
-  const handle = await fs.promises.open(ledgerFile, 'a');
-  try {
-    await handle.write(line, 'utf8');
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
+    const handle = await fs.promises.open(ledgerFile, 'a');
+    try {
+      await handle.write(line, 'utf8');
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
 
-  const lineSize = Buffer.byteLength(line, 'utf8');
-  currentOffset += lineSize;
-  lastHash = hash;
+    const lineSize = Buffer.byteLength(line, 'utf8');
+    currentOffset += lineSize;
+    lastHash = hash;
 
-  await writeAnchor();
-  logger.info({ type, hash }, 'Ledger event appended');
-  return entry;
+    await writeAnchor();
+    logger.info({ type, hash }, 'Ledger event appended');
+    return entry;
+  });
 }
 
 ensureStorage();
