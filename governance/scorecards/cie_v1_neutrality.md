@@ -13,6 +13,9 @@ runs.
 - Hash-linked references to ingress templates validated by the council.
 - Triadic backbone attestation packet including the `attestation_cycle_id`
   issued by `src/core_orchestrator/jcs.py`.
+- Confirmation that the ledger packet references the
+  `WORLD_OS_INFINITE_GAME_DEPLOYED` anchor and carries the `APEX-SEAL`
+  integrity seal.
 
 ## Open Actions
 

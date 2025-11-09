@@ -100,7 +100,23 @@
   "attestation": {
     "backbone_module": "src/core_orchestrator/jcs.py",
     "default_flow": "DEFAULT_TRIADIC_BACKBONE",
-    "required_trace_field": "attestation_cycle_id"
+    "required_trace_field": "attestation_cycle_id",
+    "ledger_anchor": "WORLD_OS_INFINITE_GAME_DEPLOYED",
+    "integrity_layers": {
+      "proof": {
+        "designation": "QRH Lock",
+        "state": "ZERO-DRIFT_COMPLIANT"
+      },
+      "flow": {
+        "designation": "Governed Stability",
+        "state": "ZERO-DRIFT_COMPLIANT"
+      },
+      "execution": {
+        "designation": "Operational Fidelity",
+        "state": "ZERO-DRIFT_COMPLIANT"
+      }
+    },
+    "seal_protocol": "APEX-SEAL"
   },
   "modules": [
     {

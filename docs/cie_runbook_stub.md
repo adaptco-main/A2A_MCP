@@ -83,7 +83,9 @@ minimum/maximum envelopes: noise probabilities ≤0.25, translation rounds ≤4.
   the ZERO-DRIFT ledger narrative.
 6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
    neutrality receipts, and validation envelopes to
-   `ssot://ledger/content.integrity.eval.v1/`.
+   `ssot://ledger/content.integrity.eval.v1/`. Each record must reference the
+   `WORLD_OS_INFINITE_GAME_DEPLOYED` anchor and confirm the `APEX-SEAL`
+   attestation seal noted in the manifest.
 
 ## 6. Attestation Alignment
 
@@ -91,8 +93,10 @@ Every execution must anchor into the tri-layer backbone described in
 `docs/triadic_backbone_visualization.md`. Platform Ops should reference the
 `TriadicBackbone` definition in `src/core_orchestrator/jcs.py` when registering
 new perturbation batches to ensure the Codex (operational), ChatGPT workspace
-(creative), and P3L (philosophical) layers stay phase-locked. Record the
-resulting `attestation_cycle_id` next to the ledger entry for traceability.
+(creative), and P3L (philosophical) layers stay phase-locked. Use
+`TriadicBackbone.ledger_anchor_packet()` to capture the
+`WORLD_OS_INFINITE_GAME_DEPLOYED` anchor, `APEX-SEAL`, and integrity layer
+states alongside the `attestation_cycle_id` for traceability.
 
 ## 7. Outstanding Tasks
 

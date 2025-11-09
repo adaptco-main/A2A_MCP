@@ -19,7 +19,11 @@ renders three interlocking rings around the radiant Qube Core:
      are scheduled.
 
 At the center, the Qube Core fuses the three streams, spinning up the
-`attestation_cycle_id` that each sandbox run must include in the ledger.
+`attestation_cycle_id` that each sandbox run must include in the ledger. The
+resulting packet now binds to the immutable `WORLD_OS_INFINITE_GAME_DEPLOYED`
+anchor and carries the `APEX-SEAL` confirmation that Proof (QRH Lock), Flow
+(Governed Stability), and Execution (Operational Fidelity) all remain
+ZERO-DRIFT compliant.
 
 ## Canonical Flow Definition
 
