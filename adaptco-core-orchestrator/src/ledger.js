@@ -19,9 +19,10 @@ function runSerialized(operation) {
   const run = appendQueueTail.then(() => operation());
   // Reset the queue tail to a resolved promise once the current operation
   // settles so that subsequent appends are not blocked after failures.
-  appendQueueTail = run
-    .catch(() => {})
-    .then(() => undefined);
+  appendQueueTail = run.then(
+    () => undefined,
+    () => undefined
+  );
   return run;
 }
 
