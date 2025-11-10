@@ -17,10 +17,7 @@ let appendQueueTail = Promise.resolve();
 
 function runSerialized(operation) {
   const run = appendQueueTail.then(() => operation());
-  appendQueueTail = run.then(
-    () => undefined,
-    () => undefined
-  );
+  appendQueueTail = run.catch(() => {}).then(() => undefined);
   return run;
 }
 
