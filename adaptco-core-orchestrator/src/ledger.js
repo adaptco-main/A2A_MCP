@@ -24,6 +24,10 @@ function runSerialized(operation) {
   return run;
 }
 
+function waitForPendingAppends() {
+  return appendQueueTail.then(() => undefined);
+}
+
 function ensureStorage() {
   fs.mkdirSync(storageDir, { recursive: true });
 }
@@ -180,5 +184,6 @@ module.exports = {
   appendEvent,
   ledgerFile,
   ledgerAnchorFile,
+  waitForPendingAppends,
   ZERO_HASH
 };

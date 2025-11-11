@@ -85,4 +85,35 @@ describe('ledger appendEvent serialization', () => {
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]).hash).toBe(entry.hash);
   });
+
+  it('waitForPendingAppends resolves once queued operations settle', async () => {
+    const ledger = require('../src/ledger');
+
+    const openSpy = jest.spyOn(fs.promises, 'open').mockImplementationOnce(() => {
+      return Promise.reject(new Error('disk full'));
+    });
+
+    const failed = ledger
+      .appendEvent('test.failure', { index: -1 })
+      .catch((error) => error);
+
+    const success = ledger.appendEvent('test.event', { index: 1 });
+
+    await ledger.waitForPendingAppends();
+    openSpy.mockRestore();
+
+    const failure = await failed;
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.message).toBe('disk full');
+
+    const entry = await success;
+    expect(entry.type).toBe('test.event');
+
+    const lines = fs
+      .readFileSync(ledger.ledgerFile, 'utf8')
+      .trim()
+      .split('\n');
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0]).hash).toBe(entry.hash);
+  });
 });
