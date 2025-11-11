@@ -82,7 +82,8 @@
         "absolute_delta_max": 6.5
       },
       "citation_traceability": {
-        "minimum_ratio": 0.90
+        "minimum_percentage": 90,
+        "notes": "Metric emitter returns percentage values (0-100); normalize fractional ratios to percentages before submission."
       },
       "confidence_consistency": {
         "ratio_min": 0.90
