@@ -83,6 +83,13 @@ minimum/maximum envelopes: noise probabilities ≤0.25, translation rounds ≤4.
   `src/core_orchestrator/jcs.py` so downstream audits can stitch the run into
   the ZERO-DRIFT ledger narrative.
 
+> **Coherence Gate Visualisation** – When validating ZERO-DRIFT stability,
+> regenerate the Lyapunov constraint graph via
+> `python -m core_orchestrator.visualizations.coherence_gate` (documented in
+> `docs/coherence_gate_visualization.md`). Attach the resulting artefact to the
+> audit packet to demonstrate that the gate forces `ΔV_t < -ε` while the
+> B-factor rebounds above 0.98.
+
 > **Traceability Threshold** – The manifest enforces
 > `citation_traceability.minimum_percentage: 90`, so telemetry emitters must
 > report percentage values on a 0–100 scale. Runs emitting fractional ratios
