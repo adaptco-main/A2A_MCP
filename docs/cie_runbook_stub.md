@@ -36,6 +36,13 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 | SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation | `semantic_similarity`, `readability_delta` |
 | SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
 
+## 3.1 Neutral Perturbation Workflow
+
+1. **SNI pass** – Execute `synthetic.noise.injector.v1` with default knobs (`ocr_blur=0.1`, `token_drop=0.02`, `translation_rounds=2`, `synonym_swap=0.05`). Capture semantic/readability deltas and attach SHA-256 receipts.
+2. **SCS pass** – Feed SNI outputs plus approved source URIs into `synthetic.contradiction.synth.v1`. Validate mutual exclusivity proofs and citation coverage.
+3. **Neutrality attestation** – Store module run metadata and DK-1.0 variance results in `ledger://cie_v1/neutrality_receipts.jsonl` before exposing aggregate metrics.
+4. **Governance sign-off** – Confirm MIAP telemetry bounds, ZERO-DRIFT gates, and council quorum prior to releasing any reports.
+
 Knob defaults follow the manifest (e.g., `ocr_blur=0.1`, `token_drop=0.02`,
 `translation_rounds=2`, `synonym_swap=0.05`). Any deviation requires council
 pre-approval and a refreshed neutrality scorecard.
@@ -71,7 +78,7 @@ pre-approval and a refreshed neutrality scorecard.
 
 ## 6. Outstanding Tasks
 
-- Automate ZERO-DRIFT neutrality scorecards for SNI and SCS.
+- Automate ZERO-DRIFT neutrality scorecards for SNI and SCS, persisting outputs to `governance/scorecards/cie_v1_neutrality.md`.
 - Publish simulation harness (`runtime/simulation/content_integrity_eval_harness.py`)
   with governance replay hooks.
 - Author failure playbooks and escalation contacts.
