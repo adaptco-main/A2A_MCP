@@ -74,13 +74,26 @@ minimum/maximum envelopes: noise probabilities ≤0.25, translation rounds ≤4.
 4. **Execution** – Launch sandbox cell. Apply SNI perturbations, then SCS
    contradictions. Ensure no additional modules are scheduled.
 5. **Metric Collection** – Emit aggregate time series only: comprehension loss
-  (`semantic_similarity`), readability delta, traceability ratio, mutual
+  (`semantic_similarity`), readability delta, traceability percentage, mutual
   exclusivity, and confidence consistency. Guard against comprehension loss
-  >0.15, readability delta >6.5, traceability <0.90, or coherence <0.90; flag
+  >0.15, readability delta >6.5, traceability <90% (per `minimum_percentage`
+  enforcement), or coherence <0.90; flag
   runs breaching bounds and initiate remediation playbooks. Capture the
   attestation trace ID emitted by the Triadic Backbone flow controller in
   `src/core_orchestrator/jcs.py` so downstream audits can stitch the run into
   the ZERO-DRIFT ledger narrative.
+
+> **Coherence Gate Visualisation** – When validating ZERO-DRIFT stability,
+> regenerate the Lyapunov constraint graph via
+> `python -m core_orchestrator.visualizations.coherence_gate` (documented in
+> `docs/coherence_gate_visualization.md`). Attach the resulting artefact to the
+> audit packet to demonstrate that the gate forces `ΔV_t < -ε` while the
+> B-factor rebounds above 0.98.
+
+> **Traceability Threshold** – The manifest enforces
+> `citation_traceability.minimum_percentage: 90`, so telemetry emitters must
+> report percentage values on a 0–100 scale. Runs emitting fractional ratios
+> (0–1) will be misinterpreted; normalize to percentages before submission.
 6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
    neutrality receipts, and validation envelopes to
    `ssot://ledger/content.integrity.eval.v1/`. Each record must reference the

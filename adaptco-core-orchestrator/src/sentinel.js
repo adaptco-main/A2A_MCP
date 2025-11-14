@@ -43,7 +43,10 @@ class SentinelAgent {
     if (typeof descriptor === 'string') {
       descriptorPath = descriptor;
     } else if (descriptor && typeof descriptor === 'object') {
-      this.#validateDescriptor(descriptor);
+      const validationOptions = {
+        allowMissingParams: Boolean(options.descriptorPath)
+      };
+      this.#validateDescriptor(descriptor, validationOptions);
       descriptorPath = await this.descriptorWriter(descriptor, options.descriptorPath);
       shouldCleanup = !options.descriptorPath;
     } else {
@@ -136,9 +139,13 @@ class SentinelAgent {
     ];
   }
 
-  #validateDescriptor(descriptor) {
+  #validateDescriptor(descriptor, options = {}) {
     const missing = REQUIRED_DESCRIPTOR_FIELDS.filter((key) => {
       if (key === 'params') {
+        if (descriptor.params === undefined) {
+          return !options.allowMissingParams;
+        }
+
         return (
           typeof descriptor.params !== 'object' ||
           descriptor.params === null ||
