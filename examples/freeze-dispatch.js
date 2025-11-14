@@ -8,6 +8,7 @@ fetch("https://api.github.com/repos/your-org/your-repo/dispatches", {
   headers: {
     Authorization: "Bearer YOUR_TOKEN",
     Accept: "application/vnd.github.v3+json",
+    "Content-Type": "application/json",
   },
   body: JSON.stringify({
     event_type: "freeze_artifact",
