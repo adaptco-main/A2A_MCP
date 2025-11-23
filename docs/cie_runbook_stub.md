@@ -23,9 +23,12 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
    ledger attestation before execution.
 3. **Sealed I/O** – Artifact ingress only; egress limited to aggregate metrics and
    ledger updates.
-4. **Neutral Perturbations** – Only the two sanctioned modules may execute:
-   - `synthetic.noise.injector.v1` (SNI) for reversible channel noise.
-   - `synthetic.contradiction.synth.v1` (SCS) for structured logical probes.
+4. **Neutral Perturbations** – Only the two sanctioned modules may execute under the
+   `operationalDirectives.allowed_modules` list:
+   - `synthetic.noise.injector.v1` (SNI) for reversible channel noise with the
+     ZERO-DRIFT runtime hooks.
+   - `synthetic.contradiction.synth.v1` (SCS) for structured logical probes that
+     respect MIAP telemetry caps.
 5. **Aggregate Observability** – Telemetry restricted to the metric set defined in
    the manifest. No per-agent state leaves the cell.
 
@@ -33,14 +36,14 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 
 | Module | Purpose | Default Controls | Output Metrics |
 | ------ | ------- | ---------------- | -------------- |
-| SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation | `semantic_similarity`, `readability_delta` |
-| SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
+| SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `semantic_similarity`, `readability_delta` |
+| SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
 
 ## 3.1 Neutral Perturbation Workflow
 
 1. **SNI pass** – Execute `synthetic.noise.injector.v1` with default knobs (`ocr_blur=0.1`, `token_drop=0.02`, `translation_rounds=2`, `synonym_swap=0.05`). Capture semantic/readability deltas and attach SHA-256 receipts.
 2. **SCS pass** – Feed SNI outputs plus approved source URIs into `synthetic.contradiction.synth.v1`. Validate mutual exclusivity proofs and citation coverage.
-3. **Neutrality attestation** – Store module run metadata and DK-1.0 variance results in `ledger://cie_v1/neutrality_receipts.jsonl` before exposing aggregate metrics.
+3. **Neutrality attestation** – Execute the mandated runtime hooks and store module run metadata plus DK-1.0 variance results in `ledger://cie_v1/neutrality_receipts.jsonl` before exposing aggregate metrics.
 4. **Governance sign-off** – Confirm MIAP telemetry bounds, ZERO-DRIFT gates, and council quorum prior to releasing any reports.
 
 Knob defaults follow the manifest (e.g., `ocr_blur=0.1`, `token_drop=0.02`,
