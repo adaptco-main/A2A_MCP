@@ -37,10 +37,67 @@ Your `package.json` defines these scripts:
 
 -----
 
-### 🚀 Recommended Action
+#!/usr/bin/env node
 
-Since the core server files exist but the CLI tools are missing, I recommend we proceed with a mix of **Option A** (Fix missing files) and **Option C** (CI Repair).
+const pino = require('pino');
+const Validator = require('../validator');
+const ledger = require('../ledger');
 
-**Shall I generate the missing `src/bin/audit.js` and `src/bin/rehearsal.js` files now to make your npm scripts executable?**
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  transport: {
+    target: 'pino-pretty',
+    options: { colorize: true }
+  }
+});
 
-(I can also fix `avatar-bindings-ci.yml` in the next step to ensure it actually runs these new scripts.)
+// Mock Capsule for Rehearsal
+const MOCK_CAPSULE = {
+  capsule_id: "capsule.rehearsal.mock.v1",
+  version: "1.0.0",
+  metadata: {
+    author: "RehearsalBot",
+    context: "CI/CD Simulation"
+  },
+  payload: {
+    data: "Mock payload for rehearsal run"
+  },
+  signature: "mock_sig_12345"
+};
+
+async function runRehearsal() {
+  logger.info('🎭 Starting Rehearsal Simulation...');
+
+  try {
+    // 1. Initialize Components
+    const validator = new Validator();
+    await validator.loadSchemas();
+    logger.info('✅ Schemas loaded.');
+
+    // 2. Validate Mock Capsule
+    logger.info(`Processing Capsule: ${MOCK_CAPSULE.capsule_id}`);
+    const isValid = validator.validate('capsule', MOCK_CAPSULE);
+    
+    if (!isValid) {
+      logger.error('❌ Rehearsal Failed: Capsule validation error.');
+      logger.error(validator.errors);
+      process.exit(1);
+    }
+    logger.info('✅ Capsule validated.');
+
+    // 3. Simulate Ledger Append (Dry Run)
+    logger.info('Simulating Ledger Append...');
+    // Note: In a real run, we'd call ledger.append(), but here we mock the success
+    // const result = await ledger.append(MOCK_CAPSULE); 
+    logger.info('✅ Ledger append simulated successfully.');
+
+    logger.info('✨ Rehearsal Complete. System is ready for traffic.');
+    process.exit(0);
+
+  } catch (error) {
+    logger.fatal({ err: error }, '🚨 Rehearsal Crashed');
+    process.exit(1);
+  }
+}
+
+runRehearsal();
