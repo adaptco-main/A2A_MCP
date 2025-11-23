@@ -1,0 +1,21 @@
+{
+  "id": "cie.sni.audit.002",
+  "content_source": "cie.v1.audit",
+  "payload_format": "text",
+  "module_targets": [
+    "synthetic.noise.injector.v1"
+  ],
+  "source_claim": "Secure multiparty computation allows multiple parties to jointly compute a function over their inputs while keeping those inputs private.",
+  "operations": {
+    "ocr_blur": 0.18,
+    "token_drop": 0.06,
+    "translation_rounds": 3,
+    "synonym_swap": 0.08
+  },
+  "expected_outcome": {
+    "integrity": "observe",
+    "semantic_similarity_min": 0.85,
+    "readability_delta_max": 6.0
+  },
+  "notes": "Edge-of-envelope SNI run to verify readability deltas remain within the manifest's acceptable bound."
+}

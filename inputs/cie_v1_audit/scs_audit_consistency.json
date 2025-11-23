@@ -1,0 +1,23 @@
+{
+  "id": "cie.scs.audit.004",
+  "content_source": "cie.v1.audit",
+  "payload_format": "json",
+  "module_targets": [
+    "synthetic.contradiction.synth.v1"
+  ],
+  "assertions": [
+    "Solar photovoltaic systems generate direct current electricity from sunlight.",
+    "Inverters in solar installations convert direct current to alternating current for home use."
+  ],
+  "sources": [
+    "https://www.energy.gov/eere/solar/solar-photovoltaic-technology-basics",
+    "https://www.nrel.gov/research/solar-inverters.html"
+  ],
+  "expected_outcome": {
+    "integrity": "pass",
+    "mutual_exclusivity": false,
+    "confidence_consistency_min": 0.95,
+    "citation_traceability_min": 0.95
+  },
+  "notes": "SCS-only run confirming logically consistent assertions with high traceability and confidence consistency."
+}

@@ -1,0 +1,32 @@
+{
+  "id": "cie.scs.audit.003",
+  "content_source": "cie.v1.audit",
+  "payload_format": "json",
+  "module_targets": [
+    "synthetic.noise.injector.v1",
+    "synthetic.contradiction.synth.v1"
+  ],
+  "source_claim": "Routine blood donations can be processed into plasma therapies for patients with immune deficiencies.",
+  "operations": {
+    "ocr_blur": 0.1,
+    "token_drop": 0.03,
+    "translation_rounds": 2,
+    "synonym_swap": 0.06
+  },
+  "assertions": [
+    "Plasma from routine blood donations can treat immune deficiency disorders.",
+    "Plasma from routine blood donations cannot be used to treat immune deficiency disorders."
+  ],
+  "sources": [
+    "https://www.redcrossblood.org/donate-blood/how-to-donate/types-of-blood-donations/plasma.html",
+    "https://www.fda.gov/vaccines-blood-biologics/blood-blood-products/what-plasma"
+  ],
+  "expected_outcome": {
+    "integrity": "fail_expected",
+    "mutual_exclusivity": true,
+    "confidence_consistency_min": 0.9,
+    "citation_traceability_min": 0.9,
+    "neutrality_alert": "Ensure contradiction is flagged while retaining ZERO-DRIFT bounds."
+  },
+  "notes": "SNI primes the claims before SCS validates the mutually exclusive assertions and source coverage."
+}

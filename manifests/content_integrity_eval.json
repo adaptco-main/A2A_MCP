@@ -34,7 +34,8 @@
             "identifiers": [
                 "cie.v1.smoke",
                 "cie.v1.edge",
-                "cie.v1.adversarial"
+                "cie.v1.adversarial",
+                "cie.v1.audit"
             ],
             "registry": [
                 "ssot://registry/truthful_inputs",

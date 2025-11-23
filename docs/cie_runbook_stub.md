@@ -114,6 +114,27 @@ pre-approval and a refreshed neutrality scorecard.
    `ledger://cie_v1/neutrality_receipts.jsonl` and mirrored in
    `ssot://ledger/content.integrity.eval.v1/`.
 
+### 6.1 First Governance Audit Bundle
+
+- **Inputs** – Use the curated audit set in `inputs/cie_v1_audit/` to mirror
+  the initial council-reviewed bundle (baseline + edge SNI passes, one
+  contradiction probe, one consistency probe).
+- **Command** – Capture the governance log for the first official audit:
+
+  ```bash
+  python scripts/run_cie_v1_smoke.py \
+    --manifest manifests/content_integrity_eval.json \
+    --inputs inputs/cie_v1_audit \
+    --output runtime/cie_v1_audit.log.jsonl
+  ```
+
+- **Receipts & Metrics** – Upload the emitted JSONL to
+  `ledger://cie_v1/neutrality_receipts.jsonl` and mirror into
+  `ssot://ledger/content.integrity.eval.v1/`. Attach module-level metric
+  extracts (similarity, readability deltas, mutual exclusivity,
+  confidence consistency, traceability) to the neutrality scorecard cited in
+  the manifest.
+
 ## 7. Outstanding Tasks
 
 - Automate ZERO-DRIFT neutrality scorecards for SNI and SCS, persisting outputs to `governance/scorecards/cie_v1_neutrality.md`.
