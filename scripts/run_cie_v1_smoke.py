@@ -68,6 +68,14 @@ def build_log_entry(
     if not module_targets:
         raise ValueError(f"No module_targets provided in {sample_path}")
 
+    payload_id = payload.get("id")
+    if not payload_id:
+        raise ValueError(f"Missing required payload id in {sample_path}")
+
+    expected_outcome = payload.get("expected_outcome")
+    if expected_outcome is None:
+        raise ValueError(f"Missing expected_outcome for {sample_path}")
+
     if routing_targets:
         out_of_route = [module for module in module_targets if module not in routing_targets]
         if out_of_route:
@@ -88,12 +96,12 @@ def build_log_entry(
     return {
         "timestamp": dt.datetime.utcnow().isoformat() + "Z",
         "input_file": str(sample_path),
-        "payload_id": payload.get("id"),
+        "payload_id": payload_id,
         "payload_format": payload_format,
         "content_source": payload.get("content_source"),
         "module_targets": module_targets,
         "routed_modules": routed_modules,
-        "expected_outcome": payload.get("expected_outcome"),
+        "expected_outcome": expected_outcome,
         "notes": payload.get("notes", ""),
         "sha256_input": sha256_input,
     }
@@ -109,10 +117,18 @@ def run(inputs_dir: Path, manifest_path: Path, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     sample_files = sorted(inputs_dir.glob("*.json"))
-    entries = [
-        build_log_entry(path, neutral_modules, allowed_formats, allowed_sources, routing_map)
-        for path in sample_files
-    ]
+    if not sample_files:
+        raise ValueError(f"No input payloads found in {inputs_dir}")
+
+    seen_ids = set()
+    entries = []
+    for path in sample_files:
+        entry = build_log_entry(path, neutral_modules, allowed_formats, allowed_sources, routing_map)
+        payload_id = entry["payload_id"]
+        if payload_id in seen_ids:
+            raise ValueError(f"Duplicate payload id detected: {payload_id}")
+        seen_ids.add(payload_id)
+        entries.append(entry)
 
     with output_path.open("w", encoding="utf-8") as handle:
         for entry in entries:

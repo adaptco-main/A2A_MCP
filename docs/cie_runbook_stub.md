@@ -109,7 +109,8 @@ pre-approval and a refreshed neutrality scorecard.
 3. **Validation artifacts** – Inspect `runtime/cie_v1_smoke.log.jsonl` for
    payload IDs, manifest-routed modules, payload hashes, and expected outcome
    echoes. The harness enforces manifest-governed payload formats, source IDs,
-   and routing. Metrics and receipts for the first audit should be copied to
+   routing, and uniqueness/requiredness for payload IDs and expected outcomes.
+   Metrics and receipts for the first audit should be copied to
    `ledger://cie_v1/neutrality_receipts.jsonl` and mirrored in
    `ssot://ledger/content.integrity.eval.v1/`.
 
