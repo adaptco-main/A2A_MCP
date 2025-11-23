@@ -9,7 +9,9 @@
     "test": "jest --runInBand",
     "lint": "eslint .",
     "format": "prettier -w .",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "audit": "node src/bin/audit.js",
+    "rehearsal": "node src/bin/rehearsal.js"
   },
   "engines": {
     "node": ">=20"

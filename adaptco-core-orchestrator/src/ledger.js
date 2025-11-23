@@ -10,6 +10,7 @@ const ZERO_HASH = '0'.repeat(64);
 const storageDir = path.join(__dirname, '..', 'storage');
 const ledgerFile = path.join(storageDir, 'ledger.jsonl');
 const ledgerAnchorFile = `${ledgerFile}.anchor.json`;
+const ledgerDir = path.dirname(ledgerFile);
 
 let currentOffset = 0;
 let lastHash = ZERO_HASH;
@@ -30,6 +31,15 @@ function waitForPendingAppends() {
 
 function ensureStorage() {
   fs.mkdirSync(ledgerDir, { recursive: true });
+}
+
+function getLedgerDirectory() {
+  return ledgerDir;
+}
+
+function getCurrentLedgerFile() {
+  ensureStorage();
+  return ledgerFile;
 }
 
 function canonicalize(value) {
@@ -97,7 +107,9 @@ function readExistingLedgerState() {
       throw new Error('Ledger continuity check failed: hash mismatch');
     }
 
-    expectedPrev = storedHash;
+    if (rest.type !== 'file_genesis') {
+      expectedPrev = storedHash;
+    }
   }
 
   lastHash = expectedPrev;
@@ -105,6 +117,7 @@ function readExistingLedgerState() {
 }
 
 function ensureLedgerState() {
+  ensureStorage();
   if (!fs.existsSync(ledgerFile)) {
     if (currentOffset !== 0 || lastHash !== ZERO_HASH) {
       lastHash = ZERO_HASH;
@@ -117,6 +130,30 @@ function ensureLedgerState() {
   if (stats.size !== currentOffset) {
     readExistingLedgerState();
   }
+}
+
+async function ensureGenesis() {
+  ensureStorage();
+  const stats = await fs.promises.stat(ledgerFile).catch(() => null);
+  if (stats && stats.size > 0) {
+    return;
+  }
+
+  const recordedAt = new Date().toISOString();
+  const recordWithoutHash = {
+    at: recordedAt,
+    payload: { previous_anchor: null },
+    prev_hash: ZERO_HASH,
+    type: 'file_genesis'
+  };
+
+  const hash = computeHash(ZERO_HASH, recordWithoutHash);
+  const entry = { ...recordWithoutHash, hash };
+  const line = `${canonJson(entry)}\n`;
+
+  await fs.promises.writeFile(ledgerFile, line, 'utf8');
+  lastHash = ZERO_HASH;
+  currentOffset = Buffer.byteLength(line, 'utf8');
 }
 
 async function writeAnchor() {
@@ -141,6 +178,7 @@ async function writeAnchor() {
 
 async function appendEvent(type, payload) {
   return runSerialized(async () => {
+    await ensureGenesis();
     ensureLedgerState();
 
     const recordedAt = new Date().toISOString();
@@ -184,6 +222,8 @@ module.exports = {
   appendEvent,
   ledgerFile,
   ledgerAnchorFile,
+  getLedgerDirectory,
+  getCurrentLedgerFile,
   waitForPendingAppends,
   ZERO_HASH
 };
