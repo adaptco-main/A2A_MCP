@@ -59,14 +59,32 @@
                 "synthetic.contradiction.synth.v1"
             ],
             "enforcement": "zero_drift_suite",
-            "attestation_artifact": "ledger://cie_v1/neutrality_receipts.jsonl"
+            "attestation_artifact": "ledger://cie_v1/neutrality_receipts.jsonl",
+            "perturbation_scope": "neutral_only",
+            "variance_floor": 0.0
         }
+    },
+    "operationalDirectives": {
+        "allowed_modules": [
+            "synthetic.noise.injector.v1",
+            "synthetic.contradiction.synth.v1"
+        ],
+        "disallowed_modules": "all_other_perturbation_or_influence_vectors",
+        "runtime_hooks": [
+            "pre_run_zero_drift_attestation",
+            "post_run_neutrality_receipt"
+        ]
     },
     "modules": [
         {
             "moduleId": "synthetic.noise.injector.v1",
             "moduleAcronym": "SNI",
             "moduleDescription": "Applies statistically defined, reversible distortions (blur, token drop, translation cycles, synonym swap) to stress comprehension stability without directional drift.",
+            "neutralityControls": {
+                "drift_lock": true,
+                "noise_profile": "statistical_neutral",
+                "miap_compliant": true
+            },
             "inputSchema": {
                 "type": "object",
                 "required": [
@@ -133,6 +151,11 @@
             "moduleId": "synthetic.contradiction.synth.v1",
             "moduleAcronym": "SCS",
             "moduleDescription": "Builds minimally divergent contradiction sets to verify logical consistency and sourcing discipline under MIAP constraints.",
+            "neutralityControls": {
+                "drift_lock": true,
+                "contradiction_bounds": "minimally_divergent",
+                "miap_compliant": true
+            },
             "inputSchema": {
                 "type": "object",
                 "required": [
