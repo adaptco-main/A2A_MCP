@@ -1,75 +1,190 @@
-Yes—please proceed to fixing `avatar-bindings-ci.yml` next.
+// adaptco-core-orchestrator/src/audit.js
+'use strict';
 
-Since I can’t see your current workflow file, here is a **drop-in, CI-ready workflow** you can use as a replacement or as a baseline to patch your existing one.
+const fs = require('fs');
+const path = require('path');
+const { ledgerFile } = require('./ledger');
 
-Save this as:
-`.github/workflows/avatar-bindings-ci.yml`
+function normalizeCriteria(criteria = {}) {
+  const { id, capsuleId, version } = criteria;
 
-```yaml
-name: Avatar Bindings CI
+  if (!id && !capsuleId) {
+    throw new Error('An artifact identifier (id or capsuleId) is required to build a trace');
+  }
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+  if (id) {
+    if (id.startsWith('capsule-')) {
+      const remainder = id.slice('capsule-'.length);
+      const lastDash = remainder.lastIndexOf('-');
+      if (lastDash !== -1) {
+        return {
+          id,
+          capsuleId: remainder.slice(0, lastDash),
+          version: remainder.slice(lastDash + 1)
+        };
+      }
+    }
 
-jobs:
-  avatar-bindings-ci:
-    name: Validate & Rehearse Avatar Bindings
-    runs-on: ubuntu-latest
+    if (id.includes('.')) {
+      const parts = id.split('.');
+      return {
+        id,
+        capsuleId: parts.slice(0, -1).join('.'),
+        version: parts[parts.length - 1]
+      };
+    }
 
-    env:
-      NODE_ENV: test
+    return { id, capsuleId, version };
+  }
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-          cache: 'npm'
-
-      - name: Install dependencies (npm ci)
-        run: npm ci
-        working-directory: adaptco-core-orchestrator
-
-      - name: Lint
-        run: npm run lint
-        working-directory: adaptco-core-orchestrator
-
-      - name: Run unit tests
-        run: npm test
-        working-directory: adaptco-core-orchestrator
-
-      - name: Audit capsule bindings
-        run: npm run audit
-        working-directory: adaptco-core-orchestrator
-
-      - name: Rehearsal (dry-run binding simulation)
-        run: npm run rehearsal
-        working-directory: adaptco-core-orchestrator
-```
-
-If you’re using a monorepo and `adaptco-core-orchestrator` isn’t at the root, adjust the `working-directory` accordingly (right now it assumes `adaptco-core-orchestrator/` is at the repo root).
-
-### Optional: pino-pretty dev dependency
-
-If your new `audit.js` / `rehearsal.js` scripts pretty-print logs via `pino-pretty`, add:
-
-```json
-"devDependencies": {
-  "pino-pretty": "^11.2.2"
+  return {
+    id: version ? `capsule-${capsuleId}-${version}` : undefined,
+    capsuleId,
+    version
+  };
 }
-```
 
-and re-run `npm ci` locally and in CI.
+async function readLedger(targetPath = ledgerFile) {
+  const resolved = path.resolve(targetPath);
+  try {
+    const content = await fs.promises.readFile(resolved, 'utf8');
+    return content
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}
 
-If you want, I can now:
+function entryTimestamp(entry) {
+  return entry.at || entry.ts;
+}
 
-* Tighten this workflow with status checks / required jobs, or
-* Add a second job that only runs `audit` + `rehearsal` on changed capsule files (path filters), or
-* Add artifact upload (e.g., attach an `audit-report.json` to the run).
+function deriveArtifactId(entries, criteria) {
+  if (criteria.id) {
+    return criteria.id;
+  }
+
+  const { capsuleId, version } = criteria;
+  for (const entry of entries) {
+    if (entry.payload?.id && entry.payload?.capsule?.capsule_id === capsuleId) {
+      return entry.payload.id;
+    }
+    if (entry.capsule_id && entry.capsule_id.startsWith(`${capsuleId}.`)) {
+      return entry.capsule_id;
+    }
+    if (entry.capsule_ref && entry.capsule_ref.startsWith(`${capsuleId}.`)) {
+      return entry.capsule_ref;
+    }
+  }
+
+  if (version) {
+    return `capsule-${capsuleId}-${version}`;
+  }
+
+  return undefined;
+}
+
+function matchesTarget(entry, artifactId, capsuleId) {
+  const capsuleMatch =
+    capsuleId &&
+    (entry.payload?.capsule?.capsule_id === capsuleId ||
+      (typeof entry.capsule_id === 'string' && entry.capsule_id.startsWith(`${capsuleId}.`)) ||
+      (typeof entry.capsule_ref === 'string' && entry.capsule_ref.startsWith(`${capsuleId}.`)));
+
+  const artifactMatch =
+    artifactId &&
+    (entry.payload?.id === artifactId || entry.capsule_id === artifactId || entry.capsule_ref === artifactId);
+
+  return artifactMatch || capsuleMatch;
+}
+
+function deriveCapsuleFromArtifact(criteria) {
+  if (criteria.capsuleId && criteria.version) {
+    return {
+      capsule_id: criteria.capsuleId,
+      version: criteria.version
+    };
+  }
+  return undefined;
+}
+
+function summarizeEvent(entry) {
+  if (entry.type === 'capsule.registered' && entry.payload?.capsule) {
+    const capsule = entry.payload.capsule;
+    const capsuleLabel = [capsule.capsule_id, capsule.version].filter(Boolean).join(' ');
+    return `Capsule ${capsuleLabel} registered`;
+  }
+  return `Event ${entry.type || entry.event}`;
+}
+
+function buildTrace(entries, criteria) {
+  const normalized = normalizeCriteria(criteria);
+
+  if (!Array.isArray(entries)) {
+    throw new TypeError('entries must be an array');
+  }
+
+  const artifactId = deriveArtifactId(entries, normalized);
+  const capsuleId = normalized.capsuleId;
+
+  const matchingIndices = [];
+  for (let idx = 0; idx < entries.length; idx += 1) {
+    if (matchesTarget(entries[idx], artifactId, capsuleId)) {
+      matchingIndices.push(idx);
+    }
+  }
+
+  let selectedEntries;
+  if (matchingIndices.length === 0) {
+    selectedEntries = entries.filter((entry) => matchesTarget(entry, artifactId, capsuleId));
+  } else {
+    const firstIdx = Math.min(...matchingIndices);
+    const lastIdx = Math.max(...matchingIndices);
+    selectedEntries = entries.slice(firstIdx, lastIdx + 1);
+  }
+
+  if (selectedEntries.length === 0) {
+    return null;
+  }
+
+  selectedEntries.sort((a, b) => {
+    const aTime = entryTimestamp(a);
+    const bTime = entryTimestamp(b);
+    if (aTime === bTime) return 0;
+    return aTime < bTime ? -1 : 1;
+  });
+
+  const resolvedArtifactId = artifactId || selectedEntries[0].payload?.id || selectedEntries[0].capsule_id;
+
+  const events = selectedEntries.map((entry) => ({
+    type: entry.type || entry.event,
+    at: entryTimestamp(entry),
+    payload: entry.payload || entry,
+    summary: summarizeEvent(entry)
+  }));
+
+  const firstSeen = events[0].at;
+  const lastSeen = events[events.length - 1].at;
+
+  const trace = {
+    artifactId: resolvedArtifactId,
+    criteria: Object.assign({}, normalized, { id: resolvedArtifactId || normalized.id }),
+    capsule: entries.find((entry) => entry.payload?.capsule)?.payload?.capsule || deriveCapsuleFromArtifact(normalized),
+    totalEvents: events.length,
+    firstSeen,
+    lastSeen,
+    events
+  };
+
+  return trace;
+}
+
+module.exports = {
+  readLedger,
+  buildTrace
+};
