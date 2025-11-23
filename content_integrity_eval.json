@@ -70,6 +70,28 @@
       "merkle_settlement_latency"
     ]
   },
+  "audit_runs": {
+    "first_official": {
+      "purpose": "Baseline ZERO-DRIFT enforcement for production onboarding.",
+      "inputs": {
+        "source_content": "Canonical JSON capsule with deterministic ordering and UTF-8 normalization.",
+        "perturbation_profile": "Entropy budget ≤0.15 bits/token, permitted scopes (whitespace, punctuation), and neutrality labels.",
+        "claim_graph": "Optional DAG of claims with stable identifiers for contradiction synthesis.",
+        "contradiction_policy": "Required labels for all synthetic contradictions plus rejection rules for unlabeled inversions."
+      },
+      "gates": {
+        "drift_score_max": 0.1,
+        "neutral_noise_rate_min": 0.95,
+        "contradiction_coverage_min": 0.8
+      },
+      "artifacts": [
+        "intake receipt with capsule_id and SHA-256 digests",
+        "ignition receipt with entropy budget proof",
+        "binding receipt with contradiction labels and hashes",
+        "settlement receipt with Merkle root and dual council attestations"
+      ]
+    }
+  },
   "lineage": {
     "canonicalization": "All inputs are normalized before any model call to minimize drift risk.",
     "hashing": "Each ritual stage emits SHA-256 digests of inputs and outputs.",

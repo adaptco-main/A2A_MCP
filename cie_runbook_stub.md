@@ -36,6 +36,21 @@ Everything is treated as a ceremony: **intake → ignition → binding → settl
 4. Confirm outputs: review `robustness_score`, neutrality verdicts, and contradiction labels.
 5. Verify audit artifacts: ledger emits capsule events with hashes, Merkle roots, and ZERO-DRIFT compliance notes.
 
+### Input definitions for the first official run
+- `source_content` (required): Canonical JSON payload with deterministic ordering and UTF-8 normalization; include `capsule_id` an
+d pre-run SHA-256 hash.
+- `perturbation_profile` (required): Entropy budget ≤0.15 bits/token, permitted scopes (whitespace, punctuation), and neutraliza
+tion labels for the noise injector.
+- `claim_graph` (optional): Directed acyclic graph of claim nodes with stable IDs for contradiction synthesis.
+- `contradiction_policy` (required when `claim_graph` provided): Label set for synthetic contradictions plus rejection rules for
+ unlabeled inversions.
+
+### Evidence to retain
+- Intake receipt with capsule_id, capsule_ref, and hashes.
+- Ignition receipt showing entropy budget proof for `synthetic.noise.injector.v1`.
+- Binding receipt listing contradictions, labels, and per-item hashes.
+- Settlement receipt with Merkle root and dual council attestations.
+
 ## Observability
 - Metrics: `drift_score`, `neutral_noise_rate`, `contradiction_coverage`, `audit_pass_rate`, `merkle_settlement_latency`.
 - Logging: Module invocations must include module id, input capsule references, guardrail outcomes, and hashes.
