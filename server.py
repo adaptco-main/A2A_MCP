@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from decimal import Decimal, ROUND_HALF_EVEN
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import List
 
@@ -37,9 +38,11 @@ def kahan_sum(values: List[float]) -> float:
 
 
 def quantize_score(value: float, precision: int = 6) -> float:
-    """Round a score to a fixed precision for deterministic ordering."""
+    """Round a score to a fixed precision using Decimal for determinism."""
 
-    return round(value, ndigits=precision)
+    quantum = Decimal("1").scaleb(-precision)
+    quantized = Decimal(str(value)).quantize(quantum, rounding=ROUND_HALF_EVEN)
+    return float(quantized)
 
 
 def rank_documents() -> list[dict]:
