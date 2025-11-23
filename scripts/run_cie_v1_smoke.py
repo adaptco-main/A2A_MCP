@@ -21,7 +21,18 @@ def collect_payload_formats(manifest: dict) -> list:
     return profile.get("payload_formats", [])
 
 
-def build_log_entry(sample_path: Path, neutral_modules: list, allowed_formats: list) -> dict:
+def collect_content_sources(manifest: dict) -> list:
+    profile = manifest.get("input_profile", {})
+    sources = profile.get("content_sources", {})
+    return sources.get("identifiers", [])
+
+
+def build_log_entry(
+    sample_path: Path,
+    neutral_modules: list,
+    allowed_formats: list,
+    allowed_sources: list,
+) -> dict:
     with sample_path.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
 
@@ -29,7 +40,17 @@ def build_log_entry(sample_path: Path, neutral_modules: list, allowed_formats: l
     if allowed_formats and payload_format not in allowed_formats:
         raise ValueError(f"Unsupported payload_format '{payload_format}' in {sample_path}")
 
+    content_source = payload.get("content_source")
+    if allowed_sources and content_source not in allowed_sources:
+        raise ValueError(f"Unsupported content_source '{content_source}' in {sample_path}")
+
     module_targets = payload.get("module_targets", [])
+    disallowed_modules = [module for module in module_targets if module not in neutral_modules]
+    if disallowed_modules:
+        raise ValueError(
+            f"Non-neutral module targets {disallowed_modules} present in {sample_path}; only {neutral_modules} allowed"
+        )
+
     routed_modules = [module for module in module_targets if module in neutral_modules]
     if not routed_modules:
         raise ValueError(f"No neutral modules mapped for {sample_path}")
@@ -52,11 +73,14 @@ def run(inputs_dir: Path, manifest_path: Path, output_path: Path) -> None:
     manifest = load_manifest(manifest_path)
     neutral_modules = collect_neutral_modules(manifest)
     allowed_formats = collect_payload_formats(manifest)
+    allowed_sources = collect_content_sources(manifest)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     sample_files = sorted(inputs_dir.glob("*.json"))
-    entries = [build_log_entry(path, neutral_modules, allowed_formats) for path in sample_files]
+    entries = [
+        build_log_entry(path, neutral_modules, allowed_formats, allowed_sources) for path in sample_files
+    ]
 
     with output_path.open("w", encoding="utf-8") as handle:
         for entry in entries:
