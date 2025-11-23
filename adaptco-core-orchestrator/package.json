@@ -1,103 +1,36 @@
-Based on the current state of the `adaptco-core-orchestrator` files you've uploaded, I recommend we start with **Option E (Audit)** immediately, as I can already see discrepancies between your `package.json` scripts and the file structure.
-
-Here is the audit of your repository based on the files provided:
-
-### 🔍 Option E: Repository Audit
-
-I have scanned the `adaptco-core-orchestrator` structure against your `package.json`.
-
-**1. ❌ Missing Script Entry Points**
-Your `package.json` defines these scripts:
-
-```json
-"audit": "node src/bin/audit.js",
-"rehearsal": "node src/bin/rehearsal.js"
-```
-
-**Critical Finding:** The directory `src/bin/` and the files `audit.js` and `rehearsal.js` are **missing** from the file list. These commands will fail if run.
-
-**2. ✅ Core Server Structure**
-
-  * `src/index.js`: **Exists**
-  * `src/server.js`: **Exists**
-  * `src/routes/capsules.js`: **Exists**
-  * `src/validator.js`: **Exists**
-  * **Status:** The core microservice skeleton (Option B) appears largely in place, though we should verify `server.js` uses Express 5 as intended.
-
-**3. ⚠️ Test Directory Convention**
-
-  * `package.json` script: `"test": "jest --runInBand"`
-  * Actual directory: `__tests__` (containing `capsule.register.test.js`, etc.)
-  * **Status:** This is valid for Jest default configuration, but standardizing on `tests/` vs `__tests__` is a choice. Currently valid.
-
-**4. ✅ Schema Availability**
-
-  * `schemas/capsule.schema.json`: **Exists**
-  * **Status:** The validation layer has its necessary artifacts.
-
------
-
-#!/usr/bin/env node
-
-const pino = require('pino');
-const Validator = require('../validator');
-const ledger = require('../ledger');
-
-const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: {
-    target: 'pino-pretty',
-    options: { colorize: true }
-  }
-});
-
-// Mock Capsule for Rehearsal
-const MOCK_CAPSULE = {
-  capsule_id: "capsule.rehearsal.mock.v1",
-  version: "1.0.0",
-  metadata: {
-    author: "RehearsalBot",
-    context: "CI/CD Simulation"
+{
+  "name": "adaptco-core-orchestrator",
+  "version": "0.1.0",
+  "description": "Adaptco Core Orchestrator service",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=20"
   },
-  payload: {
-    data: "Mock payload for rehearsal run"
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "build": "echo \"No build step configured\"",
+    "test": "jest --runInBand",
+    "lint": "eslint \"src/**/*.js\" \"__tests__/**/*.js\"",
+    "format": "prettier --write \"src/**/*.js\" \"__tests__/**/*.js\"",
+    "audit": "node src/bin/audit.js",
+    "rehearsal": "node src/bin/rehearsal.js"
   },
-  signature: "mock_sig_12345"
-};
-
-async function runRehearsal() {
-  logger.info('🎭 Starting Rehearsal Simulation...');
-
-  try {
-    // 1. Initialize Components
-    const validator = new Validator();
-    await validator.loadSchemas();
-    logger.info('✅ Schemas loaded.');
-
-    // 2. Validate Mock Capsule
-    logger.info(`Processing Capsule: ${MOCK_CAPSULE.capsule_id}`);
-    const isValid = validator.validate('capsule', MOCK_CAPSULE);
-    
-    if (!isValid) {
-      logger.error('❌ Rehearsal Failed: Capsule validation error.');
-      logger.error(validator.errors);
-      process.exit(1);
-    }
-    logger.info('✅ Capsule validated.');
-
-    // 3. Simulate Ledger Append (Dry Run)
-    logger.info('Simulating Ledger Append...');
-    // Note: In a real run, we'd call ledger.append(), but here we mock the success
-    // const result = await ledger.append(MOCK_CAPSULE); 
-    logger.info('✅ Ledger append simulated successfully.');
-
-    logger.info('✨ Rehearsal Complete. System is ready for traffic.');
-    process.exit(0);
-
-  } catch (error) {
-    logger.fatal({ err: error }, '🚨 Rehearsal Crashed');
-    process.exit(1);
-  }
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "express": "^5.1.0",
+    "pino": "^9.11.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.36.0",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.4.0",
+    "jest": "^30.1.3",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4"
+  },
+  "license": "MIT"
 }
-
-runRehearsal();
