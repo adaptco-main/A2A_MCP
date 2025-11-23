@@ -233,126 +233,6 @@
   </main>
 
   <script>
-    function makeChart(ctx, config) {
-      return new Chart(ctx, config);
-    }
-
-    const lifecycleCtx = document.getElementById('lifecycleChart');
-    makeChart(lifecycleCtx, {
-      type: 'bar',
-      data: {
-        labels: ['Ingest', 'Noise Inject', 'Contradiction Synth', 'Validation', 'Seal'],
-        datasets: [{
-          label: 'Confidence (%)',
-          data: [62, 78, 84, 92, 97],
-          backgroundColor: [
-            'rgba(96,165,250,0.6)',
-            'rgba(74,222,128,0.6)',
-            'rgba(244,114,182,0.6)',
-            'rgba(129,140,248,0.6)',
-            'rgba(34,211,238,0.7)'
-          ],
-          borderColor: 'rgba(255,255,255,0.22)',
-          borderWidth: 1.2,
-          borderRadius: 8,
-        }]
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-          x: { ticks: { color: '#cbd5e1' }, grid: { display: false } }
-        }
-      }
-    });
-
-    const schemaCtx = document.getElementById('schemaChart');
-    makeChart(schemaCtx, {
-      type: 'radar',
-      data: {
-        labels: ['Capsule ID', 'Version', 'Author', 'Payload Hash', 'Routing', 'Perturbation Tags'],
-        datasets: [{
-          label: 'Schema Strictness',
-          data: [95, 92, 82, 97, 88, 86],
-          backgroundColor: 'rgba(96,165,250,0.25)',
-          borderColor: 'rgba(96,165,250,0.9)',
-          pointBackgroundColor: 'rgba(74,222,128,0.9)',
-          pointRadius: 4,
-          borderWidth: 2,
-        }]
-      },
-      options: {
-        plugins: { legend: { display: false } },
-        scales: {
-          r: {
-            beginAtZero: true,
-            max: 100,
-            ticks: { display: false },
-            grid: { color: 'rgba(255,255,255,0.08)' },
-            angleLines: { color: 'rgba(255,255,255,0.08)' },
-            pointLabels: { color: '#cbd5e1', font: { size: 12 } }
-          }
-        }
-      }
-    });
-
-    const finalizationCtx = document.getElementById('finalizationChart');
-    makeChart(finalizationCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Telemetry Coverage', 'Reviewer Quorum', 'Neutrality Bounds', 'Anti-Drift'],
-        datasets: [{
-          data: [30, 24, 28, 18],
-          backgroundColor: [
-            'rgba(34,211,238,0.78)',
-            'rgba(74,222,128,0.78)',
-            'rgba(244,114,182,0.78)',
-            'rgba(249,115,22,0.78)'
-          ],
-          borderColor: 'rgba(15,23,42,0.8)',
-          borderWidth: 2,
-        }]
-      },
-      options: {
-        plugins: { legend: { labels: { color: '#cbd5e1' } } }
-      }
-    });
-
-    const riskCtx = document.getElementById('riskChart');
-    makeChart(riskCtx, {
-      type: 'line',
-      data: {
-        labels: ['Capture', 'Noise Drift', 'Contradiction Overshoot', 'Routing', 'Seal'],
-        datasets: [
-          {
-            label: 'Likelihood',
-            data: [0.32, 0.21, 0.17, 0.12, 0.08],
-            borderColor: 'rgba(244,114,182,0.9)',
-            backgroundColor: 'rgba(244,114,182,0.25)',
-            fill: true,
-            tension: 0.35,
-            pointRadius: 4,
-          },
-          {
-            label: 'Impact',
-            data: [0.44, 0.38, 0.31, 0.24, 0.16],
-            borderColor: 'rgba(96,165,250,0.9)',
-            backgroundColor: 'rgba(96,165,250,0.20)',
-            fill: true,
-            tension: 0.35,
-            pointRadius: 4,
-          }
-        ]
-      },
-      options: {
-        plugins: { legend: { labels: { color: '#cbd5e1' } } },
-        scales: {
-          y: { beginAtZero: true, max: 0.6, ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-          x: { ticks: { color: '#cbd5e1' }, grid: { display: false } }
-        }
-      }
-    });
-
     function normalizeWhitespace(text, mode) {
       if (mode === 'strict') return text;
       if (mode === 'minimal') return text.replace(/\s+/g, ' ').trim();
@@ -418,7 +298,131 @@
       outputEl.textContent = result;
     }
 
+    function makeChart(ctx, config) {
+      if (!ctx) return null;
+      return new Chart(ctx, config);
+    }
+
+    function hydrateCharts() {
+      const lifecycleCtx = document.getElementById('lifecycleChart');
+      makeChart(lifecycleCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Ingest', 'Noise Inject', 'Contradiction Synth', 'Validation', 'Seal'],
+          datasets: [{
+            label: 'Confidence (%)',
+            data: [62, 78, 84, 92, 97],
+            backgroundColor: [
+              'rgba(96,165,250,0.6)',
+              'rgba(74,222,128,0.6)',
+              'rgba(244,114,182,0.6)',
+              'rgba(129,140,248,0.6)',
+              'rgba(34,211,238,0.7)'
+            ],
+            borderColor: 'rgba(255,255,255,0.22)',
+            borderWidth: 1.2,
+            borderRadius: 8,
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { ticks: { color: '#cbd5e1' }, grid: { display: false } }
+          }
+        }
+      });
+
+      const schemaCtx = document.getElementById('schemaChart');
+      makeChart(schemaCtx, {
+        type: 'radar',
+        data: {
+          labels: ['Capsule ID', 'Version', 'Author', 'Payload Hash', 'Routing', 'Perturbation Tags'],
+          datasets: [{
+            label: 'Schema Strictness',
+            data: [95, 92, 82, 97, 88, 86],
+            backgroundColor: 'rgba(96,165,250,0.25)',
+            borderColor: 'rgba(96,165,250,0.9)',
+            pointBackgroundColor: 'rgba(74,222,128,0.9)',
+            pointRadius: 4,
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              beginAtZero: true,
+              max: 100,
+              ticks: { display: false },
+              grid: { color: 'rgba(255,255,255,0.08)' },
+              angleLines: { color: 'rgba(255,255,255,0.08)' },
+              pointLabels: { color: '#cbd5e1', font: { size: 12 } }
+            }
+          }
+        }
+      });
+
+      const finalizationCtx = document.getElementById('finalizationChart');
+      makeChart(finalizationCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Telemetry Coverage', 'Reviewer Quorum', 'Neutrality Bounds', 'Anti-Drift'],
+          datasets: [{
+            data: [30, 24, 28, 18],
+            backgroundColor: [
+              'rgba(34,211,238,0.78)',
+              'rgba(74,222,128,0.78)',
+              'rgba(244,114,182,0.78)',
+              'rgba(249,115,22,0.78)'
+            ],
+            borderColor: 'rgba(15,23,42,0.8)',
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          plugins: { legend: { labels: { color: '#cbd5e1' } } }
+        }
+      });
+
+      const riskCtx = document.getElementById('riskChart');
+      makeChart(riskCtx, {
+        type: 'line',
+        data: {
+          labels: ['Capture', 'Noise Drift', 'Contradiction Overshoot', 'Routing', 'Seal'],
+          datasets: [
+            {
+              label: 'Likelihood',
+              data: [0.32, 0.21, 0.17, 0.12, 0.08],
+              borderColor: 'rgba(244,114,182,0.9)',
+              backgroundColor: 'rgba(244,114,182,0.25)',
+              fill: true,
+              tension: 0.35,
+              pointRadius: 4,
+            },
+            {
+              label: 'Impact',
+              data: [0.44, 0.38, 0.31, 0.24, 0.16],
+              borderColor: 'rgba(96,165,250,0.9)',
+              backgroundColor: 'rgba(96,165,250,0.20)',
+              fill: true,
+              tension: 0.35,
+              pointRadius: 4,
+            }
+          ]
+        },
+        options: {
+          plugins: { legend: { labels: { color: '#cbd5e1' } } },
+          scales: {
+            y: { beginAtZero: true, max: 0.6, ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { ticks: { color: '#cbd5e1' }, grid: { display: false } }
+          }
+        }
+      });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      hydrateCharts();
       const runButton = document.getElementById('runButton');
       if (runButton) {
         runButton.addEventListener('click', canonicalize);
