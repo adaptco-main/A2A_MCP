@@ -20,6 +20,41 @@
             "sha256_input"
         ]
     },
+    "input_profile": {
+        "content_sources": [
+            "ssot://registry/truthful_inputs",
+            "ssot://registry/trusted_uris"
+        ],
+        "payload_format": "json",
+        "routing": {
+            "execution_order": [
+                "synthetic.noise.injector.v1",
+                "synthetic.contradiction.synth.v1"
+            ],
+            "modules": {
+                "synthetic.noise.injector.v1": "apply_neutral_noise",
+                "synthetic.contradiction.synth.v1": "probe_logical_consistency"
+            }
+        },
+        "perturbation_defaults": {
+            "synthetic.noise.injector.v1": {
+                "ocr_blur": 0.1,
+                "token_drop": 0.02,
+                "translation_rounds": 2,
+                "synonym_swap": 0.05
+            },
+            "synthetic.contradiction.synth.v1": {
+                "assertion_pairing": "minimally_divergent",
+                "source_binding": "approved_only"
+            }
+        },
+        "acceptance_thresholds": {
+            "semantic_similarity_min": 0.85,
+            "readability_delta_max": 6.5,
+            "citation_traceability_min": 0.9,
+            "confidence_consistency_min": 0.9
+        }
+    },
     "dk_1_0": {
         "drift_threshold": 0.0,
         "latency_variance_ms": 0.0002,
@@ -87,14 +122,32 @@
                 "synthetic.contradiction.synth.v1"
             ],
             "enforcement": "zero_drift_suite",
-            "attestation_artifact": "ledger://cie_v1/neutrality_receipts.jsonl"
+            "attestation_artifact": "ledger://cie_v1/neutrality_receipts.jsonl",
+            "perturbation_scope": "neutral_only",
+            "variance_floor": 0.0
         }
+    },
+    "operationalDirectives": {
+        "allowed_modules": [
+            "synthetic.noise.injector.v1",
+            "synthetic.contradiction.synth.v1"
+        ],
+        "disallowed_modules": "all_other_perturbation_or_influence_vectors",
+        "runtime_hooks": [
+            "pre_run_zero_drift_attestation",
+            "post_run_neutrality_receipt"
+        ]
     },
     "modules": [
         {
             "moduleId": "synthetic.noise.injector.v1",
             "moduleAcronym": "SNI",
             "moduleDescription": "Applies statistically defined, reversible distortions (blur, token drop, translation cycles, synonym swap) to stress comprehension stability without directional drift.",
+            "neutralityControls": {
+                "drift_lock": true,
+                "noise_profile": "statistical_neutral",
+                "miap_compliant": true
+            },
             "inputSchema": {
                 "type": "object",
                 "required": [
@@ -161,6 +214,11 @@
             "moduleId": "synthetic.contradiction.synth.v1",
             "moduleAcronym": "SCS",
             "moduleDescription": "Builds minimally divergent contradiction sets to verify logical consistency and sourcing discipline under MIAP constraints.",
+            "neutralityControls": {
+                "drift_lock": true,
+                "contradiction_bounds": "minimally_divergent",
+                "miap_compliant": true
+            },
             "inputSchema": {
                 "type": "object",
                 "required": [

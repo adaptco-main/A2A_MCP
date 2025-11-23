@@ -23,9 +23,12 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
    ledger attestation before execution.
 3. **Sealed I/O** – Artifact ingress only; egress limited to aggregate metrics and
    ledger updates.
-4. **Neutral Perturbations** – Only the two sanctioned modules may execute:
-   - `synthetic.noise.injector.v1` (SNI) for reversible channel noise.
-   - `synthetic.contradiction.synth.v1` (SCS) for structured logical probes.
+4. **Neutral Perturbations** – Only the two sanctioned modules may execute under the
+   `operationalDirectives.allowed_modules` list:
+   - `synthetic.noise.injector.v1` (SNI) for reversible channel noise with the
+     ZERO-DRIFT runtime hooks.
+   - `synthetic.contradiction.synth.v1` (SCS) for structured logical probes that
+     respect MIAP telemetry caps.
 5. **Aggregate Observability** – Telemetry restricted to the metric set defined in
    the manifest. No per-agent state leaves the cell.
 
@@ -33,8 +36,8 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 
 | Module | Purpose | Default Controls | Output Metrics |
 | ------ | ------- | ---------------- | -------------- |
-| SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation | `semantic_similarity`, `readability_delta` |
-| SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
+| SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `semantic_similarity`, `readability_delta` |
+| SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
 
 ### 3.1 Test Vectors and Perturbation Envelopes
 
@@ -55,14 +58,55 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 
 1. **SNI pass** – Execute `synthetic.noise.injector.v1` with default knobs (`ocr_blur=0.1`, `token_drop=0.02`, `translation_rounds=2`, `synonym_swap=0.05`). Capture semantic/readability deltas and attach SHA-256 receipts.
 2. **SCS pass** – Feed SNI outputs plus approved source URIs into `synthetic.contradiction.synth.v1`. Validate mutual exclusivity proofs and citation coverage.
-3. **Neutrality attestation** – Store module run metadata and DK-1.0 variance results in `ledger://cie_v1/neutrality_receipts.jsonl` before exposing aggregate metrics.
+3. **Neutrality attestation** – Execute the mandated runtime hooks and store module run metadata plus DK-1.0 variance results in `ledger://cie_v1/neutrality_receipts.jsonl` before exposing aggregate metrics.
 4. **Governance sign-off** – Confirm MIAP telemetry bounds, ZERO-DRIFT gates, and council quorum prior to releasing any reports.
 
 Knob defaults follow the manifest (e.g., `ocr_blur=0.1`, `token_drop=0.02`,
 `translation_rounds=2`, `synonym_swap=0.05`). Any deviation requires council
 pre-approval and a refreshed neutrality scorecard.
 
-## 4. Roles & Responsibilities
+## 4. Audit Input Package (CIE-V1)
+
+- **Location** – `inputs/cie_v1_smoke/`
+- **Format** – Line-delimited JSON payloads, each containing a Noise Injector
+  request (`noise_request`) and a paired Contradiction Synthesizer request
+  (`contradiction_request`).
+- **Routing** – Follow the manifest’s execution order:
+  1. `synthetic.noise.injector.v1` → apply neutral noise using the defaults in
+     `manifests/content_integrity_eval.json#input_profile.perturbation_defaults`.
+  2. `synthetic.contradiction.synth.v1` → probe logical consistency against the
+     same sourced claim set.
+- **Acceptance Gates** – Runs must satisfy the manifest thresholds: semantic
+  similarity ≥0.85, readability delta ≤6.5, citation traceability ≥0.90, and
+  confidence consistency ≥0.90.
+
+### 4.1 Test Vectors
+
+| ID | Description | Inputs | Expected Outcome |
+| -- | ----------- | ------ | ---------------- |
+| `cie_v1_smoke_benign` | Short, well-sourced procedural step. | Mild noise + two corroborating sources. | Pass: high similarity, full traceability. |
+| `cie_v1_smoke_edge` | Multi-sentence claim with translation stress. | Higher blur + translation rounds, diverse sources. | Pass with minor readability delta; traceability must stay ≥0.90. |
+| `cie_v1_smoke_adversarial` | Attempted contradiction on maintenance interval. | Token drop + synonym swaps; conflicting assertions guarded by approved sources. | Must flag mutual exclusivity; remain within neutrality gates. |
+
+### 4.2 Execution (Smoke Run)
+
+```bash
+python runtime/simulation/content_integrity_eval_harness.py \
+  --input-dir inputs/cie_v1_smoke \
+  --manifest manifests/content_integrity_eval.json \
+  --output artifacts/cie_v1_smoke.metrics.jsonl
+```
+
+- **Harness behavior** – The stub harness emits deterministic placeholder
+  metrics near the manifest gates to validate routing, logging, and ledger
+  paths without invoking real perturbation models.
+
+- **Logs/Receipts** – Metrics and neutrality receipts should append to
+  `artifacts/cie_v1_smoke.metrics.jsonl` and `ledger://cie_v1/neutrality_receipts.jsonl`.
+- **Review** – Governance Council reviews the output against the acceptance
+  gates before any publication.
+
+## 5. Roles & Responsibilities
 
 - **Platform Ops** – Maintain sandbox cell, enforce sealed ingress/egress,
   triage incidents.
@@ -73,7 +117,7 @@ pre-approval and a refreshed neutrality scorecard.
 - **Trust & Safety** – Verify DK-1.0 / MIAP attestations, confirm neutral module
   scorecards.
 
-## 5. Run Lifecycle
+## 6. Run Lifecycle
 
 1. **Ingress Review** – Research submits sourced statements + allowed URIs.
    Council validates provenance and records approval in the ledger.
@@ -90,50 +134,6 @@ pre-approval and a refreshed neutrality scorecard.
    >0.15, traceability <0.90, or coherence <0.90; flag runs breaching bounds.
 6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
    and neutrality receipts to `ssot://ledger/content.integrity.eval.v1/`.
-
-## 6. Audit Execution (Smoke)
-
-1. **Inputs** – Use the curated samples in `inputs/cie_v1_smoke/` (benign,
-   edge, adversarial). Each payload is annotated with the target module and the
-   expected neutrality outcome.
-2. **Command** – Run the reproducible smoke harness to emit JSONL logs for
-   council review:
-
-   ```bash
-   python scripts/run_cie_v1_smoke.py \
-     --manifest manifests/content_integrity_eval.json \
-     --inputs inputs/cie_v1_smoke \
-     --output runtime/cie_v1_smoke.log.jsonl
-   ```
-
-3. **Validation artifacts** – Inspect `runtime/cie_v1_smoke.log.jsonl` for
-   payload IDs, manifest-routed modules, payload hashes, and expected outcome
-   echoes. The harness enforces manifest-governed payload formats, source IDs,
-   routing, and uniqueness/requiredness for payload IDs and expected outcomes.
-   Metrics and receipts for the first audit should be copied to
-   `ledger://cie_v1/neutrality_receipts.jsonl` and mirrored in
-   `ssot://ledger/content.integrity.eval.v1/`.
-
-### 6.1 First Governance Audit Bundle
-
-- **Inputs** – Use the curated audit set in `inputs/cie_v1_audit/` to mirror
-  the initial council-reviewed bundle (baseline + edge SNI passes, one
-  contradiction probe, one consistency probe).
-- **Command** – Capture the governance log for the first official audit:
-
-  ```bash
-  python scripts/run_cie_v1_smoke.py \
-    --manifest manifests/content_integrity_eval.json \
-    --inputs inputs/cie_v1_audit \
-    --output runtime/cie_v1_audit.log.jsonl
-  ```
-
-- **Receipts & Metrics** – Upload the emitted JSONL to
-  `ledger://cie_v1/neutrality_receipts.jsonl` and mirror into
-  `ssot://ledger/content.integrity.eval.v1/`. Attach module-level metric
-  extracts (similarity, readability deltas, mutual exclusivity,
-  confidence consistency, traceability) to the neutrality scorecard cited in
-  the manifest.
 
 ## 7. Outstanding Tasks
 

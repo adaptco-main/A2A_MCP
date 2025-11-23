@@ -13,37 +13,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Detect Node lockfiles
-        id: node_lockfiles
-        shell: bash
-        run: |
-          set -euo pipefail
-          matches=$(find . -path '*/node_modules/*' -prune -o -name package-lock.json -print | sort)
-          if [ -n "$matches" ]; then
-            {
-              echo "paths<<EOF"
-              echo "$matches"
-              echo "EOF"
-            } >>"$GITHUB_OUTPUT"
-            echo "Detected npm lockfiles:"
-            echo "$matches"
-          else
-            echo "paths=" >>"$GITHUB_OUTPUT"
-            echo "No npm lockfiles found; skipping dependency cache."
-          fi
+        uses: actions/checkout@v4
 
       - name: Setup Node.js (with npm cache)
-        if: steps.node_lockfiles.outputs.paths != ''
+        if: ${{ hashFiles('**/package-lock.json') != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: ${{ steps.node_lockfiles.outputs.paths }}
+          cache-dependency-path: '**/package-lock.json'
 
       - name: Setup Node.js (without cache)
-        if: steps.node_lockfiles.outputs.paths == ''
+        if: ${{ hashFiles('**/package-lock.json') == '' }}
         uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -52,7 +33,7 @@ jobs:
         run: npm install -g ajv-cli
 
       - name: Install Python 3
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v4.7.0
         with:
           python-version: '3.x'
 
@@ -78,7 +59,7 @@ jobs:
           jq -nc --arg ts "$TS" --arg hash "$HASH" --arg sig "$MAKER_SIG" '{ts:$ts, type:"avatar_bindings.sealed", hash:$hash, maker_sig:$sig}' >> events.ndjson
 
       - name: Upload sealed artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: sealed-artifacts
           path: |
@@ -97,13 +78,13 @@ jobs:
       contents: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a085614d3f # v4.1.7
         with:
           persist-credentials: true
           fetch-depth: 0
 
       - name: Download sealed artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: sealed-artifacts
 
