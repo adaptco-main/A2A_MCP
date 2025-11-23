@@ -11,6 +11,14 @@ def load_manifest(manifest_path: Path) -> dict:
         return json.load(handle)
 
 
+def load_payload(sample_path: Path) -> dict:
+    try:
+        with sample_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except json.JSONDecodeError as err:
+        raise ValueError(f"Invalid JSON in {sample_path}: {err}") from err
+
+
 def collect_neutral_modules(manifest: dict) -> list:
     neutrality = manifest.get("validation", {}).get("neutrality", {})
     return neutrality.get("modules", [])
@@ -27,16 +35,24 @@ def collect_content_sources(manifest: dict) -> list:
     return sources.get("identifiers", [])
 
 
+def collect_routing_map(manifest: dict) -> dict:
+    profile = manifest.get("input_profile", {})
+    return profile.get("routing", {})
+
+
 def build_log_entry(
     sample_path: Path,
     neutral_modules: list,
     allowed_formats: list,
     allowed_sources: list,
+    routing_map: dict,
 ) -> dict:
-    with sample_path.open("r", encoding="utf-8") as handle:
-        payload = json.load(handle)
+    payload = load_payload(sample_path)
 
     payload_format = payload.get("payload_format")
+    if not payload_format:
+        raise ValueError(f"Missing payload_format in {sample_path}")
+
     if allowed_formats and payload_format not in allowed_formats:
         raise ValueError(f"Unsupported payload_format '{payload_format}' in {sample_path}")
 
@@ -44,7 +60,20 @@ def build_log_entry(
     if allowed_sources and content_source not in allowed_sources:
         raise ValueError(f"Unsupported content_source '{content_source}' in {sample_path}")
 
+    routing_targets = routing_map.get(payload_format) if routing_map else None
+    if routing_map and routing_targets is None:
+        raise ValueError(f"Payload format '{payload_format}' not routable per manifest in {sample_path}")
+
     module_targets = payload.get("module_targets", [])
+    if not module_targets:
+        raise ValueError(f"No module_targets provided in {sample_path}")
+
+    if routing_targets:
+        out_of_route = [module for module in module_targets if module not in routing_targets]
+        if out_of_route:
+            raise ValueError(
+                f"Module targets {out_of_route} are not permitted for payload_format '{payload_format}' in {sample_path}; allowed routes: {routing_targets}"
+            )
     disallowed_modules = [module for module in module_targets if module not in neutral_modules]
     if disallowed_modules:
         raise ValueError(
@@ -59,6 +88,7 @@ def build_log_entry(
     return {
         "timestamp": dt.datetime.utcnow().isoformat() + "Z",
         "input_file": str(sample_path),
+        "payload_id": payload.get("id"),
         "payload_format": payload_format,
         "content_source": payload.get("content_source"),
         "module_targets": module_targets,
@@ -74,12 +104,14 @@ def run(inputs_dir: Path, manifest_path: Path, output_path: Path) -> None:
     neutral_modules = collect_neutral_modules(manifest)
     allowed_formats = collect_payload_formats(manifest)
     allowed_sources = collect_content_sources(manifest)
+    routing_map = collect_routing_map(manifest)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     sample_files = sorted(inputs_dir.glob("*.json"))
     entries = [
-        build_log_entry(path, neutral_modules, allowed_formats, allowed_sources) for path in sample_files
+        build_log_entry(path, neutral_modules, allowed_formats, allowed_sources, routing_map)
+        for path in sample_files
     ]
 
     with output_path.open("w", encoding="utf-8") as handle:
