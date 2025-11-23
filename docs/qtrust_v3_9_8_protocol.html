@@ -391,10 +391,20 @@
     }
 
     function canonicalize() {
-      const raw = document.getElementById('inputText').value;
-      const caseMode = document.getElementById('caseMode').value;
-      const whitespaceMode = document.getElementById('whitespaceMode').value;
-      const precision = parseInt(document.getElementById('precision').value, 10);
+      const input = document.getElementById('inputText');
+      const caseSelect = document.getElementById('caseMode');
+      const whitespaceSelect = document.getElementById('whitespaceMode');
+      const precisionInput = document.getElementById('precision');
+      const outputEl = document.getElementById('output');
+
+      if (!input || !caseSelect || !whitespaceSelect || !precisionInput || !outputEl) {
+        return;
+      }
+
+      const raw = input.value;
+      const caseMode = caseSelect.value;
+      const whitespaceMode = whitespaceSelect.value;
+      const precision = parseInt(precisionInput.value, 10);
       let result = raw;
       try {
         const collapsed = normalizeWhitespace(raw, whitespaceMode);
@@ -405,11 +415,16 @@
       } catch (error) {
         result = normalizeWhitespace(raw, whitespaceMode);
       }
-      document.getElementById('output').textContent = result;
+      outputEl.textContent = result;
     }
 
-    document.getElementById('runButton').addEventListener('click', canonicalize);
-    canonicalize();
+    document.addEventListener('DOMContentLoaded', () => {
+      const runButton = document.getElementById('runButton');
+      if (runButton) {
+        runButton.addEventListener('click', canonicalize);
+      }
+      canonicalize();
+    });
   </script>
 </body>
 </html>
