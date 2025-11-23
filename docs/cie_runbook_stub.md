@@ -47,7 +47,44 @@ Knob defaults follow the manifest (e.g., `ocr_blur=0.1`, `token_drop=0.02`,
 `translation_rounds=2`, `synonym_swap=0.05`). Any deviation requires council
 pre-approval and a refreshed neutrality scorecard.
 
-## 4. Roles & Responsibilities
+## 4. Audit Input Package (CIE-V1)
+
+- **Location** – `inputs/cie_v1_smoke/`
+- **Format** – Line-delimited JSON payloads, each containing a Noise Injector
+  request (`noise_request`) and a paired Contradiction Synthesizer request
+  (`contradiction_request`).
+- **Routing** – Follow the manifest’s execution order:
+  1. `synthetic.noise.injector.v1` → apply neutral noise using the defaults in
+     `manifests/content_integrity_eval.json#input_profile.perturbation_defaults`.
+  2. `synthetic.contradiction.synth.v1` → probe logical consistency against the
+     same sourced claim set.
+- **Acceptance Gates** – Runs must satisfy the manifest thresholds: semantic
+  similarity ≥0.85, readability delta ≤6.5, citation traceability ≥0.90, and
+  confidence consistency ≥0.90.
+
+### 4.1 Test Vectors
+
+| ID | Description | Inputs | Expected Outcome |
+| -- | ----------- | ------ | ---------------- |
+| `cie_v1_smoke_benign` | Short, well-sourced procedural step. | Mild noise + two corroborating sources. | Pass: high similarity, full traceability. |
+| `cie_v1_smoke_edge` | Multi-sentence claim with translation stress. | Higher blur + translation rounds, diverse sources. | Pass with minor readability delta; traceability must stay ≥0.90. |
+| `cie_v1_smoke_adversarial` | Attempted contradiction on maintenance interval. | Token drop + synonym swaps; conflicting assertions guarded by approved sources. | Must flag mutual exclusivity; remain within neutrality gates. |
+
+### 4.2 Execution (Smoke Run)
+
+```bash
+python runtime/simulation/content_integrity_eval_harness.py \
+  --input-dir inputs/cie_v1_smoke \
+  --manifest manifests/content_integrity_eval.json \
+  --output artifacts/cie_v1_smoke.metrics.jsonl
+```
+
+- **Logs/Receipts** – Metrics and neutrality receipts should append to
+  `artifacts/cie_v1_smoke.metrics.jsonl` and `ledger://cie_v1/neutrality_receipts.jsonl`.
+- **Review** – Governance Council reviews the output against the acceptance
+  gates before any publication.
+
+## 5. Roles & Responsibilities
 
 - **Platform Ops** – Maintain sandbox cell, enforce sealed ingress/egress,
   triage incidents.
@@ -58,7 +95,7 @@ pre-approval and a refreshed neutrality scorecard.
 - **Trust & Safety** – Verify DK-1.0 / MIAP attestations, confirm neutral module
   scorecards.
 
-## 5. Run Lifecycle
+## 6. Run Lifecycle
 
 1. **Ingress Review** – Research submits sourced statements + allowed URIs.
    Council validates provenance and records approval in the ledger.
@@ -76,7 +113,7 @@ pre-approval and a refreshed neutrality scorecard.
 6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
    and neutrality receipts to `ssot://ledger/content.integrity.eval.v1/`.
 
-## 6. Outstanding Tasks
+## 7. Outstanding Tasks
 
 - Automate ZERO-DRIFT neutrality scorecards for SNI and SCS, persisting outputs to `governance/scorecards/cie_v1_neutrality.md`.
 - Publish simulation harness (`runtime/simulation/content_integrity_eval_harness.py`)
