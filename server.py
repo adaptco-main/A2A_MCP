@@ -36,12 +36,21 @@ def kahan_sum(values: List[float]) -> float:
     return total
 
 
+def quantize_score(value: float, precision: int = 6) -> float:
+    """Round a score to a fixed precision for deterministic ordering."""
+
+    return round(value, ndigits=precision)
+
+
 def rank_documents() -> list[dict]:
     """Return documents ordered by stable score and doc id tie-breakers."""
-    scored = []
+
+    scored: list[dict] = []
     for doc in DOCS:
-        score = kahan_sum(doc["vector"])
+        raw_score = kahan_sum(doc["vector"])
+        score = quantize_score(raw_score)
         scored.append({"doc_id": doc["doc_id"], "score": score})
+
     scored.sort(key=lambda x: (-x["score"], x["doc_id"]))
     return scored
 
