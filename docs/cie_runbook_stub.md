@@ -79,6 +79,10 @@ python runtime/simulation/content_integrity_eval_harness.py \
   --output artifacts/cie_v1_smoke.metrics.jsonl
 ```
 
+- **Harness behavior** – The stub harness emits deterministic placeholder
+  metrics near the manifest gates to validate routing, logging, and ledger
+  paths without invoking real perturbation models.
+
 - **Logs/Receipts** – Metrics and neutrality receipts should append to
   `artifacts/cie_v1_smoke.metrics.jsonl` and `ledger://cie_v1/neutrality_receipts.jsonl`.
 - **Review** – Governance Council reviews the output against the acceptance
