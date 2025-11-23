@@ -89,7 +89,9 @@ jobs:
         run: npm ci
 
       - name: Install API-diff and Spectral
-        run: npm install -g @stoplight/spectral-cli openapi-diff
+        run: |
+          npm install -g @stoplight/spectral-cli
+          npm install -g openapi-diff
 
       - name: Prepare artifact workspace
         run: mkdir -p "${{ env.ARTIFACTS_DIR }}"

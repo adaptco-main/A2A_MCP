@@ -42,12 +42,13 @@ describe('ledger appendEvent serialization', () => {
     const lines = fs.readFileSync(ledger.ledgerFile, 'utf8')
       .trim()
       .split('\n');
-    expect(lines).toHaveLength(3);
+    expect(lines).toHaveLength(4);
 
     const parsed = lines.map((line) => JSON.parse(line));
     parsed.forEach((entry, index) => {
-      const expectedPrev = index === 0 ? ledger.ZERO_HASH : parsed[index - 1].hash;
-      expect(entry.prev_hash).toBe(expectedPrev);
+      const previous = parsed[index - 1];
+      const expectedPrev = !previous || previous.type === 'file_genesis' ? ledger.ZERO_HASH : previous.hash;
+      expect(entry.prev_hash).toBe(index === 0 ? ledger.ZERO_HASH : expectedPrev);
     });
   });
 
@@ -82,8 +83,8 @@ describe('ledger appendEvent serialization', () => {
       .readFileSync(ledger.ledgerFile, 'utf8')
       .trim()
       .split('\n');
-    expect(lines).toHaveLength(1);
-    expect(JSON.parse(lines[0]).hash).toBe(entry.hash);
+    expect(lines).toHaveLength(2);
+    expect(JSON.parse(lines[1]).hash).toBe(entry.hash);
   });
 
   it('waitForPendingAppends resolves once queued operations settle', async () => {
@@ -113,7 +114,7 @@ describe('ledger appendEvent serialization', () => {
       .readFileSync(ledger.ledgerFile, 'utf8')
       .trim()
       .split('\n');
-    expect(lines).toHaveLength(1);
-    expect(JSON.parse(lines[0]).hash).toBe(entry.hash);
+    expect(lines).toHaveLength(2);
+    expect(JSON.parse(lines[1]).hash).toBe(entry.hash);
   });
 });

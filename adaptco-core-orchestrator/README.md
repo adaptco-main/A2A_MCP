@@ -32,6 +32,8 @@ npm install
 | `npm run test` | Runs Jest unit tests. |
 | `npm run lint` | Lints the codebase with ESLint. |
 | `npm run format` | Formats files with Prettier. |
+| `npm run audit` | Runs a wrapper/registry integrity check. |
+| `npm run rehearsal` | Performs a rehearsal-only anchor binding check. |
 
 ## Usage
 
@@ -67,6 +69,20 @@ Example response:
     "version": "1.0.0"
   }
 }
+```
+
+### Auditing and rehearsal checks
+
+Run an integrity audit of the wrapper and runtime registry (fails on missing registry, ledger, or unbound anchors):
+
+```bash
+npm run audit -- --wrapper capsules/doctrine/capsule.wrapper.adaptco_os.v1.json --registry runtime/capsule.registry.runtime.v1.json
+```
+
+Validate that rehearsal anchors are present and marked with `status: "REHEARSAL"`:
+
+```bash
+npm run rehearsal -- --wrapper capsules/doctrine/capsule.wrapper.adaptco_os.v1.json --registry runtime/capsule.registry.runtime.v1.json
 ```
 
 ### Optional Operations

@@ -39,7 +39,22 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 | SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `semantic_similarity`, `readability_delta` |
 | SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
 
-## 3.1 Neutral Perturbation Workflow
+### 3.1 Test Vectors and Perturbation Envelopes
+
+- **Benign** – Single-source statements with neutral tone and default SNI knobs
+  (`ocr_blur=0.10`, `token_drop=0.02`, `translation_rounds=2`, `synonym_swap=0.05`).
+- **Edge** – Multi-clause statements or dense citations with elevated but bounded
+  noise (`ocr_blur≤0.20`, `token_drop≤0.08`, `translation_rounds≤3`, `synonym_swap≤0.10`).
+- **Adversarial** – Structured contradictions and tightly scoped source tension
+  routed through SCS; expected to surface `mutual_exclusivity=true` without
+  exceeding neutrality thresholds.
+
+| Module | Perturbation Intensity | Expected Neutrality Bounds |
+| ------ | ---------------------- | -------------------------- |
+| SNI (`synthetic.noise.injector.v1`) | OCR blur 0.05–0.20; token drop 0.00–0.08; translation rounds 0–3; synonym swap 0.00–0.10 | `semantic_similarity ≥ 0.85`; `readability_delta ≤ 6.5`; ZERO-DRIFT variance ≤0.0002ms |
+| SCS (`synthetic.contradiction.synth.v1`) | 1–5 assertions with at least 1 trusted URI; contradictory pairs seeded from approved registries | `mutual_exclusivity` flagged only on genuine conflicts; `confidence_consistency ≥ 0.90`; `citation_traceability ≥ 0.90` |
+
+## 3.2 Neutral Perturbation Workflow
 
 1. **SNI pass** – Execute `synthetic.noise.injector.v1` with default knobs (`ocr_blur=0.1`, `token_drop=0.02`, `translation_rounds=2`, `synonym_swap=0.05`). Capture semantic/readability deltas and attach SHA-256 receipts.
 2. **SCS pass** – Feed SNI outputs plus approved source URIs into `synthetic.contradiction.synth.v1`. Validate mutual exclusivity proofs and citation coverage.

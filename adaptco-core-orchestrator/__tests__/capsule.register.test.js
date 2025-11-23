@@ -5,7 +5,13 @@ const fs = require('fs');
 const path = require('path');
 const request = require('supertest');
 const createApp = require('../src/index');
-const { ledgerFile, ledgerAnchorFile, ZERO_HASH } = require('../src/ledger');
+const {
+  ledgerFile,
+  ledgerAnchorFile,
+  ZERO_HASH,
+  getLedgerDirectory,
+  getCurrentLedgerFile
+} = require('../src/ledger');
 
 function createRegistryPacket(artifactId, type, author = 'ops@adaptco.io') {
   return {
