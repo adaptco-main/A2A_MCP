@@ -24,6 +24,11 @@
         "bias_guardrails": "Neutral perturbations only; no semantic inversion or sentiment shift allowed.",
         "entropy_budget": "max 0.15 bits/token",
         "rollback": "Disable module if drift score exceeds threshold-neutral"
+      },
+      "lineage": {
+        "canonicalization": "Normalize whitespace, casing, and ordering before perturbation to prevent spurious drift.",
+        "hashing": "SHA-256 digest of canonical input and neutralized output recorded per invocation.",
+        "merkle_anchor": "Perturbation receipts grouped per batch and anchored into the evaluation ledger."
       }
     },
     {
@@ -40,7 +45,13 @@
       ],
       "controls": {
         "fact_preservation": "Contradictions must be synthetic and tagged; no unlabelled misinformation.",
-        "neutrality": "Models must operate under ZERO-DRIFT mandate with audit logging enabled."
+        "neutrality": "Models must operate under ZERO-DRIFT mandate with audit logging enabled.",
+        "coherence_gate": "Reject contradictions that break logical binding or role constraints."
+      },
+      "lineage": {
+        "canonicalization": "Claim graphs are normalized and ordered before contradiction synthesis.",
+        "hashing": "SHA-256 digest of claim graph and contradiction set stored with capsule refs.",
+        "merkle_anchor": "Contradiction capsules anchored with module signatures for replay and settlement."
       }
     }
   ],
@@ -55,8 +66,20 @@
       "drift_score",
       "neutral_noise_rate",
       "contradiction_coverage",
-      "audit_pass_rate"
+      "audit_pass_rate",
+      "merkle_settlement_latency"
     ]
+  },
+  "lineage": {
+    "canonicalization": "All inputs are normalized before any model call to minimize drift risk.",
+    "hashing": "Each ritual stage emits SHA-256 digests of inputs and outputs.",
+    "merkle_root": "Ritual batches are folded into Merkle roots and anchored to the audit ledger.",
+    "receipts": "Capsule receipts include capsule_id, capsule_ref, hashes, and settlement attestors."
+  },
+  "governance": {
+    "rituals": ["intake", "ignition", "binding", "settlement"],
+    "council": "Two-person council must attest to neutrality and settlement readiness per batch.",
+    "fallback": "If neutrality is breached, halt ignition and rollback to last settled Merkle root."
   },
   "compliance": {
     "ethics": "Neutral perturbation only; ZERO-DRIFT mandate enforced at pipeline level.",
