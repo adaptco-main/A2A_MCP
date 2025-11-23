@@ -13,38 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a085614d3f # v4.1.7
-
-      - name: Detect Node lockfiles
-        id: node_lockfiles
-        shell: bash
-        run: |
-          set -euo pipefail
-          matches=$(find . -path '*/node_modules/*' -prune -o -name package-lock.json -print | sort)
-          if [ -n "$matches" ]; then
-            {
-              echo "paths<<EOF"
-              echo "$matches"
-              echo "EOF"
-            } >>"$GITHUB_OUTPUT"
-            echo "Detected npm lockfiles:"
-            echo "$matches"
-          else
-            echo "paths=" >>"$GITHUB_OUTPUT"
-            echo "No npm lockfiles found; skipping dependency cache."
-          fi
+        uses: actions/checkout@v4
 
       - name: Setup Node.js (with npm cache)
-        if: steps.node_lockfiles.outputs.paths != ''
-        uses: actions/setup-node@1a4442cacd387db4340c8b569f5320d0e4a1ce37 # v4.0.4
+        if: ${{ hashFiles('**/package-lock.json') != '' }}
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: ${{ steps.node_lockfiles.outputs.paths }}
+          cache-dependency-path: '**/package-lock.json'
 
       - name: Setup Node.js (without cache)
-        if: steps.node_lockfiles.outputs.paths == ''
-        uses: actions/setup-node@1a4442cacd387db4340c8b569f5320d0e4a1ce37 # v4.0.4
+        if: ${{ hashFiles('**/package-lock.json') == '' }}
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
