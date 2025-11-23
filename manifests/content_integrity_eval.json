@@ -20,6 +20,41 @@
             "sha256_input"
         ]
     },
+    "input_profile": {
+        "content_sources": [
+            "ssot://registry/truthful_inputs",
+            "ssot://registry/trusted_uris"
+        ],
+        "payload_format": "json",
+        "routing": {
+            "execution_order": [
+                "synthetic.noise.injector.v1",
+                "synthetic.contradiction.synth.v1"
+            ],
+            "modules": {
+                "synthetic.noise.injector.v1": "apply_neutral_noise",
+                "synthetic.contradiction.synth.v1": "probe_logical_consistency"
+            }
+        },
+        "perturbation_defaults": {
+            "synthetic.noise.injector.v1": {
+                "ocr_blur": 0.1,
+                "token_drop": 0.02,
+                "translation_rounds": 2,
+                "synonym_swap": 0.05
+            },
+            "synthetic.contradiction.synth.v1": {
+                "assertion_pairing": "minimally_divergent",
+                "source_binding": "approved_only"
+            }
+        },
+        "acceptance_thresholds": {
+            "semantic_similarity_min": 0.85,
+            "readability_delta_max": 6.5,
+            "citation_traceability_min": 0.9,
+            "confidence_consistency_min": 0.9
+        }
+    },
     "dk_1_0": {
         "drift_threshold": 0.0,
         "latency_variance_ms": 0.0002,
