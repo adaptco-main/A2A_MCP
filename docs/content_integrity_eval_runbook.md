@@ -28,6 +28,8 @@ generators that cannot encode human-targeted influence patterns.
 4. **Neutral Perturbations Only** — The Noise Injector and Contradiction
    Synthesizer modules operate under neutrality test suites. Channel noise is
    applied strictly as a robustness probe; persuasive levers are disallowed.
+   Only modules listed in `operational_directives.allowed_modules` of
+   `manifests/content_integrity_eval.json` may be scheduled.
 
 ## 3. Perturbation Modules
 
@@ -39,6 +41,13 @@ generators that cannot encode human-targeted influence patterns.
   contradiction prompts to probe claim resilience without introducing targeted
   persuasion hooks. Outputs are reviewed against the ZERO-DRIFT checklist and
   bound by DK-1.0 persona isolation guardrails.
+
+### 3.1 Default Inputs and Gates
+
+- **Routing** — `synthetic.noise.injector.v1` → `synthetic.contradiction.synth.v1` (see `input_profile.routing`).
+- **Perturbation Defaults** — `ocr_blur=0.10`, `token_drop=0.02`, `translation_rounds=2`, `synonym_swap=0.05` (Noise Injector);
+  `max_contradictions=5`, `trusted_uri_minimum=1`, `citation_traceability_floor=0.90` (Contradiction Synthesizer).
+- **Acceptance Gates** — semantic similarity ≥0.85; readability delta ≤6.5; citation traceability ≥0.90; confidence consistency ≥0.90.
 
 ## 4. Roles & Responsibilities
 

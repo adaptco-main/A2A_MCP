@@ -11,6 +11,23 @@
       "auditable": true
     }
   },
+  "operational_directives": {
+    "allowed_modules": [
+      "synthetic.noise.injector.v1",
+      "synthetic.contradiction.synth.v1"
+    ],
+    "ingress": {
+      "artifact_only": true,
+      "requires_council_attestation": true,
+      "dk_1_isolation": "required",
+      "miap_telemetry_minimization": "enforced"
+    },
+    "egress": {
+      "aggregate_metrics_only": true,
+      "ledger_append_only": true,
+      "no_per_agent_traces": true
+    }
+  },
   "modules": [
     {
       "id": "synthetic.noise.injector.v1",
@@ -61,6 +78,31 @@
       }
     }
   ],
+  "input_profile": {
+    "perturbation_defaults": {
+      "synthetic.noise.injector.v1": {
+        "ocr_blur": 0.1,
+        "token_drop": 0.02,
+        "translation_rounds": 2,
+        "synonym_swap": 0.05
+      },
+      "synthetic.contradiction.synth.v1": {
+        "max_contradictions": 5,
+        "trusted_uri_minimum": 1,
+        "citation_traceability_floor": 0.9
+      }
+    },
+    "acceptance_gates": {
+      "semantic_similarity_min": 0.85,
+      "readability_delta_max": 6.5,
+      "citation_traceability_min": 0.9,
+      "confidence_consistency_min": 0.9
+    },
+    "routing": [
+      "synthetic.noise.injector.v1",
+      "synthetic.contradiction.synth.v1"
+    ]
+  },
   "runtime": {
     "queue": "cie.neutral.audit",
     "max_parallel_jobs": 3,
