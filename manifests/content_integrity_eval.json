@@ -21,16 +21,37 @@
         ]
     },
     "input_profile": {
-        "content_sources": [
-            "ssot://registry/truthful_inputs",
-            "ssot://registry/trusted_uris"
+        "content_sources": {
+            "identifiers": [
+                "cie.v1.smoke",
+                "cie.v1.edge",
+                "cie.v1.adversarial",
+                "cie.v1.audit"
+            ],
+            "registry": [
+                "ssot://registry/truthful_inputs",
+                "ssot://registry/trusted_uris"
+            ]
+        },
+        "payload_formats": [
+            "text",
+            "json"
         ],
-        "payload_format": "json",
         "routing": {
             "execution_order": [
                 "synthetic.noise.injector.v1",
                 "synthetic.contradiction.synth.v1"
             ],
+            "by_format": {
+                "text": [
+                    "synthetic.noise.injector.v1",
+                    "synthetic.contradiction.synth.v1"
+                ],
+                "json": [
+                    "synthetic.noise.injector.v1",
+                    "synthetic.contradiction.synth.v1"
+                ]
+            },
             "modules": {
                 "synthetic.noise.injector.v1": "apply_neutral_noise",
                 "synthetic.contradiction.synth.v1": "probe_logical_consistency"
@@ -63,34 +84,6 @@
     "miap": {
         "agent_scope": "synthetic_only",
         "aggregate_reporting": true
-    },
-    "input_profile": {
-        "content_sources": {
-            "identifiers": [
-                "cie.v1.smoke",
-                "cie.v1.edge",
-                "cie.v1.adversarial",
-                "cie.v1.audit"
-            ],
-            "registry": [
-                "ssot://registry/truthful_inputs",
-                "ssot://registry/trusted_uris"
-            ]
-        },
-        "payload_formats": [
-            "text",
-            "json"
-        ],
-        "routing": {
-            "text": [
-                "synthetic.noise.injector.v1",
-                "synthetic.contradiction.synth.v1"
-            ],
-            "json": [
-                "synthetic.noise.injector.v1",
-                "synthetic.contradiction.synth.v1"
-            ]
-        }
     },
     "ingressControls": {
         "artifact_hashing": "sha256",

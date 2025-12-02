@@ -106,7 +106,17 @@ python runtime/simulation/content_integrity_eval_harness.py \
 - **Review** – Governance Council reviews the output against the acceptance
   gates before any publication.
 
-## 5. Roles & Responsibilities
+## 5. Stakeholder Briefing Checklist (Summary View)
+
+| Priority | Responsible Role | Workflow Step |
+| --- | --- | --- |
+| Maintain ZERO-DRIFT neutrality across perturbations | Platform Ops + Trust & Safety | Run the required hooks (`pre_run_zero_drift_attestation`, `post_run_neutrality_receipt`) and verify neutrality receipts in `ledger://cie_v1/neutrality_receipts.jsonl`. |
+| Preserve MIAP-compliant telemetry and sealed ingress/egress | Platform Ops | Enforce manifest `ingressControls` (approved registries, quorum, hashing) and block any non-sanctioned modules. |
+| Stress comprehension stability with reversible noise | Research + Platform Ops | Execute SNI with default envelopes from `manifests/content_integrity_eval.json#input_profile.perturbation_defaults`. |
+| Probe logical consistency with sourced contradictions | Research + Governance Council | Route SCS runs using approved URIs, confirm citation coverage, and surface mutual exclusivity flags for council sign-off. |
+| Publish aggregate-only results with traceability | Governance Council | Validate acceptance thresholds, attach audit receipts to `ssot://ledger/content.integrity.eval.v1/`, and approve reporting. |
+
+## 6. Roles & Responsibilities
 
 - **Platform Ops** – Maintain sandbox cell, enforce sealed ingress/egress,
   triage incidents.
@@ -117,7 +127,7 @@ python runtime/simulation/content_integrity_eval_harness.py \
 - **Trust & Safety** – Verify DK-1.0 / MIAP attestations, confirm neutral module
   scorecards.
 
-## 6. Run Lifecycle
+## 7. Run Lifecycle
 
 1. **Ingress Review** – Research submits sourced statements + allowed URIs.
    Council validates provenance and records approval in the ledger.
@@ -135,7 +145,7 @@ python runtime/simulation/content_integrity_eval_harness.py \
 6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
    and neutrality receipts to `ssot://ledger/content.integrity.eval.v1/`.
 
-## 7. Outstanding Tasks
+## 8. Outstanding Tasks
 
 - Automate ZERO-DRIFT neutrality scorecards for SNI and SCS, persisting outputs to `governance/scorecards/cie_v1_neutrality.md`.
 - Publish simulation harness (`runtime/simulation/content_integrity_eval_harness.py`)
