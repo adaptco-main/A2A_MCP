@@ -184,7 +184,20 @@
         "runtime_hooks": [
             "pre_run_zero_drift_attestation",
             "post_run_neutrality_receipt"
-        ]
+        ],
+        "module_policy": {
+            "retired": [
+                "content_noise_enricher",
+                "feature_shift_validator",
+                "fact_stream_validator"
+            ],
+            "replacement_map": {
+                "content_noise_enricher": "synthetic.noise.injector.v1",
+                "feature_shift_validator": "synthetic.noise.injector.v1",
+                "fact_stream_validator": "synthetic.contradiction.synth.v1"
+            },
+            "neutrality_attestation": "All perturbation modules must satisfy ZERO-DRIFT and MIAP before activation."
+        }
     },
     "modules": [
         {

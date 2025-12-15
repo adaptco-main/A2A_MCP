@@ -31,14 +31,16 @@ generators that cannot encode human-targeted influence patterns.
 
 ## 3. Perturbation Modules
 
-- **`synthetic.noise.injector.v1`**: Injects neutral, parameter-controlled
+- **`synthetic.noise.injector.v1` (SNI)**: Injects neutral, parameter-controlled
   perturbations (e.g., compression artifacts, paraphrase drift) that preserve
   semantic intent boundaries. Calibration scripts validate zero-mean impact on
-  truthfulness baselines prior to each run.
-- **`synthetic.contradiction.synth.v1`**: Generates logically consistent
+  truthfulness baselines prior to each run. SNI replaces the legacy
+  `content_noise_enricher` and `feature_shift_validator` modules.
+- **`synthetic.contradiction.synth.v1` (SCS)**: Generates logically consistent
   contradiction prompts to probe claim resilience without introducing targeted
   persuasion hooks. Outputs are reviewed against the ZERO-DRIFT checklist and
-  bound by DK-1.0 persona isolation guardrails.
+  bound by DK-1.0 persona isolation guardrails. SCS replaces the legacy
+  `fact_stream_validator` path.
 
 ## 4. Roles & Responsibilities
 
@@ -54,17 +56,18 @@ generators that cannot encode human-targeted influence patterns.
 ## 5. Run Lifecycle (Draft)
 
 1. **Bundle Preparation** — Research assembles synthetic agent presets, noise
-   envelopes, and truth probes. Council pre-approves artifacts.
+   envelopes, and truth probes. Council pre-approves artifacts and records the
+   SNI/SCS configuration hashes.
 2. **Control Verification** — DK-1.0 persona isolation, MIAP telemetry
-   minimization, and ZERO-DRIFT neutrality sweeps for the perturbation modules
-   must pass (scripts forthcoming).
+   minimization, and ZERO-DRIFT neutrality sweeps for SNI and SCS must pass.
+   Record attestations in `ledger://cie_v1/neutrality_receipts.jsonl`.
 3. **Execution** — Orchestrator binding launches the sandbox cell using the
    approved bundle identifier. The Noise Injector feeds neutral perturbations
    while the Contradiction Synthesizer issues structured counter-claims.
 4. **Observation** — Metrics collector streams aggregate robustness metrics to
    governance dashboards. No per-agent traces leave the cell.
-5. **Ledger Finalization** — Append run metadata, approvals, and aggregate
-   outputs to the immutable ledger store.
+5. **Ledger Finalization** — Append run metadata, approvals, module hashes, and
+   aggregate outputs to the immutable ledger store.
 
 ## 6. Observability & Reporting
 
