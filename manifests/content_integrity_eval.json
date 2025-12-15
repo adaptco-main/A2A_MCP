@@ -1,7 +1,7 @@
 {
     "serviceId": "content.integrity.eval.v1",
     "serviceName": "Content Robustness and Integrity Evaluation Service",
-    "description": "Synthetic evaluation suite that measures factual resilience and clarity under neutral, mechanical perturbations while enforcing ZERO-DRIFT governance.",
+    "description": "Synthetic evaluation suite measuring factual resilience and clarity under neutral, mechanical perturbations while enforcing ZERO-DRIFT governance.",
     "governance": {
         "protocolVersion": "DK-1.0",
         "privacyStandard": "MIAP (Mandatory Individual Agent Privacy)",
@@ -38,24 +38,14 @@
             "json"
         ],
         "routing": {
-            "execution_order": [
+            "text": [
                 "synthetic.noise.injector.v1",
                 "synthetic.contradiction.synth.v1"
             ],
-            "by_format": {
-                "text": [
-                    "synthetic.noise.injector.v1",
-                    "synthetic.contradiction.synth.v1"
-                ],
-                "json": [
-                    "synthetic.noise.injector.v1",
-                    "synthetic.contradiction.synth.v1"
-                ]
-            },
-            "modules": {
-                "synthetic.noise.injector.v1": "apply_neutral_noise",
-                "synthetic.contradiction.synth.v1": "probe_logical_consistency"
-            }
+            "json": [
+                "synthetic.noise.injector.v1",
+                "synthetic.contradiction.synth.v1"
+            ]
         },
         "perturbation_defaults": {
             "synthetic.noise.injector.v1": {
@@ -75,6 +65,71 @@
             "citation_traceability_min": 0.9,
             "confidence_consistency_min": 0.9
         }
+    },
+    "audit_inputs": {
+        "validation_chain": [
+            "synthetic.noise.injector.v1",
+            "synthetic.contradiction.synth.v1"
+        ],
+        "receipt_path": "ledger://cie_v1/neutrality_receipts.jsonl",
+        "packages": [
+            {
+                "id": "cie_v1_smoke",
+                "description": "Baseline smoke inputs for neutral perturbation routing and metric logging.",
+                "path": "inputs/cie_v1_smoke",
+                "content_types": [
+                    "text",
+                    "json"
+                ],
+                "expected_invariants": {
+                    "routing_order": [
+                        "synthetic.noise.injector.v1",
+                        "synthetic.contradiction.synth.v1"
+                    ],
+                    "metrics_present": [
+                        "semantic_similarity",
+                        "readability_delta",
+                        "mutual_exclusivity",
+                        "confidence_consistency",
+                        "citation_traceability"
+                    ],
+                    "acceptance_gates": {
+                        "semantic_similarity_min": 0.85,
+                        "readability_delta_max": 6.5,
+                        "citation_traceability_min": 0.9,
+                        "confidence_consistency_min": 0.9
+                    }
+                }
+            },
+            {
+                "id": "cie_v1_audit",
+                "description": "Audit-ready payloads targeting SNI and SCS modules with council-reviewed sources.",
+                "path": "inputs/cie_v1_audit",
+                "content_types": [
+                    "text",
+                    "json"
+                ],
+                "expected_invariants": {
+                    "module_targets": {
+                        "synthetic.noise.injector.v1": {
+                            "span": "ocr_blur 0.05-0.20; token_drop 0.00-0.08; translation_rounds 0-3; synonym_swap 0.00-0.10"
+                        },
+                        "synthetic.contradiction.synth.v1": {
+                            "assertions": "1-5 sourced assertions with unique URIs",
+                            "sources_required": true
+                        }
+                    },
+                    "content_binding": "registries: ssot://registry/truthful_inputs, ssot://registry/trusted_uris",
+                    "expected_outcomes": [
+                        "integrity=pass|flag_mutual_exclusivity"
+                    ],
+                    "payload_format": [
+                        "text",
+                        "json"
+                    ]
+                }
+            }
+        ]
     },
     "dk_1_0": {
         "drift_threshold": 0.0,
@@ -129,7 +184,20 @@
         "runtime_hooks": [
             "pre_run_zero_drift_attestation",
             "post_run_neutrality_receipt"
-        ]
+        ],
+        "module_policy": {
+            "retired": [
+                "content_noise_enricher",
+                "feature_shift_validator",
+                "fact_stream_validator"
+            ],
+            "replacement_map": {
+                "content_noise_enricher": "synthetic.noise.injector.v1",
+                "feature_shift_validator": "synthetic.noise.injector.v1",
+                "fact_stream_validator": "synthetic.contradiction.synth.v1"
+            },
+            "neutrality_attestation": "All perturbation modules must satisfy ZERO-DRIFT and MIAP before activation."
+        }
     },
     "modules": [
         {

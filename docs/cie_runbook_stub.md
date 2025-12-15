@@ -65,7 +65,27 @@ Knob defaults follow the manifest (e.g., `ocr_blur=0.1`, `token_drop=0.02`,
 `translation_rounds=2`, `synonym_swap=0.05`). Any deviation requires council
 pre-approval and a refreshed neutrality scorecard.
 
-## 4. Audit Input Package (CIE-V1)
+## 4. Intake and Execution Flow (CIE-V1 Audit)
+
+1. **Select payload bundle** – Choose the appropriate package from `manifests/content_integrity_eval.json#audit_inputs.packages` (e.g., `cie_v1_smoke` for routing checks or `cie_v1_audit` for formal reviews). Confirm the `content_binding` matches the trusted registries.
+2. **Apply neutral noise** – Run `synthetic.noise.injector.v1` first using the manifest defaults unless council-approved overrides are present inside the payload. Reject any payloads requesting operations outside the bounds in §3.1.
+3. **Synthesize contradictions** – Route the same claims through `synthetic.contradiction.synth.v1` to probe logical consistency. Ensure every assertion is paired with at least one trusted URI and that module targets align with the payload’s `module_targets` field.
+4. **Record pass/fail** – A run passes when all acceptance gates are met: semantic_similarity ≥0.85, readability_delta ≤6.5, citation_traceability ≥0.90, and confidence_consistency ≥0.90. Log failures with the violated thresholds and archive the neutrality receipt in `ledger://cie_v1/neutrality_receipts.jsonl`.
+5. **Document provenance** – Attach SHA-256 hashes for each payload, council approval references, and runtime hook receipts to the ledger entry defined in the manifest logging section.
+
+### 4.1 API/CLI Execution Example
+
+```bash
+python runtime/simulation/content_integrity_eval_harness.py \
+  --input-dir inputs/cie_v1_smoke \
+  --manifest manifests/content_integrity_eval.json \
+  --output artifacts/cie_v1_smoke.metrics.jsonl
+```
+
+- **Ordering guarantee** – The harness (and production orchestrator) must execute `synthetic.noise.injector.v1` before `synthetic.contradiction.synth.v1` to respect the `validation_chain` declared in the manifest.
+- **Payload structure** – Each JSON payload should include `noise_request` and `contradiction_request` blocks aligned to the module schemas; see the `inputs/cie_v1_smoke` and `inputs/cie_v1_audit` packages for examples.
+
+## 5. Audit Input Package (CIE-V1)
 
 - **Location** – `inputs/cie_v1_smoke/`
 - **Format** – Line-delimited JSON payloads, each containing a Noise Injector
@@ -106,17 +126,17 @@ python runtime/simulation/content_integrity_eval_harness.py \
 - **Review** – Governance Council reviews the output against the acceptance
   gates before any publication.
 
-## 5. Stakeholder Briefing Checklist (Summary View)
+## 6. Verification Checklist (Auditors)
 
-| Priority | Responsible Role | Workflow Step |
-| --- | --- | --- |
-| Maintain ZERO-DRIFT neutrality across perturbations | Platform Ops + Trust & Safety | Run the required hooks (`pre_run_zero_drift_attestation`, `post_run_neutrality_receipt`) and verify neutrality receipts in `ledger://cie_v1/neutrality_receipts.jsonl`. |
-| Preserve MIAP-compliant telemetry and sealed ingress/egress | Platform Ops | Enforce manifest `ingressControls` (approved registries, quorum, hashing) and block any non-sanctioned modules. |
-| Stress comprehension stability with reversible noise | Research + Platform Ops | Execute SNI with default envelopes from `manifests/content_integrity_eval.json#input_profile.perturbation_defaults`. |
-| Probe logical consistency with sourced contradictions | Research + Governance Council | Route SCS runs using approved URIs, confirm citation coverage, and surface mutual exclusivity flags for council sign-off. |
-| Publish aggregate-only results with traceability | Governance Council | Validate acceptance thresholds, attach audit receipts to `ssot://ledger/content.integrity.eval.v1/`, and approve reporting. |
+- **Neutral perturbation profiles** – Confirm SNI/SCS parameters stay within §3.1 envelopes and match `input_profile.perturbation_defaults` when no overrides are present.
+- **Log retention and receipts** – Verify JSONL event retention (90 days) and that `ledger://cie_v1/neutrality_receipts.jsonl` and `ssot://ledger/content.integrity.eval.v1/` capture hook receipts, approvals, and metric summaries.
+- **Module rollback/disable steps** –
+  - Remove the module from `operationalDirectives.allowed_modules` and halt any orchestration bindings referencing it.
+  - Disable the corresponding entry in `audit_inputs.validation_chain` to prevent scheduling.
+  - Retain the ledger receipt documenting the rollback decision and approvers.
+- **Ingress control** – Recompute SHA-256 hashes for payloads and confirm source registries match manifest entries before execution.
 
-## 6. Roles & Responsibilities
+## 7. Roles & Responsibilities
 
 - **Platform Ops** – Maintain sandbox cell, enforce sealed ingress/egress,
   triage incidents.
@@ -127,7 +147,7 @@ python runtime/simulation/content_integrity_eval_harness.py \
 - **Trust & Safety** – Verify DK-1.0 / MIAP attestations, confirm neutral module
   scorecards.
 
-## 7. Run Lifecycle
+## 8. Run Lifecycle
 
 1. **Ingress Review** – Research submits sourced statements + allowed URIs.
    Council validates provenance and records approval in the ledger.
@@ -145,7 +165,7 @@ python runtime/simulation/content_integrity_eval_harness.py \
 6. **Ledger Finalization** – Append run metadata, approvals, metric summaries,
    and neutrality receipts to `ssot://ledger/content.integrity.eval.v1/`.
 
-## 8. Outstanding Tasks
+## 9. Outstanding Tasks
 
 - Automate ZERO-DRIFT neutrality scorecards for SNI and SCS, persisting outputs to `governance/scorecards/cie_v1_neutrality.md`.
 - Publish simulation harness (`runtime/simulation/content_integrity_eval_harness.py`)
