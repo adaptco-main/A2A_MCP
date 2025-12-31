@@ -2,6 +2,7 @@
 
 from .cli import main
 from .databases import OrganizeSentinel
+from .github_dispatch import make_tx_id, send_block
 from .parsers import DiscordMessage, DiscordParser
 from .router import Event, Router
 from .sinks import GoogleCalendarSink, NotionSink, ShopifySink
@@ -10,10 +11,12 @@ __all__ = [
     "DiscordMessage",
     "DiscordParser",
     "Event",
+    "make_tx_id",
     "GoogleCalendarSink",
     "NotionSink",
     "OrganizeSentinel",
     "Router",
+    "send_block",
     "ShopifySink",
     "main",
 ]
