@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "rules": [
+    {
+      "intents": ["index_build", "retrieval_issue"],
+      "experts": ["expert:retrieval.rag", "expert:integration.runtime"]
+    },
+    {
+      "intents": ["release_cut", "lock_registry"],
+      "experts": ["expert:governance.pm"]
+    }
+  ],
+  "default_experts": ["expert:integration.runtime"]
+}
