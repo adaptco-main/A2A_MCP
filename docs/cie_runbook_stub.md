@@ -94,7 +94,7 @@ python runtime/simulation/content_integrity_eval_harness.py \
 ```
 
 - **Ordering guarantee** – The harness (and production orchestrator) must execute `synthetic.noise.injector.v1` before `synthetic.contradiction.synth.v1` to respect the `validation_chain` declared in the manifest.
-- **Payload structure** – Each JSON payload should include `noise_request` and `contradiction_request` blocks aligned to the module schemas; see the `inputs/cie_v1_smoke` and `inputs/cie_v1_audit` packages for examples.
+- **Payload structure** – Each JSON payload must include `noise_request`, `contradiction_request`, and a `metadata` block with `content_id`, `source_registry`, `sha256_payload`, `council_attestation_id`, and `run_id` aligned to `manifests/content_integrity_eval.json#audit_inputs.input_contract`; see the `inputs/cie_v1_smoke` and `inputs/cie_v1_audit` packages for examples.
 
 ## 5. Audit Input Package (CIE-V1)
 
