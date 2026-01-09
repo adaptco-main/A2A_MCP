@@ -102,6 +102,10 @@ python runtime/simulation/content_integrity_eval_harness.py \
 - **Format** – Line-delimited JSON payloads, each containing a Noise Injector
   request (`noise_request`) and a paired Contradiction Synthesizer request
   (`contradiction_request`).
+- **Input contract** – Each payload must include `noise_request`, `contradiction_request`,
+  and a `metadata` block with `content_id`, `source_registry`, `sha256_payload`,
+  `council_attestation_id`, and `run_id`, matching
+  `manifests/content_integrity_eval.json#audit_inputs.input_contract`.
 - **Routing** – Follow the manifest’s execution order:
   1. `synthetic.noise.injector.v1` → apply neutral noise using the defaults in
      `manifests/content_integrity_eval.json#input_profile.perturbation_defaults`.
