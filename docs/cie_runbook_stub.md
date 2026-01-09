@@ -76,11 +76,21 @@ pre-approval and a refreshed neutrality scorecard.
 
 ### 4.1 API/CLI Execution Example
 
+Use the manifest-backed CLI profiles to avoid routing drift and to align with the
+ledger outputs declared in `manifests/content_integrity_eval.json#cliProfiles`:
+
 ```bash
+# Smoke validation (routing + metric envelopes)
 python runtime/simulation/content_integrity_eval_harness.py \
   --input-dir inputs/cie_v1_smoke \
   --manifest manifests/content_integrity_eval.json \
   --output artifacts/cie_v1_smoke.metrics.jsonl
+
+# Audit bundle (council-reviewed payloads; same routing order)
+python runtime/simulation/content_integrity_eval_harness.py \
+  --input-dir inputs/cie_v1_audit \
+  --manifest manifests/content_integrity_eval.json \
+  --output artifacts/cie_v1_audit.metrics.jsonl
 ```
 
 - **Ordering guarantee** – The harness (and production orchestrator) must execute `synthetic.noise.injector.v1` before `synthetic.contradiction.synth.v1` to respect the `validation_chain` declared in the manifest.

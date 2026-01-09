@@ -199,6 +199,38 @@
             "neutrality_attestation": "All perturbation modules must satisfy ZERO-DRIFT and MIAP before activation."
         }
     },
+    "cliProfiles": [
+        {
+            "id": "cie_v1_smoke",
+            "description": "Local smoke validation of neutral perturbation routing using SNI → SCS with manifest defaults.",
+            "command": "python runtime/simulation/content_integrity_eval_harness.py --input-dir inputs/cie_v1_smoke --manifest manifests/content_integrity_eval.json --output artifacts/cie_v1_smoke.metrics.jsonl",
+            "routing_order_required": [
+                "synthetic.noise.injector.v1",
+                "synthetic.contradiction.synth.v1"
+            ],
+            "acceptance_thresholds_ref": "input_profile.acceptance_thresholds",
+            "ledger_outputs": [
+                "artifacts/cie_v1_smoke.metrics.jsonl",
+                "ledger://cie_v1/neutrality_receipts.jsonl"
+            ],
+            "quorum_required": "governance.approvalQuorum"
+        },
+        {
+            "id": "cie_v1_audit",
+            "description": "Audit run exercising council-reviewed payloads with the neutral perturbation chain locked to SNI → SCS.",
+            "command": "python runtime/simulation/content_integrity_eval_harness.py --input-dir inputs/cie_v1_audit --manifest manifests/content_integrity_eval.json --output artifacts/cie_v1_audit.metrics.jsonl",
+            "routing_order_required": [
+                "synthetic.noise.injector.v1",
+                "synthetic.contradiction.synth.v1"
+            ],
+            "acceptance_thresholds_ref": "input_profile.acceptance_thresholds",
+            "ledger_outputs": [
+                "artifacts/cie_v1_audit.metrics.jsonl",
+                "ledger://cie_v1/neutrality_receipts.jsonl"
+            ],
+            "quorum_required": "governance.approvalQuorum"
+        }
+    ],
     "modules": [
         {
             "moduleId": "synthetic.noise.injector.v1",
