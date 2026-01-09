@@ -38,7 +38,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install Python dependencies
-        run: pip install nacl
+        run: pip install pynacl
 
       - name: Schema-validate manifest
         run: ajv validate -s schemas/avatar_bindings.v1.schema.json -d avatar_bindings.v1.json --strict=true
