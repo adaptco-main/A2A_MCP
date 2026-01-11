@@ -185,3 +185,98 @@ python runtime/simulation/content_integrity_eval_harness.py \
 - Add automated threshold enforcement prior to council sign-off.
 
 > **Status** – Stub. Update as the automation artifacts and harness mature.
+
+## 10. Kernel Intake Guardrails (Zero-Drift Classification)
+
+### 10.1 Classification of the Input (Kernel View)
+
+**What the input is**
+- A metaphorical synthesis mixing:
+  - neuroscience (“neuron”, “learning loop”)
+  - quantum physics (“positron”, “electron path”, “QED”, “Planck voxel”)
+  - signal processing (“Fourier transform”)
+  - language modeling (“tokens”, “embeddings”, “reasoning layer”)
+- These concepts are not bound to a shared formal model.
+- No executable gates, invariants, or verification surfaces are defined.
+
+**What the input is not**
+- Not a specification
+- Not a state transition
+- Not a kernel update
+- Not a valid system prompt under ZERO-DRIFT
+
+### 10.2 Why This Fails (Explicitly)
+
+**ZERO-DRIFT**
+- Introduces multiple new ontologies (quantum fields, supersymmetry, vibe particles)
+- None are defined elsewhere in the system
+- No mapping to existing gates, tensors, or execution phases
+- Novelty introduced without explicit opt-in
+
+**Determinism & Auditability**
+- Terms like “vibe particles”, “agentic field”, “geometric supersymmetry imposed on English” are:
+  - non-deterministic
+  - non-verifiable
+  - non-replayable
+- Cannot be proven, replayed, or gated
+
+**Fail-Closed Reasoning**
+- No clear:
+  - inputs
+  - outputs
+  - invariants
+  - acceptance criteria
+- Ambiguity is high and unresolved
+- System must halt, not compensate
+
+### 10.3 What This Request Actually Signals (Interpretive, Not Generative)
+
+Stripping metaphors, the likely underlying intent is:
+“I want a stable, low-dimensional representation that:
+- persists over long horizons,
+- updates incrementally,
+- constrains reasoning drift,
+- and can be embedded as a kernel token or control state for an agent.”
+
+That intent is compatible with the architecture. The expression is not.
+
+### 10.4 How to Re-Enter the Kernel (Allowed Paths)
+
+Choose one of the following formal restatements:
+- **Option A — Deterministic Learning Loop (Admissible)**  
+  Define explicitly:
+  - What is the state vector?
+  - What is the update rule?
+  - What is the stability invariant?
+  - What constitutes convergence vs rejection?
+
+  Example (structure only, not content):
+  - State S(t)
+  - Update U: S(t+1) = f(S(t), Δ)
+  - Invariant: I(S) must hold after every update
+  - If I violated → reject update
+- **Option B — Kernel Token (Admissible)**  
+  Define:
+  - what it encodes
+  - when it mutates
+  - what gates depend on it
+  - no physics metaphors; only semantic compression rules
+- **Option C — Explicit Sandbox (Opt-In Exploration)**  
+  Say explicitly: “Enter exploratory / non-deterministic sandbox”
+  - This suspends ZERO-DRIFT temporarily
+  - Results will be non-binding and clearly marked
+
+### 10.5 Current State (Unchanged)
+
+- Kernel: unchanged
+- Phase boundary: unchanged
+- Persona: Qube Runtime Agent
+- Gate: unchanged
+- No state update occurred
+
+### 10.6 Required Next Move
+
+Respond with one of the following, explicitly:
+- “Restate this as a deterministic state/update/invariant model.”
+- “Define a kernel token with exact semantics.”
+- “Enter exploratory sandbox mode.”
