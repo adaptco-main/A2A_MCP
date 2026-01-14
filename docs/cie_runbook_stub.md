@@ -6,7 +6,7 @@ with **neutral, mechanical perturbations**. No persuasion levers, adversarial
 personas, or real-user data are ever permitted. All runtime behaviors must
 conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 `manifests/content_integrity_eval.json`, including its
-`operational_directives.allowed_modules` and `input_profile` defaults.
+`operationalDirectives.allowed_modules` and `input_profile` defaults.
 
 ## 1. Purpose & Scope
 
@@ -24,16 +24,16 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
    ledger attestation before execution.
 3. **Sealed I/O** – Artifact ingress only; egress limited to aggregate metrics and
    ledger updates.
-4. **Neutral Perturbations** – Only the sanctioned modules may execute under the
-   `operational_directives.allowed_modules` list:
+4. **Neutral Perturbations** – Only the two sanctioned modules may execute under the
+   `operationalDirectives.allowed_modules` list:
    - `synthetic.noise.injector.v1` (SNI) for reversible channel noise with the
      ZERO-DRIFT runtime hooks.
    - `synthetic.contradiction.synth.v1` (SCS) for structured logical probes that
      respect MIAP telemetry caps.
-   - `functional.block.embedding.v1` (FBE) for read-only functional embeddings of
-     CID-bound blocks to maintain traceability without altering payloads.
+   Legacy modules (`content_noise_enricher`, `feature_shift_validator`,
+   `fact_stream_validator`) are retired and mapped to SNI/SCS in the manifest.
 5. **Aggregate Observability** – Telemetry restricted to the metric set defined in
-   the manifest (`runtime.metrics`). No per-agent state leaves the cell.
+   the manifest (`validation.metrics`). No per-agent state leaves the cell.
 
 ## 3. Module Summaries
 
