@@ -1,7 +1,7 @@
 {
     "serviceId": "content.integrity.eval.v1",
     "serviceName": "Content Robustness and Integrity Evaluation Service",
-    "description": "Synthetic evaluation suite measuring factual resilience and clarity under neutral, mechanical perturbations while enforcing ZERO-DRIFT governance.",
+    "description": "Synthetic evaluation suite measuring factual resilience and clarity under neutral, mechanical perturbations while enforcing ZERO-DRIFT governance via synthetic.noise.injector.v1 and synthetic.contradiction.synth.v1.",
     "governance": {
         "protocolVersion": "DK-1.0",
         "privacyStandard": "MIAP (Mandatory Individual Agent Privacy)",
