@@ -258,7 +258,7 @@
         {
             "moduleId": "synthetic.noise.injector.v1",
             "moduleAcronym": "SNI",
-            "moduleDescription": "Applies statistically defined, reversible distortions (blur, token drop, translation cycles, synonym swap) to stress comprehension stability without directional drift.",
+            "moduleDescription": "Applies statistically defined, reversible distortions (blur, token drop, translation cycles, synonym swap) to stress comprehension stability without directional drift, replacing legacy content_noise_enricher and feature_shift_validator logic.",
             "neutralityControls": {
                 "drift_lock": true,
                 "noise_profile": "statistical_neutral",
@@ -329,7 +329,7 @@
         {
             "moduleId": "synthetic.contradiction.synth.v1",
             "moduleAcronym": "SCS",
-            "moduleDescription": "Builds minimally divergent contradiction sets to verify logical consistency and sourcing discipline under MIAP constraints.",
+            "moduleDescription": "Builds minimally divergent contradiction sets to verify logical consistency and sourcing discipline under MIAP constraints, replacing legacy fact_stream_validator logic.",
             "neutralityControls": {
                 "drift_lock": true,
                 "contradiction_bounds": "minimally_divergent",
