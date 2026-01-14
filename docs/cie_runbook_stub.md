@@ -41,6 +41,7 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 | ------ | ------- | ---------------- | -------------- |
 | SNI (`synthetic.noise.injector.v1`) | Apply OCR blur, token drop, translation rounds, synonym swaps within neutral bounds. | ZERO-DRIFT neutrality suite; DK-1 persona isolation; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `semantic_similarity`, `readability_delta` |
 | SCS (`synthetic.contradiction.synth.v1`) | Generate mutually exclusive counter-assertions from approved sources. | ZERO-DRIFT logical consistency; MIAP telemetry minimization; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `mutual_exclusivity`, `confidence_consistency`, `citation_traceability` |
+| FBE (`functional.block.embedding.v1`) | Track CID-bound blocks with deterministic functional embeddings for integrity traceability. | Read-only embeddings; MIAP telemetry minimization; runtime hooks: `pre_run_zero_drift_attestation`, `post_run_neutrality_receipt` | `functional_embedding_ref`, `embedding_hash` |
 
 ### 3.1 Test Vectors and Perturbation Envelopes
 
@@ -61,8 +62,9 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 
 1. **SNI pass** – Execute `synthetic.noise.injector.v1` with default knobs (`ocr_blur=0.1`, `token_drop=0.02`, `translation_rounds=2`, `synonym_swap=0.05`). Capture semantic/readability deltas and attach SHA-256 receipts.
 2. **SCS pass** – Feed SNI outputs plus approved source URIs into `synthetic.contradiction.synth.v1`. Validate mutual exclusivity proofs and citation coverage.
-3. **Neutrality attestation** – Execute the mandated runtime hooks and store module run metadata plus DK-1.0 variance results in `ledger://cie_v1/neutrality_receipts.jsonl` before exposing aggregate metrics.
-4. **Governance sign-off** – Confirm MIAP telemetry bounds, ZERO-DRIFT gates, and council quorum prior to releasing any reports.
+3. **Block embedding tracking** – Submit CID + multihash metadata to `functional.block.embedding.v1` to generate a deterministic functional embedding reference for the audited block.
+4. **Neutrality attestation** – Execute the mandated runtime hooks and store module run metadata plus DK-1.0 variance results in `ledger://cie_v1/neutrality_receipts.jsonl` before exposing aggregate metrics.
+5. **Governance sign-off** – Confirm MIAP telemetry bounds, ZERO-DRIFT gates, and council quorum prior to releasing any reports.
 
 Knob defaults follow the manifest (e.g., `ocr_blur=0.1`, `token_drop=0.02`,
 `translation_rounds=2`, `synonym_swap=0.05`). Any deviation requires council
@@ -73,8 +75,9 @@ pre-approval and a refreshed neutrality scorecard.
 1. **Select payload bundle** – Choose the appropriate package from `manifests/content_integrity_eval.json#audit_inputs.packages` (e.g., `cie_v1_smoke` for routing checks or `cie_v1_audit` for formal reviews). Confirm the `content_binding` matches the trusted registries.
 2. **Apply neutral noise** – Run `synthetic.noise.injector.v1` first using the manifest defaults unless council-approved overrides are present inside the payload. Reject any payloads requesting operations outside the bounds in §3.1.
 3. **Synthesize contradictions** – Route the same claims through `synthetic.contradiction.synth.v1` to probe logical consistency. Ensure every assertion is paired with at least one trusted URI and that module targets align with the payload’s `module_targets` field.
-4. **Record pass/fail** – A run passes when all acceptance gates are met: semantic_similarity ≥0.85, readability_delta ≤6.5, citation_traceability ≥0.90, and confidence_consistency ≥0.90. Log failures with the violated thresholds and archive the neutrality receipt in `ledger://cie_v1/neutrality_receipts.jsonl`.
-5. **Document provenance** – Attach SHA-256 hashes for each payload, council approval references, and runtime hook receipts to the ledger entry defined in the manifest logging section.
+4. **Track block embeddings** – For CID-bound inputs, run `functional.block.embedding.v1` after SCS to register the functional embedding reference and hash alongside the payload metadata.
+5. **Record pass/fail** – A run passes when all acceptance gates are met: semantic_similarity ≥0.85, readability_delta ≤6.5, citation_traceability ≥0.90, and confidence_consistency ≥0.90. Log failures with the violated thresholds and archive the neutrality receipt in `ledger://cie_v1/neutrality_receipts.jsonl`.
+6. **Document provenance** – Attach SHA-256 hashes for each payload, council approval references, embedding references, and runtime hook receipts to the ledger entry defined in the manifest logging section.
 
 ### 4.1 API/CLI Execution Example
 
