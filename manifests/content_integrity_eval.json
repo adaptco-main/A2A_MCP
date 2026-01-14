@@ -1,7 +1,7 @@
 {
     "serviceId": "content.integrity.eval.v1",
     "serviceName": "Content Robustness and Integrity Evaluation Service",
-    "description": "Synthetic evaluation suite measuring factual resilience and clarity under neutral, mechanical perturbations while enforcing ZERO-DRIFT governance.",
+    "description": "Synthetic evaluation suite measuring factual resilience and clarity under neutral, mechanical perturbations while enforcing ZERO-DRIFT governance via synthetic.noise.injector.v1 and synthetic.contradiction.synth.v1.",
     "governance": {
         "protocolVersion": "DK-1.0",
         "privacyStandard": "MIAP (Mandatory Individual Agent Privacy)",
@@ -178,7 +178,8 @@
     "operationalDirectives": {
         "allowed_modules": [
             "synthetic.noise.injector.v1",
-            "synthetic.contradiction.synth.v1"
+            "synthetic.contradiction.synth.v1",
+            "functional.block.embedding.v1"
         ],
         "disallowed_modules": "all_other_perturbation_or_influence_vectors",
         "runtime_hooks": [
@@ -355,6 +356,73 @@
                     "metricId": "citation_traceability",
                     "unit": "percentage",
                     "description": "Share of assertions linked to verified sources."
+                }
+            ]
+        },
+        {
+            "moduleId": "functional.block.embedding.v1",
+            "moduleAcronym": "FBE",
+            "moduleDescription": "Records a deterministic functional embedding for content blocks (e.g., CID-bound assets) to enable traceable integrity tracking without altering payloads.",
+            "neutralityControls": {
+                "drift_lock": true,
+                "embedding_mode": "read_only",
+                "miap_compliant": true
+            },
+            "inputSchema": {
+                "type": "object",
+                "required": [
+                    "cid",
+                    "codec",
+                    "multihash",
+                    "hash_digest"
+                ],
+                "properties": {
+                    "cid": {
+                        "type": "string",
+                        "description": "CIDv1 identifier for the tracked block."
+                    },
+                    "base": {
+                        "type": "string",
+                        "description": "CID base encoding (e.g., base32)."
+                    },
+                    "version": {
+                        "type": "string",
+                        "description": "CID version (e.g., cidv1)."
+                    },
+                    "codec": {
+                        "type": "string",
+                        "description": "Content codec label (e.g., eth-block)."
+                    },
+                    "multihash": {
+                        "type": "string",
+                        "description": "Full multihash string for the block."
+                    },
+                    "hash_digest": {
+                        "type": "string",
+                        "description": "Hex digest extracted from the multihash."
+                    },
+                    "hash_algorithm": {
+                        "type": "string",
+                        "description": "Hash algorithm name (e.g., keccak-256)."
+                    },
+                    "hash_bits": {
+                        "type": "integer",
+                        "description": "Hash size in bits.",
+                        "minimum": 1
+                    }
+                },
+                "additionalProperties": false
+            },
+            "outputMetrics": [
+                {
+                    "metricId": "functional_embedding_ref",
+                    "unit": "uri",
+                    "description": "Pointer to the generated embedding vector or registry entry."
+                },
+                {
+                    "metricId": "embedding_hash",
+                    "unit": "sha256",
+                    "description": "Digest of the embedding payload for deterministic tracking."
                 }
             ]
         }
