@@ -101,6 +101,26 @@ python runtime/simulation/content_integrity_eval_harness.py \
 - **Ordering guarantee** – The harness (and production orchestrator) must execute `synthetic.noise.injector.v1` before `synthetic.contradiction.synth.v1` to respect the `validation_chain` declared in the manifest.
 - **Payload structure** – Each JSON payload must include `noise_request`, `contradiction_request`, and a `metadata` block with `content_id`, `source_registry`, `sha256_payload`, `council_attestation_id`, and `run_id` aligned to `manifests/content_integrity_eval.json#audit_inputs.input_contract`; see the `inputs/cie_v1_smoke` and `inputs/cie_v1_audit` packages for examples.
 
+### 4.2 Docling Template (LangGraph Topology Intake)
+
+When a request arrives for a "docling" or topology narrative, capture it in a
+bounded, auditable template that can be mapped back to the neutral CIE-V1
+execution chain. Keep the language deterministic and avoid speculative physics
+metaphors. The structure below is intentionally plain and keeps the request
+compatible with ZERO-DRIFT controls.
+
+**Docling Template**
+- **Objective**: What should the topology describe (e.g., "neutral perturbation routing for CIE-V1")?
+- **Nodes**: List the components in order (e.g., Input Validator → SNI → SCS → Metrics Aggregator → Ledger).
+- **Edges**: Define directional handoffs (include required artifacts or hashes).
+- **State Requirements**: Enumerate required fields from the manifest input contract.
+- **Lifecycle Hooks**: Reference the runtime hooks (`pre_run_zero_drift_attestation`, `post_run_neutrality_receipt`).
+- **Acceptance Gates**: Cite thresholds from `input_profile.acceptance_thresholds`.
+- **Audit Outputs**: Metrics JSONL + neutrality receipts destinations.
+
+Use this template when translating high-level "network topology" language into
+concrete CIE-V1 artifacts.
+
 ## 5. Audit Input Package (CIE-V1)
 
 - **Location** – `inputs/cie_v1_smoke/`
