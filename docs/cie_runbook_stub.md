@@ -212,6 +212,8 @@ python runtime/simulation/content_integrity_eval_harness.py \
   with governance replay hooks.
 - Author failure playbooks and escalation contacts.
 - Add automated threshold enforcement prior to council sign-off.
+- Define the first official CIE-V1 audit input bundle (see §11) and record the
+  council attestation IDs in the ledger before promotion.
 
 > **Status** – Stub. Update as the automation artifacts and harness mature.
 
@@ -309,3 +311,23 @@ Respond with one of the following, explicitly:
 - “Restate this as a deterministic state/update/invariant model.”
 - “Define a kernel token with exact semantics.”
 - “Enter exploratory sandbox mode.”
+
+## 11. Next Operational Step (Official CIE-V1 Audit Inputs)
+
+To proceed with the first official CIE-V1 audit run, publish a dedicated input
+bundle under `inputs/cie_v1_audit/` and register it in the ledger. Use the
+following checklist to keep the run aligned with ZERO-DRIFT and MIAP controls:
+
+1. **Define the audit scope** – select the target content IDs and trusted source
+   registries, and confirm they map to
+   `manifests/content_integrity_eval.json#audit_inputs.input_contract`.
+2. **Author payloads** – create line-delimited JSON entries that include
+   `noise_request`, `contradiction_request`, and `metadata` fields with
+   `content_id`, `source_registry`, `sha256_payload`, `council_attestation_id`,
+   and `run_id`.
+3. **Attach council attestations** – record approval references in
+   `ledger://cie_v1/neutrality_receipts.jsonl` prior to execution.
+4. **Freeze the routing order** – verify that SNI → SCS ordering matches
+   `audit_inputs.validation_chain` and the CLI profile used for the run.
+5. **Schedule the audit harness** – execute the `cie_v1_audit` CLI profile after
+   the bundle is approved and the ledger entries are sealed.
