@@ -1,7 +1,7 @@
 {
     "serviceId": "content.integrity.eval.v1",
     "serviceName": "Content Robustness and Integrity Evaluation Service",
-    "description": "Synthetic evaluation suite measuring factual resilience and clarity under neutral, mechanical perturbations while enforcing ZERO-DRIFT governance via synthetic.noise.injector.v1 and synthetic.contradiction.synth.v1.",
+    "description": "Synthetic evaluation suite measuring factual resilience and clarity under neutral, mechanical perturbations while enforcing ZERO-DRIFT governance via the Noise Injector (synthetic.noise.injector.v1) and Contradiction Synthesizer (synthetic.contradiction.synth.v1).",
     "governance": {
         "protocolVersion": "DK-1.0",
         "privacyStandard": "MIAP (Mandatory Individual Agent Privacy)",
@@ -258,6 +258,7 @@
         {
             "moduleId": "synthetic.noise.injector.v1",
             "moduleAcronym": "SNI",
+            "moduleDisplayName": "Noise Injector",
             "moduleDescription": "Applies statistically defined, reversible distortions (blur, token drop, translation cycles, synonym swap) to stress comprehension stability without directional drift, replacing legacy content_noise_enricher and feature_shift_validator logic.",
             "neutralityControls": {
                 "drift_lock": true,
@@ -329,6 +330,7 @@
         {
             "moduleId": "synthetic.contradiction.synth.v1",
             "moduleAcronym": "SCS",
+            "moduleDisplayName": "Contradiction Synthesizer",
             "moduleDescription": "Builds minimally divergent contradiction sets to verify logical consistency and sourcing discipline under MIAP constraints, replacing legacy fact_stream_validator logic.",
             "neutralityControls": {
                 "drift_lock": true,
@@ -384,6 +386,7 @@
         {
             "moduleId": "functional.block.embedding.v1",
             "moduleAcronym": "FBE",
+            "moduleDisplayName": "Functional Block Embedding",
             "moduleDescription": "Records a deterministic functional embedding for content blocks (e.g., CID-bound assets) to enable traceable integrity tracking without altering payloads.",
             "neutralityControls": {
                 "drift_lock": true,
