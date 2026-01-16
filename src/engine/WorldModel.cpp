@@ -47,4 +47,19 @@ Vector2 WorldModel::GetSpawnPoint() const { return spawnPoint_; }
 
 int WorldModel::GetCurrentLevel() const { return currentLevel_; }
 
+void WorldModel::SpawnPlane(Vector2 origin, float width, float height) {
+  std::cout << ">> GENESIS EVENT: Spawning Plane at " << origin.x << ","
+            << origin.y << " <<" << std::endl;
+  // Create a new platform tile at the origin
+  // Note: Y is usually up or down depending on coord sys. Assuming Y-down
+  // (screen coords) or Y-up? Physics usually Y-up, but Canvas is Y-down.
+  // LevelGen used {{-100, 10}, {1000, 20}} implying Y=10 to 20 is a floor.
+
+  Tile t;
+  t.type = TileType::Platform;
+  t.bounds.min = origin;
+  t.bounds.max = {origin.x + width, origin.y + height};
+  tiles_.push_back(t);
+}
+
 } // namespace engine

@@ -10,6 +10,7 @@ metrics:
     unit: float
     target: 0.0
     description: "Deviation of the agent's trajectory from the Petrified manifold during HIRR."
+    aggregation: "deduped_per_session"
     collection_interval: "Per 1k cycles"
 
   - id: KAWAII_SCORE
@@ -23,8 +24,9 @@ metrics:
     type: ratio
     unit: percent
     target: 100.0
-    formula: "successful_replays / total_replays"
-    description: "Percentage of Decision Records that reproduce bit-exact outputs."
+    formula: "successful_sessions / total_sessions"
+    description: "Percentage of Sessions where all Decision Records reproduce bit-exact outputs."
+    aggregation: "deduped_per_session"
 
   - id: MERKLE_COLLAPSE_TIME
     type: histogram

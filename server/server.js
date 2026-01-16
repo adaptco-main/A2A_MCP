@@ -10,6 +10,14 @@ const wss = new WebSocket.Server({ server });
 
 // Serve static files from 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json()); // Needed for body parsing? No, grounding uses raw/manual parse for simplicity logic
+
+// Grounding Receptor Mount
+// We use a proxy object to find the active engine
+const engineProxy = {
+    get stdin() { return global.activeEngine ? global.activeEngine.stdin : null; }
+};
+app.use('/webhook', require('./grounding')(engineProxy));
 
 const PORT = 8080;
 server.listen(PORT, () => {
@@ -21,6 +29,7 @@ server.listen(PORT, () => {
 // Path to the compiled engine executable
 // Assuming it's in ../bin/ghost-void_engine.exe
 const enginePath = path.resolve(__dirname, '../bin/ghost-void_engine.exe');
+const groundingReceptor = require('./grounding');
 
 wss.on('connection', (ws) => {
     console.log('Client connected');
@@ -29,6 +38,17 @@ wss.on('connection', (ws) => {
     const engine = spawn(enginePath, [], {
         stdio: ['pipe', 'pipe', 'inherit'] // Pipe stdin/stdout, inherit stderr
     });
+
+    // Attach Grounding Receptor (needs engine reference to pipe commands)
+    // Note: In this simple architecture, we attach it per socket connection, which is a bit odd.
+    // Ideally, the engine is singleton or managed globally. 
+    // For this scaffolding, we'll let the most recent connection "own" the grounding receptor 
+    // or just assume one user.
+    // Better: Mount the route once, but update the engine reference. 
+    // Hack for scaffolding: We'll re-mount or notify a global emitter.
+    // Let's go with: Global Engine Reference for Grounding.
+
+    global.activeEngine = engine;
 
     engine.stdout.on('data', (data) => {
         // Send engine output (state) to the client
