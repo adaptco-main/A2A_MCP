@@ -29,6 +29,16 @@ void Sandbox::SpawnPlane(Vector2 origin, float width, float height) {
   const_cast<WorldModel &>(*world_).SpawnPlane(origin, width, height);
 }
 
+void Sandbox::TriggerGenesis() {
+  if (boss_) {
+    // Let the boss handle emergence
+    boss_->DeployEmergence(world_.get());
+  } else {
+    // Fallback? Or just log error
+    std::cerr << "Cannot deploy emergence: No Boss found!" << std::endl;
+  }
+}
+
 void Sandbox::Update(float dt) {
   // Simulate Game Loop
   if (avatar_)

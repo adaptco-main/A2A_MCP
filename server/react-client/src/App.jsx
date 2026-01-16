@@ -3,6 +3,7 @@ import { useGameSocket } from './hooks/useGameSocket';
 import { GameCanvas } from './components/GameCanvas';
 import { HUD } from './components/HUD';
 import { ConnectionStatus } from './components/ConnectionStatus';
+import { Terminal } from './components/Terminal';
 
 function App() {
     const { status, gameState, sendInput } = useGameSocket('ws://localhost:8080');
@@ -12,6 +13,7 @@ function App() {
             <ConnectionStatus status={status} />
             <GameCanvas gameState={gameState} sendInput={sendInput} />
             <HUD score={0} energy={100} />
+            <Terminal sendInput={sendInput} />
         </div>
     );
 }

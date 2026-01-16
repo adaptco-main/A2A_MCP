@@ -32,3 +32,8 @@ clean:
 test:
 	$(CXX) $(CXXFLAGS) tests/safety_test.cpp src/safety/SafetyLayer.cpp -o $(BIN_DIR)/safety_test
 	./$(BIN_DIR)/safety_test
+
+test_engine: $(OBJS)
+	# Filter out main.o if it exists in OBJS to avoid multiple main() definitions
+	$(CXX) $(CXXFLAGS) tests/engine_test.cpp $(filter-out $(BUILD_DIR)/src/main.o, $(OBJS)) -o $(BIN_DIR)/engine_test
+	./$(BIN_DIR)/engine_test

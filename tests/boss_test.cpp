@@ -4,7 +4,6 @@
 #include <iostream>
 #include <memory>
 
-
 int main() {
   std::cout << "Testing Boss and BigBoss..." << std::endl;
 
@@ -57,6 +56,28 @@ int main() {
 
     std::cout << "Rage Speed: " << delta << std::endl;
     assert(delta == 2.0f);
+  }
+
+  // Test Deployment
+  {
+    std::cout << "Test 5: Boss Deployment" << std::endl;
+    agents::BigBoss bb({0, 0});
+    engine::WorldModel world;
+
+    // Before: NO plane at 0,500 means IsSolid({0, 500}) should be false or type
+    // Empty Actually WorldModel starts empty or with Level 1. Let's just run it
+    // and ensure no crash/logic runs
+    bb.DeployEmergence(&world);
+
+    // Verify plane exists?
+    // WorldModel::GetTiles() check...
+    bool found = false;
+    for (const auto &tile : world.GetTiles()) {
+      // Check bounds roughly
+      if (tile.bounds.min.y == 500)
+        found = true;
+    }
+    assert(found);
   }
 
   std::cout << "All Boss tests passed!" << std::endl;

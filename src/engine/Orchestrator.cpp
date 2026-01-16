@@ -29,7 +29,7 @@ void Orchestrator::Run() {
       // access. For scaffolding, let's cast or add a method. Better: Add
       // sandbox_->SpawnPlane(...)
 
-      sandbox_->SpawnPlane({0, 500}, 1000, 50);
+      sandbox_->TriggerGenesis();
 
       // Do not tick physics on configuration commands? Or do?
       // Let's continue to tick to stay alive.

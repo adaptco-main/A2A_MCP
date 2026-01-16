@@ -1,4 +1,5 @@
 #include "agents/BigBoss.hpp"
+#include "engine/WorldModel.hpp"
 #include <cmath>
 #include <iostream>
 
@@ -24,6 +25,15 @@ void BigBoss::Update(float dt, const engine::Vector2 &target) {
   float dir = (target.x - position_.x);
   if (std::abs(dir) > 1.0f) {
     position_.x += (dir > 0 ? 1.0f : -1.0f) * speed * dt;
+  }
+}
+
+void BigBoss::DeployEmergence(engine::WorldModel *world) {
+  std::cout << ">> BIG BOSS: I AM DEPLOYING THE MODEL FOR EMERGENCE! <<"
+            << std::endl;
+  // Spawn the Genesis Plane at (0, 500) with size 1000x50
+  if (world) {
+    world->SpawnPlane({0, 500}, 1000, 50);
   }
 }
 

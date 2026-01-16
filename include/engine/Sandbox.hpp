@@ -16,6 +16,7 @@ public:
   void Initialize();
   void LoadLevel(int levelId);
   void SpawnPlane(Vector2 origin, float width, float height);
+  void TriggerGenesis();
   void Update(float dt);
   const WorldModel &GetWorld() const;
 
