@@ -1,0 +1,21 @@
+# C++ Build Artifacts
+bin/
+build/
+*.o
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Node.js
+node_modules/
+npm-debug.log
+
+# React Build
+server/public/
+server/react-client/dist/
+server/react-client/node_modules/
+
+# OS Specific
+.DS_Store
+Thumbs.db
