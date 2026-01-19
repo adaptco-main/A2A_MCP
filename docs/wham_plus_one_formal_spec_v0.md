@@ -55,8 +55,19 @@ Each WHAM+1 request MUST include:
 
 - `wham.request_id` and `plus_one.action_id` MUST be unique within a run.
 - `sha256_payload` MUST be the hash of the respective payload object encoded in
-  canonical JSON.
+  canonical JSON (see §4.2).
 - `metadata.attestation_id` MUST reference a pre-approved governance record.
+
+### 4.2 Canonical JSON Encoding
+
+Payloads MUST be encoded using the following canonicalization rules before
+hashing:
+
+- UTF-8 encoding.
+- Object keys sorted lexicographically.
+- No insignificant whitespace.
+- No NaN/Infinity values.
+- Arrays preserve original ordering.
 
 ## 5. Execution Order
 
@@ -111,6 +122,12 @@ Each run MUST write exactly one ledger record containing:
 }
 ```
 
+### 7.1 Ledger Hashes
+
+- The ledger record MUST include `sha256_payload` values that match §4.2.
+- If an implementation stores a ledger hash, it MUST be computed over the
+  canonical JSON encoding of the entire ledger record.
+
 ## 8. Failure Modes
 
 - If any ingress gate fails, the run MUST be rejected and the +1 phase MUST NOT
@@ -124,7 +141,14 @@ Each run MUST write exactly one ledger record containing:
   record without external dependencies.
 - Any deviation from the execution order MUST be treated as a `fail`.
 
-## 10. Versioning
+## 10. Idempotency
+
+- Replaying the same `run_id` with identical payloads MUST produce identical
+  gate outcomes and ledger hashes.
+- If a `run_id` is re-submitted with different payload hashes, the run MUST be
+  rejected.
+
+## 11. Versioning
 
 - This document is **WHAM+1 Formal Spec v0**.
 - Breaking changes MUST increment the major version (v1, v2, ...).
