@@ -1,14 +1,17 @@
 import json
+import sys
 
 import jsonschema
 
 SCHEMA_PATH = "schemas/ArcState.v1.schema.json"
 
 
-def validate_arc_state(data):
+def load_schema():
     with open(SCHEMA_PATH, "r", encoding="utf-8") as schema_file:
-        schema = json.load(schema_file)
+        return json.load(schema_file)
 
+
+def validate_arc_state(schema, data):
     try:
         jsonschema.validate(instance=data, schema=schema)
         print("✅ [VALID] ArcState matches the Hyperbolic-Cubic contract.")
@@ -37,4 +40,6 @@ if __name__ == "__main__":
         "invariant_status": "VALIDATED",
     }
 
-    validate_arc_state(test_artifact)
+    schema = load_schema()
+    success = validate_arc_state(schema, test_artifact)
+    sys.exit(0 if success else 1)
