@@ -11,6 +11,12 @@ Everything is treated as a ceremony: **intake → ignition → binding → settl
 - **Evaluate**: Ingest source content, apply neutral noise, measure drift, and synthesize contradictions for robustness scoring.
 - **Export**: Emit capsule events and robustness metrics to downstream audit ledgers.
 
+## Next operational step (World Engine)
+- Prepare the input bundle for the **first official CIE-V1 audit run** so the World Engine can invoke the evaluate path.
+- Confirm both modules are deployed with their `replaces` metadata set and emitting capsule telemetry.
+- Collect canonicalized `source_content`, configured `perturbation_profile` (entropy budget ≤0.15 bits/token), and optional `claim_graph` plus `contradiction_policy` when contradiction synthesis is needed.
+- Register `capsule_id`/`capsule_ref` and pre-run hashes before submitting to the evaluation interface.
+
 ## Inputs
 - `source_content`: canonical text or structured payload under evaluation (canonicalize before ingestion).
 - `perturbation_profile`: constraints for noise injection (entropy budget, allowed token scopes).
