@@ -28,8 +28,10 @@ generators that cannot encode human-targeted influence patterns.
 4. **Neutral Perturbations Only** — The Noise Injector and Contradiction
    Synthesizer modules operate under neutrality test suites. Channel noise is
    applied strictly as a robustness probe; persuasive levers are disallowed.
-   Only modules listed in `operational_directives.allowed_modules` of
-   `manifests/content_integrity_eval.json` may be scheduled.
+   Only modules listed in `operational_directives.allowed_modules` and
+   `operational_directives.neutral_perturbation_models` of
+   `manifests/content_integrity_eval.json` may be scheduled for perturbation
+   runs.
 
 ## 3. Perturbation Modules
 
