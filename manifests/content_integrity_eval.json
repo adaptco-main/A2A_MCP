@@ -203,6 +203,10 @@
             "synthetic.contradiction.synth.v1",
             "functional.block.embedding.v1"
         ],
+        "neutral_perturbation_models": [
+            "synthetic.noise.injector.v1",
+            "synthetic.contradiction.synth.v1"
+        ],
         "disallowed_modules": "all_other_perturbation_or_influence_vectors",
         "runtime_hooks": [
             "pre_run_zero_drift_attestation",
