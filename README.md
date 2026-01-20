@@ -54,3 +54,8 @@ Monorepo delivering the Synapse digital twin, Chrono-Sync protocol, Asset Forge,
 Recommended layering:
 1. Use semantic state mapping as the kernel to drive deterministic behavior.
 2. Use direct visual recall as a rendering overlay for visual continuity.
+
+Kernel-first sequencing:
+1. Define a physics and affordance tagging rubric to anchor retrieval and policy.
+2. Specify LoRA routing logic that depends on the rubric’s tags.
+3. Formalize the vector schema that serializes embeddings, tags, and outcomes.
