@@ -77,6 +77,55 @@ describe('artifact audit trace', () => {
     expect(trace.events[1].summary).toBe('Event capsule.promoted');
   });
 
+  it('honors the requested capsule version when resolving the artifact identifier', () => {
+    const entries = [
+      {
+        type: 'capsule.promoted',
+        payload: {
+          id: 'capsule-caps-123-1.0.0',
+          stage: 'staging'
+        },
+        at: '2024-01-03T12:00:00.000Z'
+      },
+      {
+        type: 'capsule.registered',
+        payload: {
+          id: 'capsule-caps-123-1.0.0',
+          capsule: {
+            capsule_id: 'caps-123',
+            version: '1.0.0'
+          }
+        },
+        at: '2024-01-02T10:00:00.000Z'
+      },
+      {
+        type: 'capsule.registered',
+        payload: {
+          id: 'capsule-caps-123-2.0.0',
+          capsule: {
+            capsule_id: 'caps-123',
+            version: '2.0.0'
+          }
+        },
+        at: '2024-02-01T10:00:00.000Z'
+      },
+      {
+        type: 'capsule.promoted',
+        payload: {
+          id: 'capsule-caps-123-2.0.0',
+          stage: 'production'
+        },
+        at: '2024-02-03T12:00:00.000Z'
+      }
+    ];
+
+    const trace = buildTrace(entries, { capsuleId: 'caps-123', version: '2.0.0' });
+
+    expect(trace).not.toBeNull();
+    expect(trace.artifactId).toBe('capsule-caps-123-2.0.0');
+    expect(trace.events.map((event) => event.payload.id)).toContain('capsule-caps-123-2.0.0');
+  });
+
   it('builds a trace for dotted capsule identifiers from emission ledger entries', () => {
     const entries = [
       {
