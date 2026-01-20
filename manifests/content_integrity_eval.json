@@ -210,11 +210,15 @@
         ],
         "module_policy": {
             "retired": [
+                "CNE",
+                "FSV",
                 "content_noise_enricher",
                 "feature_shift_validator",
                 "fact_stream_validator"
             ],
             "replacement_map": {
+                "CNE": "synthetic.noise.injector.v1",
+                "FSV": "synthetic.noise.injector.v1",
                 "content_noise_enricher": "synthetic.noise.injector.v1",
                 "feature_shift_validator": "synthetic.noise.injector.v1",
                 "fact_stream_validator": "synthetic.contradiction.synth.v1"
