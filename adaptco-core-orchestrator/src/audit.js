@@ -50,6 +50,7 @@ async function readLedger(targetPath = ledgerFile) {
     const content = await fs.promises.readFile(resolved, 'utf8');
     return content
       .split(/\r?\n/)
+      .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => JSON.parse(line));
   } catch (error) {
