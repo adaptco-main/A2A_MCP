@@ -316,8 +316,10 @@ Respond with one of the following, explicitly:
 ## 11. Next Operational Step (Official CIE-V1 Audit Inputs)
 
 To proceed with the first official CIE-V1 audit run, publish a dedicated input
-bundle under `inputs/cie_v1_audit/` and register it in the ledger. Use the
-following checklist to keep the run aligned with ZERO-DRIFT and MIAP controls:
+bundle under `inputs/cie_v1_audit/` and register it in the ledger. The immediate
+next step is to define the audit inputs (payloads + metadata) and capture the
+council attestation IDs that authorize the run. Use the following checklist to
+keep the run aligned with ZERO-DRIFT and MIAP controls:
 
 1. **Define the audit scope** – select the target content IDs and trusted source
    registries, and confirm they map to
