@@ -57,6 +57,11 @@ tion labels for the noise injector.
 - Binding receipt listing contradictions, labels, and per-item hashes.
 - Settlement receipt with Merkle root and dual council attestations.
 
+## Next operational step (World Engine)
+- Approve the pivot to neutral perturbation modules (`synthetic.noise.injector.v1`, `synthetic.contradiction.synth.v1`).
+- Publish the canonical input bundle for the first official run (schemas for `source_content`, `perturbation_profile`, `claim_graph`, `contradiction_policy`).
+- Schedule and execute the inaugural ZERO-DRIFT evaluation via `capsules/content-integrity/eval.v1`, recording all receipts in the ledger.
+
 ## Observability
 - Metrics: `drift_score`, `neutral_noise_rate`, `contradiction_coverage`, `audit_pass_rate`, `merkle_settlement_latency`.
 - Logging: Module invocations must include module id, input capsule references, guardrail outcomes, and hashes.
