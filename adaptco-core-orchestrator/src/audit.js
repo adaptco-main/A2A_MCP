@@ -1,6 +1,8 @@
 // adaptco-core-orchestrator/src/audit.js
 'use strict';
 
+// Utilities for constructing capsule and artifact audit traces from the ledger.
+
 const fs = require('fs');
 const path = require('path');
 const { ledgerFile } = require('./ledger');

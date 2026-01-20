@@ -92,6 +92,11 @@
       ]
     }
   },
+  "next_steps": [
+    "World Engine to approve the manifest pivot to synthetic.noise.injector.v1 and synthetic.contradiction.synth.v1.",
+    "Define and publish the canonical input bundle for the first official run, including source_content, perturbation_profile, claim_graph, and contradiction_policy schemas.",
+    "Schedule the inaugural ZERO-DRIFT evaluation via capsules/content-integrity/eval.v1 and record receipts in the ledger."
+  ],
   "lineage": {
     "canonicalization": "All inputs are normalized before any model call to minimize drift risk.",
     "hashing": "Each ritual stage emits SHA-256 digests of inputs and outputs.",
