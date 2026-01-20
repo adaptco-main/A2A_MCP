@@ -1,5 +1,7 @@
 # world-os-codex
 
+[![.github/workflows/ci.yml](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml)
+
 Monorepo delivering the Synapse digital twin, Chrono-Sync protocol, Asset Forge, and World OS kernel. Everything runs with one Docker compose stack.
 
 ## Commands
