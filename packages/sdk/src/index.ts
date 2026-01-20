@@ -2,6 +2,7 @@ import axios from "axios";
 import { Action, State } from "@world-os/kernel";
 export * from "./agent_field";
 export * from "./agent_runtime_client";
+export * from "./attested_inference_client";
 
 export interface ApiClientOptions {
   baseUrl: string;
