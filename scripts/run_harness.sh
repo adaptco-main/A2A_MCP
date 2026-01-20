@@ -70,6 +70,7 @@ OUTPUT_PATH="${profile_data##*|}"
 export MANIFEST_PATH
 
 python - <<'PY'
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -82,6 +83,92 @@ manifest = json.loads(manifest_path.read_text())
 contract = manifest.get("audit_inputs", {}).get("input_contract", {})
 required_blocks = set(contract.get("required_blocks", []))
 metadata_fields = set(contract.get("metadata_fields", []))
+receipt_uri = manifest.get("audit_inputs", {}).get("receipt_path")
+
+
+def canonicalize(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def sha256_hex(canonical: str) -> str:
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def normalize_hash(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if value.startswith("sha256:"):
+        return value.split(":", 1)[1]
+    return value
+
+
+def scrub_sha256_payload(value: object) -> object:
+    if isinstance(value, dict):
+        return {key: scrub_sha256_payload(val) for key, val in value.items() if key != "sha256_payload"}
+    if isinstance(value, list):
+        return [scrub_sha256_payload(item) for item in value]
+    return value
+
+
+def compute_payload_hash(payload: dict) -> str:
+    canonical = canonicalize(scrub_sha256_payload(payload))
+    return sha256_hex(canonical)
+
+
+def resolve_receipts_path(uri: str | None) -> Path | None:
+    if not uri:
+        return None
+    if uri.startswith("ledger://"):
+        return Path("ledger") / uri.removeprefix("ledger://")
+    return Path(uri)
+
+
+def validate_receipt(receipt: dict, line_no: int, contract_hash: str) -> dict:
+    required_fields = {
+        "receipt_schema",
+        "receipt_id",
+        "run_id",
+        "council_attestation_id",
+        "attestation",
+    }
+    required_attestation_fields = {
+        "attestor",
+        "decision",
+        "scope",
+        "payload_sha256",
+        "contract_hash",
+    }
+    forbidden_fields = {"ingested_at", "source_file", "line_number"}
+    missing = required_fields.difference(receipt)
+    if missing:
+        raise SystemExit(f"Receipt line {line_no} missing fields: {sorted(missing)}")
+    if receipt.get("receipt_schema") != "neutrality_receipt.v1":
+        raise SystemExit(f"Receipt line {line_no} has unsupported receipt_schema")
+    if any(field in receipt for field in forbidden_fields):
+        present = [field for field in forbidden_fields if field in receipt]
+        raise SystemExit(f"Receipt line {line_no} contains forbidden fields: {present}")
+    if receipt.get("created_at") is not None and not isinstance(receipt.get("created_at"), str):
+        raise SystemExit(f"Receipt line {line_no} created_at must be a string when present")
+    attestation = receipt.get("attestation")
+    if not isinstance(attestation, dict):
+        raise SystemExit(f"Receipt line {line_no} attestation must be an object")
+    missing_attestation = required_attestation_fields.difference(attestation)
+    if missing_attestation:
+        raise SystemExit(f"Receipt line {line_no} attestation missing fields: {sorted(missing_attestation)}")
+    if attestation.get("signature") and not attestation.get("signature_alg"):
+        raise SystemExit(f"Receipt line {line_no} attestation.signature_alg required when signature present")
+    if attestation.get("signature_alg") and not attestation.get("signature"):
+        raise SystemExit(f"Receipt line {line_no} attestation.signature required when signature_alg present")
+    if receipt.get("receipt_hash_alg") not in (None, "sha256"):
+        raise SystemExit(f"Receipt line {line_no} receipt_hash_alg must be sha256 when provided")
+    hash_material = {key: value for key, value in receipt.items() if key not in {"receipt_hash", "receipt_hash_alg"}}
+    computed_hash = f"sha256:{sha256_hex(canonicalize(hash_material))}"
+    stored_hash = receipt.get("receipt_hash")
+    if normalize_hash(stored_hash) != normalize_hash(computed_hash):
+        raise SystemExit(f"Receipt line {line_no} receipt_hash mismatch")
+    if attestation.get("contract_hash") != contract_hash:
+        raise SystemExit(f"Receipt line {line_no} contract_hash mismatch with manifest")
+    return receipt
 
 routing = json.loads(routing_path.read_text())
 chains = routing.get("module_chains", {})
@@ -96,6 +183,22 @@ if cie_chain.get("fallbacks"):
 if not payloads_path.exists():
     raise SystemExit(f"Missing input payloads: {payloads_path}")
 
+contract_hash = f"sha256:{sha256_hex(canonicalize(manifest))}"
+receipts_path = resolve_receipts_path(receipt_uri)
+receipts_index = {}
+if receipts_path:
+    if not receipts_path.exists():
+        raise SystemExit(f"Missing neutrality receipts: {receipts_path}")
+    for line_no, line in enumerate(receipts_path.read_text().splitlines(), start=1):
+        if not line.strip():
+            continue
+        receipt = json.loads(line)
+        receipt = validate_receipt(receipt, line_no, contract_hash)
+        key = (receipt["run_id"], receipt["council_attestation_id"])
+        if key in receipts_index:
+            raise SystemExit(f"Duplicate receipt binding for run_id {key[0]} and council_attestation_id {key[1]}")
+        receipts_index[key] = receipt
+
 for idx, line in enumerate(payloads_path.read_text().splitlines(), start=1):
     if not line.strip():
         continue
@@ -104,9 +207,32 @@ for idx, line in enumerate(payloads_path.read_text().splitlines(), start=1):
     if missing:
         raise SystemExit(f"Payload line {idx} missing blocks: {sorted(missing)}")
     metadata = payload.get("metadata", {})
-    missing_meta = metadata_fields.difference(metadata)
-    if missing_meta:
-        raise SystemExit(f"Payload line {idx} missing metadata fields: {sorted(missing_meta)}")
+    if metadata and not isinstance(metadata, dict):
+        raise SystemExit(f"Payload line {idx} metadata must be an object")
+    resolved_meta = {}
+    for field in metadata_fields:
+        top_value = payload.get(field)
+        meta_value = metadata.get(field) if isinstance(metadata, dict) else None
+        if top_value is None and meta_value is None:
+            raise SystemExit(f"Payload line {idx} missing metadata field: {field}")
+        if top_value is not None and meta_value is not None and top_value != meta_value:
+            raise SystemExit(f"Payload line {idx} metadata mismatch for field: {field}")
+        resolved_meta[field] = meta_value if meta_value is not None else top_value
+    payload_hash = compute_payload_hash(payload)
+    stored_hash = resolved_meta.get("sha256_payload")
+    if normalize_hash(stored_hash) != normalize_hash(f"sha256:{payload_hash}"):
+        raise SystemExit(f"Payload line {idx} sha256_payload mismatch")
+    if receipts_index:
+        run_id = resolved_meta.get("run_id")
+        council_id = resolved_meta.get("council_attestation_id")
+        receipt = receipts_index.get((run_id, council_id))
+        if receipt is None:
+            raise SystemExit(
+                f"Payload line {idx} missing receipt for run_id {run_id} and council_attestation_id {council_id}"
+            )
+        receipt_payload_hash = receipt["attestation"]["payload_sha256"]
+        if normalize_hash(receipt_payload_hash) != normalize_hash(stored_hash):
+            raise SystemExit(f"Payload line {idx} payload hash does not match receipt attestation")
 print("Pre-run invariants satisfied.")
 PY
 
