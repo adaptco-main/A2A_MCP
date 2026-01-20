@@ -15,6 +15,14 @@ if [[ ! -f "${CANONICAL_FILE}" ]]; then
   exit 1
 fi
 
+if ! python3 - <<'PYEOF'
+import nacl  # noqa: F401
+PYEOF
+then
+  echo "PyNaCl is required (install with: pip install pynacl)" >&2
+  exit 1
+fi
+
 HASH=$(sha256sum "${CANONICAL_FILE}" | cut -d' ' -f1)
 python3 - "$CANONICAL_FILE" "$MAKER_KEY" >"${SIGNATURE_FILE}" <<'PYEOF'
 import base64

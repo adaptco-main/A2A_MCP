@@ -332,5 +332,8 @@ keep the run aligned with ZERO-DRIFT and MIAP controls:
    `ledger://cie_v1/neutrality_receipts.jsonl` prior to execution.
 4. **Freeze the routing order** – verify that SNI → SCS ordering matches
    `audit_inputs.validation_chain` and the CLI profile used for the run.
-5. **Schedule the audit harness** – execute the `cie_v1_audit` CLI profile after
+5. **Register the bundle** – append the new input package under
+   `manifests/content_integrity_eval.json#audit_inputs.packages` so the audit run
+   is bound to the corridor manifest.
+6. **Schedule the audit harness** – execute the `cie_v1_audit` CLI profile after
    the bundle is approved and the ledger entries are sealed.
