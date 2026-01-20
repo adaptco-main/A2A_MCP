@@ -1,5 +1,7 @@
 # world-os-codex
 
+[![.github/workflows/ci.yml](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml)
+
 Monorepo delivering the Synapse digital twin, Chrono-Sync protocol, Asset Forge, and World OS kernel. Everything runs with one Docker compose stack.
 
 ## Commands
@@ -27,6 +29,7 @@ Monorepo delivering the Synapse digital twin, Chrono-Sync protocol, Asset Forge,
 - Game actions are validated against JSON Schemas and reduced through the kernel.
 - Chrono-Sync issues signed challenges before minting TFTs on the local chain.
 - Asset Forge requests enqueue jobs persisted to Postgres with Redis cache via BullMQ.
+- Kernel reductions are CI-gated for determinism and schema compliance.
 
 ### Setup
 1. Copy `.env.example` to `.env` if you need overrides.
