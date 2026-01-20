@@ -99,6 +99,9 @@ if not input_path.exists():
 if input_path.is_dir():
     ndjson_path = input_path / "payloads.ndjson"
     jsonl_path = input_path / "payloads.jsonl"
+    metadata_path = input_path / "metadata.json"
+    if not metadata_path.exists():
+        raise SystemExit(f"Missing metadata.json in {input_path}")
     if ndjson_path.exists():
         payloads_path = ndjson_path
     elif jsonl_path.exists():
@@ -138,6 +141,9 @@ output_dir = Path(os.environ["TMP_DIR"])
 if input_path.is_dir():
     ndjson_path = input_path / "payloads.ndjson"
     jsonl_path = input_path / "payloads.jsonl"
+    metadata_path = input_path / "metadata.json"
+    if not metadata_path.exists():
+        raise SystemExit(f"Missing metadata.json in {input_path}")
     if ndjson_path.exists():
         payloads_path = ndjson_path
     elif jsonl_path.exists():
