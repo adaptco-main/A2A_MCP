@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 --profile <profile_id> --input <payloads.jsonl>" >&2
+  echo "Usage: $0 --profile <profile_id> --input <payloads.jsonl|payloads.ndjson|input_dir>" >&2
   exit 1
 }
 
@@ -74,7 +74,7 @@ import json
 import os
 from pathlib import Path
 
-payloads_path = Path(os.environ["INPUT"])
+input_path = Path(os.environ["INPUT"])
 manifest_path = Path(os.environ["MANIFEST_PATH"])
 routing_path = Path("registry/routing/routing_policy.v1.json")
 
@@ -93,8 +93,20 @@ if cie_chain.get("routing_order") != ["synthetic.noise.injector.v1", "synthetic.
 if cie_chain.get("fallbacks"):
     raise SystemExit("Routing policy contains fallbacks for content.integrity.eval.v1")
 
-if not payloads_path.exists():
-    raise SystemExit(f"Missing input payloads: {payloads_path}")
+if not input_path.exists():
+    raise SystemExit(f"Missing input payloads: {input_path}")
+
+if input_path.is_dir():
+    ndjson_path = input_path / "payloads.ndjson"
+    jsonl_path = input_path / "payloads.jsonl"
+    if ndjson_path.exists():
+        payloads_path = ndjson_path
+    elif jsonl_path.exists():
+        payloads_path = jsonl_path
+    else:
+        raise SystemExit(f"Missing payloads.ndjson or payloads.jsonl in {input_path}")
+else:
+    payloads_path = input_path
 
 for idx, line in enumerate(payloads_path.read_text().splitlines(), start=1):
     if not line.strip():
@@ -120,8 +132,20 @@ import json
 import os
 from pathlib import Path
 
-payloads_path = Path(os.environ["INPUT"])
+input_path = Path(os.environ["INPUT"])
 output_dir = Path(os.environ["TMP_DIR"])
+
+if input_path.is_dir():
+    ndjson_path = input_path / "payloads.ndjson"
+    jsonl_path = input_path / "payloads.jsonl"
+    if ndjson_path.exists():
+        payloads_path = ndjson_path
+    elif jsonl_path.exists():
+        payloads_path = jsonl_path
+    else:
+        raise SystemExit(f"Missing payloads.ndjson or payloads.jsonl in {input_path}")
+else:
+    payloads_path = input_path
 
 for idx, line in enumerate(payloads_path.read_text().splitlines(), start=1):
     if not line.strip():
