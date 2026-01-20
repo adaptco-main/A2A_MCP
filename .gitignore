@@ -99,6 +99,7 @@ openapi-diff.cache/
 ##################################
 scripts/local-*.*
 fixtures/*.json
+!fixtures/plan_release_candidate_input.json
 *.qcap
 
 # CIE smoke artifacts
