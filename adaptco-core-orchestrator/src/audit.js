@@ -71,13 +71,39 @@ function deriveArtifactId(entries, criteria) {
 
   const { capsuleId, version } = criteria;
   for (const entry of entries) {
-    if (entry.payload?.id && entry.payload?.capsule?.capsule_id === capsuleId) {
-      return entry.payload.id;
+    const payloadCapsuleId = entry.payload?.capsule?.capsule_id;
+    const payloadVersion = entry.payload?.capsule?.version || entry.payload?.version;
+    const artifactFromPayload = entry.payload?.id;
+
+    const capsuleMatch =
+      payloadCapsuleId === capsuleId ||
+      (typeof entry.capsule_id === 'string' && entry.capsule_id.startsWith(`${capsuleId}.`)) ||
+      (typeof entry.capsule_ref === 'string' && entry.capsule_ref.startsWith(`${capsuleId}.`));
+
+    if (!capsuleMatch) {
+      continue;
     }
-    if (entry.capsule_id && entry.capsule_id.startsWith(`${capsuleId}.`)) {
+
+    const versionMatch =
+      !version ||
+      payloadVersion === version ||
+      (typeof artifactFromPayload === 'string' &&
+        artifactFromPayload.startsWith(`capsule-${capsuleId}-`) &&
+        artifactFromPayload.slice(`capsule-${capsuleId}-`.length) === version) ||
+      entry.capsule_id === `${capsuleId}.${version}` ||
+      entry.capsule_ref === `${capsuleId}.${version}`;
+
+    if (!versionMatch) {
+      continue;
+    }
+
+    if (artifactFromPayload) {
+      return artifactFromPayload;
+    }
+    if (entry.capsule_id) {
       return entry.capsule_id;
     }
-    if (entry.capsule_ref && entry.capsule_ref.startsWith(`${capsuleId}.`)) {
+    if (entry.capsule_ref) {
       return entry.capsule_ref;
     }
   }
