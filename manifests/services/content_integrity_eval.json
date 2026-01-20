@@ -17,10 +17,6 @@
       "synthetic.contradiction.synth.v1",
       "functional.block.embedding.v1"
     ],
-    "neutral_perturbation_models": [
-      "synthetic.noise.injector.v1",
-      "synthetic.contradiction.synth.v1"
-    ],
     "ingress": {
       "artifact_only": true,
       "requires_council_attestation": true,
