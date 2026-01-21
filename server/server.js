@@ -28,8 +28,8 @@ server.listen(PORT, () => {
 // console.log('WebSocket Server started on port 8080'); // Removed separate log
 
 // Path to the compiled engine executable
-// Assuming it's in ../bin/ghost-void_engine.exe
-const enginePath = path.resolve(__dirname, '../bin/ghost-void_engine.exe');
+const isWin = process.platform === 'win32';
+const enginePath = path.resolve(__dirname, `../bin/ghost-void_engine${isWin ? '.exe' : ''}`);
 const groundingReceptor = require('./grounding');
 
 wss.on('connection', (ws) => {
