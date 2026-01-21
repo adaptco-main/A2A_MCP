@@ -18,6 +18,7 @@ const engineProxy = {
     get stdin() { return global.activeEngine ? global.activeEngine.stdin : null; }
 };
 app.use('/webhook', require('./grounding')(engineProxy));
+app.use('/valuation', require('./valuation')(engineProxy));
 
 const PORT = 8080;
 server.listen(PORT, () => {
