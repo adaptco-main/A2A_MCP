@@ -229,3 +229,4 @@ export function stateHash(state: State): string {
 }
 
 export { stateSchema, actionSchema, validateState, validateAction };
+export * from "./physics";
