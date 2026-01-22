@@ -33,6 +33,8 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
    Legacy modules (`content_noise_enricher`, `feature_shift_validator`,
    `fact_stream_validator`, plus their aliases `CNE` and `FSV`) are retired and
    mapped in the manifest (`CNE`/`FSV` → SNI, `fact_stream_validator` → SCS).
+   Payloads referencing retired module IDs must be rejected at intake per
+   `manifests/content_integrity_eval.json#audit_inputs.input_contract.constraints`.
 5. **Aggregate Observability** – Telemetry restricted to the metric set defined in
    the manifest (`validation.metrics`). No per-agent state leaves the cell.
 
