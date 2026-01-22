@@ -1,532 +1,540 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  BrainCircuit,
-  ChevronRight,
-  Heart,
-  History,
-  Loader2,
-  Play,
-  ShieldAlert,
-  ShieldCheck,
-  Sparkles,
-  Terminal,
-  Zap,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * BAEK-CHEON-2026: Kinetic Manifold Prototype v0.4
+ * BAEK-CHEON-2026: Kinetic Manifold Prototype v0.6
  * INTEGRATION: Gemini API Neural Audit & Strategy
  * ARCHITECTURE: MVP (Model-View-Presenter)
  */
 
-const API_KEY = "";
+type IconName =
+  | "Leaf"
+  | "Shield"
+  | "Heart"
+  | "Zap"
+  | "Play"
+  | "Pause"
+  | "RotateCcw"
+  | "ShieldAlert"
+  | "Sparkles"
+  | "MessageSquare"
+  | "Database";
 
-type PlayerState = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  vy: number;
-  isJumping: boolean;
-  currentHealth: number;
-  maxHealth: number;
-  minHealth: number;
+type IconProps = {
+  name: IconName;
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
 };
 
-type EnvironmentState = {
-  obstacles: Array<{ x: number; y: number; width: number; height: number }>;
-  speed: number;
-  score: number;
+const Icon = ({ name, size = 24, className = "", style }: IconProps) => {
+  const iconPaths: Record<IconName, JSX.Element> = {
+    Leaf: (
+      <>
+        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.5 1 9.8a7 7 0 0 1-9 8.2Z" />
+        <path d="M11 20v-5a4 4 0 0 1 4-4h5" />
+      </>
+    ),
+    Shield: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+    Heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
+    Zap: <path d="M13 2 L3 14 L12 14 L11 22 L21 10 L12 10 L13 2 Z" />,
+    Play: <polygon points="5 3 19 12 5 21 5 3" />,
+    Pause: (
+      <>
+        <rect x="6" y="4" width="4" height="16" />
+        <rect x="14" y="4" width="4" height="16" />
+      </>
+    ),
+    RotateCcw: (
+      <>
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+      </>
+    ),
+    ShieldAlert: (
+      <>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </>
+    ),
+    Sparkles: (
+      <>
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+        <path d="M5 3v4" />
+        <path d="M19 17v4" />
+        <path d="M3 5h4" />
+        <path d="M17 19h4" />
+      </>
+    ),
+    MessageSquare: <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />,
+    Database: (
+      <>
+        <ellipse cx="12" cy="5" rx="9" ry="3" />
+        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+        <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      style={style}
+    >
+      {iconPaths[name]}
+    </svg>
+  );
 };
 
-type LedgerEntry = {
-  type: "JUMP" | "DAMAGE" | "HEAL" | "RESTORE";
-  timestamp: number;
-  amount: number;
-  actor: string;
-  hash: string;
+const ENTITY_CAPACITY = 32;
+const STRIDE = 8; // [x, y, type, state, health, vx, vy, timer]
+
+const TYPE_SPROUTLING = 1;
+const TYPE_TRAP = 2;
+const TYPE_THREAT = 3;
+
+const TILES = {
+  0: { name: "VOID", color: "#020617" },
+  1: { name: "MOSS_DIRT", color: "#14532d" },
+  2: { name: "CYAN_RAMP", color: "#0e7490" },
+  3: { name: "OBSIDIAN", color: "#0f172a" },
 };
 
-type ModelState = {
-  player: PlayerState;
-  environment: EnvironmentState;
-  isPaused: boolean;
-  fossilLedger: LedgerEntry[];
-  currentHash: string;
-  aiAnalysis: string | null;
-  isAiThinking: boolean;
+const INCIDENT_TABLE = {
+  RAPTOR_SURGE: { safety: -0.15, happiness: -0.1, color: "#ef4444" },
+  FROST_WILT: { happiness: -0.2, finances: -0.05, color: "#60a5fa" },
+  SPORE_BLOOM: { finances: 0.1, safety: -0.05, color: "#f59e0b" },
 };
 
-// --- MODEL: THE STATE MANIFOLD ---
-const INITIAL_STATE: ModelState = {
-  player: {
-    x: 50,
-    y: 150,
-    width: 20,
-    height: 20,
-    vy: 0,
-    isJumping: false,
-    currentHealth: 100,
-    maxHealth: 100,
-    minHealth: 0,
-  },
-  environment: { obstacles: [], speed: 2, score: 0 },
-  isPaused: true,
-  fossilLedger: [],
-  currentHash: "0x0000000000000000",
-  aiAnalysis: null,
-  isAiThinking: false,
+type IncidentKey = keyof typeof INCIDENT_TABLE | null;
+
+type CapsuleEntry = {
+  tick: number;
+  type: string;
+  data: Record<string, number>;
 };
 
-// --- STABLE STRINGIFY LOGIC ---
-const stableStringify = (data: unknown): string => {
-  if (data === null) return "null";
-  if (typeof data === "number") {
-    if (!Number.isFinite(data)) return "0";
-    return JSON.stringify(data);
-  }
-  if (typeof data === "string" || typeof data === "boolean") return JSON.stringify(data);
-  if (Array.isArray(data)) return `[${data.map(stableStringify).join(",")}]`;
-  if (typeof data === "object") {
-    const record = data as Record<string, unknown>;
-    return `{${Object.keys(record)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`)
-      .join(",")}}`;
-  }
-  return "null";
-};
+const apiKey = "";
 
-const generateHash = async (text: string) => {
-  const msgUint8 = new TextEncoder().encode(text);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return `0x${hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")}`;
-};
+const callGemini = async (
+  metrics: { finances: string; safety: string; happiness: string },
+  incident: IncidentKey,
+) => {
+  const systemPrompt = `You are the MoE Strategic Coach for Jurassic Pixels. Analyze the current 2.5D simulation state. \n            Metrics: Finances: ${metrics.finances}, Safety: ${metrics.safety}, Happiness: ${metrics.happiness}. \n            Active Incident: ${incident || "NONE"}. \n            Provide a 1-sentence chunky strategy tip in a Bubble-Bobble aesthetic tone.`;
 
-// --- GEMINI API INTEGRATION ---
-const fetchAiAnalysis = async (ledger: LedgerEntry[], currentScore: number) => {
-  const prompt = `You are the Chief Auditor of the Merkle Forest.\n  Analyze this kinetic manifold audit ledger: ${JSON.stringify(
-    ledger,
-  )}.\n  Current Score: ${currentScore}.\n  Provide a concise (2-3 sentences), high-level strategic assessment and a creative "narrative audit" status.\n  Keep it technical yet immersive in the BAEK-CHEON context.`;
-
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
   const payload = {
-    contents: [{ parts: [{ text: prompt }] }],
-    systemInstruction: {
-      parts: [
-        { text: "Respond as a futuristic, slightly clinical AI auditor overseeing a physics manifold." },
-      ],
-    },
+    contents: [{ parts: [{ text: "Provide strategic audit." }] }],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
   };
 
-  const callApi = async (attempt = 0): Promise<string | undefined> => {
+  const backoff = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  let delay = 1000;
+  for (let i = 0; i < 5; i += 1) {
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
-
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       if (!response.ok) throw new Error("API_ERROR");
-      const result = await response.json();
-      return result.candidates?.[0]?.content?.parts?.[0]?.text;
-    } catch (error) {
-      if (attempt < 5) {
-        const delay = Math.pow(2, attempt) * 1000;
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        return callApi(attempt + 1);
-      }
-      throw error;
+      const data = await response.json();
+      return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    } catch {
+      if (i === 4) return "NEURAL_LINK_ERR: Check connectivity.";
+      await backoff(delay);
+      delay *= 2;
     }
-  };
-
-  return callApi();
+  }
+  return "";
 };
 
-// --- VIEW: THE KINETIC VIEWPORT & HEALTH SLIDER ---
-const GameView = ({ model, onInput }: { model: ModelState; onInput: HandleInput }) => {
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+export default function JurassicPixels() {
+  const [buffer] = useState(() => new Float32Array(10 + ENTITY_CAPACITY * STRIDE));
+  const [tick, setTick] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [activeIncident, setActiveIncident] = useState<IncidentKey>(null);
+  const [aiTip, setAiTip] = useState("Initializing MoE Council...");
+  const [capsule, setCapsule] = useState<CapsuleEntry[]>([]);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  useEffect(() => {
+  const spawnEntity = useCallback(
+    (type: number, x?: number, y?: number) => {
+      for (let i = 0; i < ENTITY_CAPACITY; i += 1) {
+        const ptr = 10 + i * STRIDE;
+        if (buffer[ptr + 2] === 0) {
+          buffer[ptr] = x ?? Math.random() * 400;
+          buffer[ptr + 1] = y ?? Math.random() * 300 + 50;
+          buffer[ptr + 2] = type;
+          buffer[ptr + 3] = 1;
+          buffer[ptr + 4] = 1.0;
+          buffer[ptr + 5] = (Math.random() - 0.5) * 2;
+          buffer[ptr + 6] = (Math.random() - 0.5) * 2;
+          buffer[ptr + 7] = 0;
+          break;
+        }
+      }
+    },
+    [buffer],
+  );
+
+  const logInteraction = useCallback(
+    (type: string, data: Record<string, number>) => {
+      setCapsule((prev) => [...prev, { tick: buffer[0], type, data }].slice(-20));
+    },
+    [buffer],
+  );
+
+  const emitBubble = useCallback(
+    (event: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      spawnEntity(TYPE_TRAP, x, y);
+      logInteraction("EMIT_BUBBLE", { x, y });
+    },
+    [spawnEntity, logInteraction],
+  );
+
+  const updateAiCoaching = useCallback(async () => {
+    const metrics = {
+      finances: buffer[4].toFixed(0),
+      safety: buffer[2].toFixed(2),
+      happiness: buffer[3].toFixed(2),
+    };
+    const response = await callGemini(metrics, activeIncident);
+    setAiTip(response);
+  }, [activeIncident, buffer]);
+
+  const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = "#FDFCFB";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, 600, 400);
 
-    // Draw Ground
-    ctx.strokeStyle = "#E5E7EB";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, 170);
-    ctx.lineTo(canvas.width, 170);
-    ctx.stroke();
-
-    // Draw Player
-    ctx.fillStyle = model.player.currentHealth < 30 ? "#EF4444" : "#2563EB";
-    ctx.fillRect(model.player.x, model.player.y, model.player.width, model.player.height);
-
-    // Draw Obstacles
-    ctx.fillStyle = "#D97706";
-    model.environment.obstacles.forEach((obs) => {
-      ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-    });
-
-    // Draw HUD
-    ctx.fillStyle = "#1C1C1E";
-    ctx.font = "bold 10px monospace";
-    ctx.fillText(`SCORE: ${Math.floor(model.environment.score)}`, 10, 20);
-  }, [model]);
-
-  return (
-    <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-lg border border-stone-200 bg-white shadow-inner">
-        <canvas
-          ref={canvasRef}
-          width={400}
-          height={200}
-          className="h-auto w-full cursor-pointer"
-          onClick={() => onInput("JUMP")}
-        />
-        {model.isPaused && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-sm">
-            <div className="text-center">
-              <p className="mb-2 text-xs font-black uppercase tracking-widest text-blue-600">
-                Manifold Idle
-              </p>
-              <button
-                onClick={() => onInput("TOGGLE_PAUSE")}
-                className="rounded-full bg-blue-600 p-3 text-white shadow-lg transition-all hover:bg-blue-700"
-              >
-                <Play className="h-5 w-5 fill-current" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-2 rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 text-[10px] font-bold uppercase text-stone-500">
-            <Heart
-              className={`h-3 w-3 ${
-                model.player.currentHealth < 30 ? "animate-pulse text-red-500" : "text-blue-500"
-              }`}
-            />
-            Health Manifold Status
-          </span>
-          <span className="text-xs font-black text-stone-600">{model.player.currentHealth}%</span>
-        </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-stone-100">
-          <div
-            className={`h-full transition-all duration-300 ${
-              model.player.currentHealth < 30 ? "bg-red-500" : "bg-blue-600"
-            }`}
-            style={{ width: `${(model.player.currentHealth / model.player.maxHealth) * 100}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-type CommandType = "TOGGLE_PAUSE" | "JUMP" | "DAMAGE" | "HEAL" | "RESTORE";
-
-type HandleInput = (type: CommandType, amount?: number) => Promise<void>;
-
-// --- PRESENTER: THE KINETIC ENGINE ---
-export default function JurassicPixels() {
-  const [model, setModel] = useState(INITIAL_STATE);
-  const [log, setLog] = useState<string[]>([
-    "[SYSTEM]: Health Manifold Sync'd.",
-    "[SYSTEM]: Awaiting Agent intent.",
-  ]);
-  const requestRef = useRef<number>();
-
-  const addLog = (msg: string) => setLog((prev) => [msg, ...prev].slice(0, 8));
-
-  const runAiAudit = async () => {
-    if (model.fossilLedger.length === 0) {
-      addLog("[AI]: Insufficient data for neural audit.");
-      return;
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 600; i += 40) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, 400);
+      ctx.stroke();
     }
 
-    setModel((prev) => ({ ...prev, isAiThinking: true, aiAnalysis: null }));
-    try {
-      const analysis = await fetchAiAnalysis(model.fossilLedger, model.environment.score);
-      setModel((prev) => ({ ...prev, isAiThinking: false, aiAnalysis: analysis ?? null }));
-      addLog("[AI]: Neural audit fossilized.");
-    } catch {
-      setModel((prev) => ({ ...prev, isAiThinking: false }));
-      addLog("[ERROR]: AI integration manifold failure.");
+    for (let i = 0; i < ENTITY_CAPACITY; i += 1) {
+      const ptr = 10 + i * STRIDE;
+      const type = buffer[ptr + 2];
+      if (type === 0) continue;
+
+      const x = buffer[ptr];
+      const y = buffer[ptr + 1];
+
+      if (type === TYPE_SPROUTLING) {
+        ctx.fillStyle = "#22c55e";
+        ctx.fillRect(x - 10, y - 10, 20, 20);
+        ctx.strokeStyle = "#fff";
+        ctx.strokeRect(x - 10, y - 10, 20, 20);
+      } else if (type === TYPE_TRAP) {
+        ctx.beginPath();
+        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(6, 182, 212, 0.3)";
+        ctx.fill();
+        ctx.strokeStyle = "#06b6d4";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else if (type === TYPE_THREAT) {
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.moveTo(x, y - 15);
+        ctx.lineTo(x + 15, y + 15);
+        ctx.lineTo(x - 15, y + 15);
+        ctx.fill();
+      }
     }
-  };
+  }, [buffer]);
 
-  const handleInput: HandleInput = async (type, amount = 0) => {
-    if (type === "TOGGLE_PAUSE") {
-      setModel((prev) => ({ ...prev, isPaused: !prev.isPaused }));
-      return;
-    }
+  const simulate = useCallback(() => {
+    buffer[0] += 1;
 
-    if (model.isPaused) return;
+    for (let i = 0; i < ENTITY_CAPACITY; i += 1) {
+      const ptr = 10 + i * STRIDE;
+      if (buffer[ptr + 2] === 0) continue;
 
-    const command = {
-      type,
-      timestamp: Date.now(),
-      amount,
-      actor: "AGENT_01",
-    };
+      buffer[ptr] += buffer[ptr + 5];
+      buffer[ptr + 1] += buffer[ptr + 6];
 
-    const canonical = stableStringify(command);
-    const hash = await generateHash(canonical);
+      if (buffer[ptr] < 20 || buffer[ptr] > 580) buffer[ptr + 5] *= -1;
+      if (buffer[ptr + 1] < 20 || buffer[ptr + 1] > 380) buffer[ptr + 6] *= -1;
 
-    setModel((prev) => {
-      const nextPlayer = { ...prev.player };
+      if (buffer[ptr + 2] === TYPE_TRAP) {
+        buffer[ptr + 7] += 1;
+        if (buffer[ptr + 7] > 180) buffer[ptr + 2] = 0;
 
-      if (type === "JUMP" && !nextPlayer.isJumping) {
-        nextPlayer.vy = -8;
-        nextPlayer.isJumping = true;
-      }
-
-      if (type === "DAMAGE") {
-        nextPlayer.currentHealth = Math.max(prev.player.minHealth, prev.player.currentHealth - amount);
-      }
-      if (type === "HEAL") {
-        nextPlayer.currentHealth = Math.min(prev.player.maxHealth, prev.player.currentHealth + amount);
-      }
-      if (type === "RESTORE") {
-        nextPlayer.currentHealth = prev.player.maxHealth;
-      }
-
-      const collisionState = nextPlayer.currentHealth <= 0;
-
-      return {
-        ...prev,
-        isPaused: collisionState,
-        player: nextPlayer,
-        fossilLedger: [...prev.fossilLedger, { ...command, hash }].slice(-10),
-        currentHash: hash,
-      };
-    });
-
-    addLog(`[COMMAND]: ${type} processed. Hash: ${hash.slice(0, 8)}...`);
-  };
-
-  const update = () => {
-    if (!model.isPaused) {
-      setModel((prev) => {
-        const { player, environment } = prev;
-
-        let newVy = player.vy + 0.4;
-        let newY = player.y + newVy;
-        let jumping = true;
-
-        if (newY > 150) {
-          newY = 150;
-          newVy = 0;
-          jumping = false;
+        for (let j = 0; j < ENTITY_CAPACITY; j += 1) {
+          const target = 10 + j * STRIDE;
+          if (buffer[target + 2] === TYPE_THREAT) {
+            const dx = buffer[ptr] - buffer[target];
+            const dy = buffer[ptr + 1] - buffer[target + 1];
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 30) {
+              buffer[target + 2] = 0;
+              buffer[ptr + 2] = 0;
+              buffer[1] += 50;
+            }
+          }
         }
-
-        const newObstacles = environment.obstacles
-          .map((o) => ({ ...o, x: o.x - environment.speed }))
-          .filter((o) => o.x > -20);
-
-        if (Math.random() < 0.01 && newObstacles.length < 2) {
-          newObstacles.push({ x: 400, y: 150, width: 15, height: 20 });
-        }
-
-        const hit = newObstacles.some(
-          (obs) =>
-            player.x < obs.x + obs.width &&
-            player.x + player.width > obs.x &&
-            player.y < obs.y + obs.height &&
-            player.y + player.height > obs.y,
-        );
-
-        if (hit) {
-          void handleInput("DAMAGE", 10);
-        }
-
-        return {
-          ...prev,
-          player: { ...player, y: newY, vy: newVy, isJumping: jumping },
-          environment: {
-            ...environment,
-            obstacles: newObstacles,
-            score: environment.score + 0.1,
-            speed: 2 + environment.score / 100,
-          },
-        };
-      });
+      }
     }
-    requestRef.current = requestAnimationFrame(update);
-  };
+
+    if (buffer[0] % 600 === 0) {
+      const keys = Object.keys(INCIDENT_TABLE) as Array<keyof typeof INCIDENT_TABLE>;
+      const choice = keys[Math.floor(Math.random() * keys.length)] ?? "RAPTOR_SURGE";
+      setActiveIncident(choice);
+      spawnEntity(TYPE_THREAT);
+    }
+
+    if (buffer[0] % 3000 === 0) {
+      void updateAiCoaching();
+    }
+
+    setTick(buffer[0]);
+  }, [buffer, spawnEntity, updateAiCoaching]);
 
   useEffect(() => {
-    requestRef.current = requestAnimationFrame(update);
-    return () => {
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
+    buffer[2] = 0.85;
+    buffer[3] = 0.9;
+    buffer[4] = 1000;
+
+    for (let i = 0; i < 6; i += 1) {
+      spawnEntity(TYPE_SPROUTLING);
+    }
+  }, [buffer, spawnEntity]);
+
+  useEffect(() => {
+    let frame = 0;
+    const loop = () => {
+      if (isPlaying) {
+        simulate();
+        render();
       }
+      frame = requestAnimationFrame(loop);
     };
-  }, [model.isPaused]);
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  }, [isPlaying, render, simulate, activeIncident]);
+
+  const metrics = useMemo(
+    () => ({
+      safety: clamp(buffer[2] * 100, 0, 100).toFixed(0),
+      happiness: clamp(buffer[3] * 100, 0, 100).toFixed(0),
+      finances: buffer[4].toFixed(0),
+    }),
+    [buffer, tick],
+  );
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 font-mono text-slate-900 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <header className="flex flex-col items-start justify-between gap-4 border-b border-stone-200 pb-6 md:flex-row md:items-center">
+    <div className="flex min-h-screen flex-col gap-6 p-4 md:p-8">
+      <div className="flex flex-col items-start justify-between gap-4 rounded-[2rem] border border-slate-800 bg-slate-900/50 p-6 shadow-2xl md:flex-row md:items-center">
+        <div className="flex items-center gap-4">
+          <div className="pixel-border rounded-2xl bg-green-600 p-3">
+            <Icon name="Leaf" className="text-white" />
+          </div>
           <div>
-            <h1 className="flex items-center gap-3 text-2xl font-black text-blue-600">
-              <Zap className="h-8 w-8 fill-current" />
-              JURASSIC PIXELS: KINETIC MANIFOLD
+            <h1 className="text-2xl font-black italic uppercase tracking-tighter">
+              Jurassic Pixels <span className="text-green-500">v0.6</span>
             </h1>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.3em] text-stone-500">
-              Axiomatic Runtime v0.4 | Gemini AI Integration
+            <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+              Axiomatic Deterministic Runtime
             </p>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleInput("HEAL", 20)}
-              className="rounded bg-white px-4 py-2 text-[10px] font-black uppercase text-emerald-600 shadow-sm transition-all hover:bg-emerald-50"
-            >
-              HEAL (20)
-            </button>
-            <button
-              onClick={() => handleInput("RESTORE")}
-              className="rounded bg-white px-4 py-2 text-[10px] font-black uppercase text-blue-600 shadow-sm transition-all hover:bg-blue-50"
-            >
-              RESTORE
-            </button>
+        </div>
+
+        <div className="flex gap-6">
+          <div className="text-center">
+            <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Safety</span>
+            <div className="flex items-center gap-2">
+              <Icon name="Shield" size={14} className="text-blue-500" />
+              <span className="text-lg font-black text-blue-400">{metrics.safety}%</span>
+            </div>
           </div>
-        </header>
+          <div className="border-l border-slate-800 pl-6 text-center">
+            <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">
+              Happiness
+            </span>
+            <div className="flex items-center gap-2">
+              <Icon name="Heart" size={14} className="text-red-500" />
+              <span className="text-lg font-black text-red-400">{metrics.happiness}%</span>
+            </div>
+          </div>
+          <div className="border-l border-slate-800 pl-6 text-center">
+            <span className="mb-1 block text-[10px] font-black uppercase text-slate-500">Finances</span>
+            <div className="flex items-center gap-2">
+              <Icon name="Zap" size={14} className="text-yellow-500" />
+              <span className="text-lg font-black text-yellow-400">${metrics.finances}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className="space-y-6 lg:col-span-7">
-            <GameView model={model} onInput={handleInput} />
+      <div className="grid flex-grow grid-cols-1 gap-6 overflow-hidden lg:grid-cols-12">
+        <div className="flex flex-col space-y-6 lg:col-span-3">
+          <section className="group relative overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-900 p-6 shadow-xl">
+            <div className="absolute -right-4 -top-4 opacity-5 transition-transform duration-1000 group-hover:rotate-12">
+              <Icon name="Sparkles" size={120} />
+            </div>
+            <h3 className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-400">
+              <Icon name="MessageSquare" size={14} /> Neural MoE Coaching
+            </h3>
+            <div className="flex min-h-[100px] items-center rounded-2xl border border-purple-500/20 bg-slate-950 p-4">
+              <p className="text-xs font-medium italic leading-relaxed text-slate-300">"{aiTip}"</p>
+            </div>
+            <button
+              onClick={updateAiCoaching}
+              className="mt-4 w-full rounded-xl border border-purple-500/30 bg-purple-600/10 py-2 text-[10px] font-bold uppercase tracking-widest text-purple-400 transition-all hover:bg-purple-600 hover:text-white"
+            >
+              Force Logic Refresh
+            </button>
+          </section>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-3 rounded-lg border border-stone-100 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-[10px] font-bold uppercase text-stone-500">
-                    <BrainCircuit className="h-3 w-3 text-fuchsia-500" />
-                    Neural Audit Registry
-                  </span>
-                  <button
-                    disabled={model.isAiThinking}
-                    onClick={runAiAudit}
-                    className="flex items-center gap-1 rounded bg-fuchsia-100 px-2 py-1 text-[8px] font-bold text-fuchsia-600 hover:bg-fuchsia-200 disabled:opacity-50"
-                  >
-                    {model.isAiThinking ? (
-                      <Loader2 className="h-2 w-2 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-2 w-2" />
-                    )}
-                    ✨ GENERATE AUDIT
-                  </button>
+          <section className="flex flex-grow flex-col overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-900/50 p-6">
+            <h3 className="mb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <Icon name="Database" size={14} /> Capsule Event Log
+            </h3>
+            <div className="custom-scrollbar flex-grow space-y-2 overflow-y-auto pr-2">
+              {capsule.map((entry, index) => (
+                <div
+                  key={`${entry.tick}-${index}`}
+                  className="flex justify-between rounded-lg border border-white/5 bg-black/40 p-2 font-mono text-[9px]"
+                >
+                  <span className="text-slate-600">T-{entry.tick}</span>
+                  <span className="text-green-500">{entry.type}</span>
                 </div>
-                <div className="min-h-[60px] rounded border border-stone-100 bg-stone-50 p-3 text-[10px] italic leading-relaxed text-stone-600">
-                  {model.aiAnalysis ||
-                    (model.isAiThinking
-                      ? "Auditing temporal commands..."
-                      : "Awaiting neural analysis request...")}
-                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="flex flex-col gap-4 lg:col-span-6">
+          <div className="group relative overflow-hidden rounded-[3rem] border-4 border-slate-800 bg-black shadow-2xl">
+            <canvas
+              ref={canvasRef}
+              width={600}
+              height={400}
+              onClick={emitBubble}
+              className="h-full w-full"
+            />
+            <div className="pointer-events-none absolute left-6 top-6 flex flex-col gap-2">
+              <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-1.5 backdrop-blur">
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-white">
+                  Live: {activeIncident || "IDLE"}
+                </span>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border border-stone-100 bg-white p-4 text-center shadow-sm">
-                  <p className="mb-1 text-[8px] font-bold uppercase text-stone-400">Health_Axis</p>
-                  <p
-                    className={`text-lg font-black ${
-                      model.player.currentHealth < 30 ? "text-red-500" : "text-blue-600"
-                    }`}
-                  >
-                    {model.player.currentHealth}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-stone-100 bg-white p-4 text-center shadow-sm">
-                  <p className="mb-1 text-[8px] font-bold uppercase text-stone-400">Score_Manifold</p>
-                  <p className="text-lg font-black text-amber-600">
-                    {Math.floor(model.environment.score)}
-                  </p>
-                </div>
+            </div>
+            <div className="pointer-events-none absolute bottom-8 right-8">
+              <div className="text-right">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Score</p>
+                <p className="text-4xl font-black italic leading-none text-white">
+                  {(buffer[1] || 0).toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-6 lg:col-span-5">
-            <div className="flex h-[280px] flex-col overflow-hidden rounded-xl bg-stone-900 text-stone-300 shadow-2xl">
-              <div className="flex items-center justify-between bg-stone-800 px-4 py-2">
-                <span className="flex items-center gap-2 text-[10px] font-bold uppercase">
-                  <Terminal className="h-3 w-3 text-emerald-400" />
-                  Kinetic Ledger (Fossilized)
-                </span>
-                <span className="text-[8px] text-stone-500">ASIL_D_SYNC</span>
-              </div>
-              <div className="flex-1 space-y-2 overflow-y-auto p-4 font-mono text-[10px]">
-                {log.map((entry, i) => (
-                  <div key={i} className="flex gap-2 border-b border-stone-800/50 pb-1">
-                    <ChevronRight className="mt-1 h-2 w-2 text-stone-600" />
-                    <span>{entry}</span>
-                  </div>
-                ))}
-              </div>
+          <div className="flex items-center justify-between rounded-3xl border border-slate-800 bg-slate-900/50 p-4">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsPlaying((prev) => !prev)}
+                className="rounded-xl bg-slate-800 p-3 transition-colors hover:bg-slate-700"
+              >
+                {isPlaying ? <Icon name="Pause" size={18} /> : <Icon name="Play" size={18} />}
+              </button>
+              <button
+                className="rounded-xl bg-slate-800 p-3 transition-colors hover:bg-slate-700"
+                onClick={() => window.location.reload()}
+              >
+                <Icon name="RotateCcw" size={18} />
+              </button>
             </div>
-
-            <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-              <div className="border-b border-stone-200 bg-stone-50 px-4 py-2">
-                <span className="flex items-center gap-2 text-[10px] font-bold uppercase text-stone-500">
-                  <History className="h-3 w-3" />
-                  Health Intent Registry
-                </span>
-              </div>
-              <div className="max-h-[180px] space-y-2 overflow-y-auto p-4">
-                {model.fossilLedger.length === 0 ? (
-                  <p className="text-[10px] italic text-stone-400">Awaiting intent...</p>
-                ) : (
-                  model.fossilLedger
-                    .slice()
-                    .reverse()
-                    .map((cmd, i) => (
-                      <div
-                        key={`${cmd.hash}-${i}`}
-                        className="mb-1 flex items-center justify-between rounded border border-stone-100 bg-stone-50 p-2"
-                      >
-                        <div className="flex flex-col">
-                          <span
-                            className={`text-[10px] font-black ${
-                              cmd.type === "DAMAGE" ? "text-red-500" : "text-blue-600"
-                            }`}
-                          >
-                            {cmd.type} {cmd.amount > 0 ? `(${cmd.amount})` : ""}
-                          </span>
-                          <span className="text-[8px] font-mono text-stone-400">
-                            {cmd.hash.slice(0, 16)}...
-                          </span>
-                        </div>
-                        <ShieldCheck className="h-3 w-3 text-emerald-500" />
-                      </div>
-                    ))
-                )}
-              </div>
+            <div className="text-right font-mono text-[10px] text-slate-500">
+              VECTOR_TICK: {tick.toString().padStart(8, "0")}
             </div>
           </div>
         </div>
 
-        <footer className="border-t border-stone-100 py-12 text-center">
-          <p className="mb-4 text-[10px] uppercase tracking-[0.4em] text-stone-400">
-            Axiom: What is kinetic is measured. What is neural is analyzed.
-          </p>
-          <div className="flex items-center justify-center gap-6 opacity-40 grayscale">
-            <ShieldAlert className="h-4 w-4" />
-            <span className="text-[8px] font-black uppercase">Sovereign Vow Certified</span>
-          </div>
-        </footer>
+        <div className="space-y-6 lg:col-span-3">
+          <section className="rounded-[2rem] border border-slate-800 bg-slate-900 p-6 shadow-xl">
+            <h3 className="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Active Tileset Spec
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(TILES).map(([id, tile]) => (
+                <div
+                  key={id}
+                  className="flex items-center justify-between rounded-xl border border-white/5 bg-black/20 p-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-6 w-6 rounded-md shadow-inner"
+                      style={{ backgroundColor: tile.color }}
+                    />
+                    <span className="text-[10px] font-bold text-slate-300">{tile.name}</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-slate-600">v1.0</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-slate-800 bg-slate-900 p-6 shadow-xl">
+            <h3 className="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Threat Table
+            </h3>
+            <div className="space-y-4">
+              {Object.entries(INCIDENT_TABLE).map(([key, data]) => (
+                <div
+                  key={key}
+                  className="group relative overflow-hidden rounded-2xl border border-white/5 bg-black/40 p-3"
+                >
+                  <div className="relative z-10 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase text-white">
+                      {key.replace("_", " ")}
+                    </span>
+                    <Icon name="ShieldAlert" size={14} style={{ color: data.color }} />
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    {Object.entries(data).map(([metric, value]) =>
+                      metric !== "color" ? (
+                        <span key={metric} className="text-[8px] font-bold uppercase text-slate-600">
+                          {metric}: {value}
+                        </span>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
       </div>
+
+      <footer className="mt-auto text-center text-[10px] font-black uppercase tracking-[0.5em] text-slate-700">
+        Caretaker Protocol // 211,734 Vector Space // Bath House Simulations
+      </footer>
     </div>
   );
 }
