@@ -37,7 +37,22 @@ def collect_content_sources(manifest: dict) -> list:
 
 def collect_routing_map(manifest: dict) -> dict:
     profile = manifest.get("input_profile", {})
-    return profile.get("routing", {})
+    routing = profile.get("routing", {})
+    if not isinstance(routing, dict):
+        return {}
+
+    # Allow either legacy top-level payload_format keys or the nested routing.by_format map.
+    routing_map = {}
+    by_format = routing.get("by_format")
+    if isinstance(by_format, dict):
+        routing_map.update(by_format)
+
+    for key, value in routing.items():
+        if key == "by_format":
+            continue
+        routing_map.setdefault(key, value)
+
+    return routing_map
 
 
 def build_log_entry(
