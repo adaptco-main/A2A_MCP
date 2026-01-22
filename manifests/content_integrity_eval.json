@@ -38,6 +38,14 @@
             "json"
         ],
         "routing": {
+            "text": [
+                "synthetic.noise.injector.v1",
+                "synthetic.contradiction.synth.v1"
+            ],
+            "json": [
+                "synthetic.noise.injector.v1",
+                "synthetic.contradiction.synth.v1"
+            ],
             "by_format": {
                 "text": [
                     "synthetic.noise.injector.v1",
