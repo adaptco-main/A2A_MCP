@@ -17,6 +17,12 @@ conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
 - **Excluded** – Antagonist, memetic, or behavioral-influence models; any
   scenario touching personal data or unsourced claims.
 
+**Next operational step** – Yes, define the inputs for the first official
+CIE-V1 audit run. Draft the audit payloads under `inputs/cie_v1_audit/`, capture
+council attestation IDs, and register the bundle in
+`manifests/content_integrity_eval.json#audit_inputs.packages` before scheduling
+the `cie_v1_audit` profile.
+
 ## 2. Core Safeguards
 
 1. **Synthetic Agents Only** – Parameterized templates; personalization disabled.
