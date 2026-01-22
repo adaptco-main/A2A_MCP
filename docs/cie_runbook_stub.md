@@ -1,55 +1,221 @@
-The error you are seeing occurs because **Python 3.7** reached its end-of-life (EOL) in June 2023. Consequently, it is being phased out of the hosted tool caches for newer GitHub Actions runner images (like `ubuntu-latest`, which is now `ubuntu-22.04` or `ubuntu-24.04`).
+# 1️⃣ Public Documentation Rewrite (Docs-portal ready)
 
-Based on the files you provided, there are two primary reasons why this is failing and how to fix it:
+## Q.Bot (Agent Starter Pack)
 
-### 1. Project Inconsistency
+Q.Bot is a Python-based **agent starter pack** that helps teams build, deploy, and operate production-ready GenAI agents on Google Cloud.
 
-Your `pyproject.toml` explicitly states:
-
-```toml
-[project]
-requires-python = ">=3.10"
-
-```
-
-You are attempting to set up a CI environment with **Python 3.7**, which contradicts your own project requirements. Your code uses modern features (like `from __future__ import annotations` and newer typing syntax) that perform best on Python 3.10+.
-
-### 2. Runner Image Mismatch
-
-Looking at the `versions-manifest.json` data you provided, notice that for Python 3.7.17, there are binaries for `linux-22.04`, but **none** for `linux-24.04`. If your workflow is using `ubuntu-latest`, it is likely trying to run on an environment where 3.7 is no longer supported or available.
+It provides opinionated templates, infrastructure, and tooling so you can focus on **agent logic**, not platform setup.
 
 ---
 
-### The Fix: Update your Workflow File
+## What You Get
 
-You should update your GitHub Actions YAML file (likely located in `.github/workflows/`) to match your project's `pyproject.toml` specification.
+**From prototype to production, out of the box:**
 
-**Change this:**
+* Pre-built agent templates (ReAct, RAG, multi-agent, real-time)
+* Production-ready infrastructure (CI/CD, observability, security)
+* Local development + cloud deployment workflows
+* Extensible templates you can customize to your needs
 
-```yaml
-- uses: actions/setup-python@v3
-  with:
-    python-version: 3.7
+---
 
+## Quick Start (1 Minute)
+
+Create a new agent project using [`uv`](https://docs.astral.sh/uv/getting-started/installation/):
+
+```bash
+uvx agent-starter-pack create
 ```
 
-**To this (Recommended):**
+That’s it. You now have a working agent project with backend, frontend, and deployment configuration.
 
-```yaml
-- uses: actions/setup-python@v5 # Upgrade to v5 for better caching and support
-  with:
-    python-version: '3.10' # Matches your pyproject.toml minimum
+### Alternative: pip
 
+<details>
+<summary>Use pip instead of uv</summary>
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install --upgrade agent-starter-pack
+agent-starter-pack create
 ```
 
-### Why this is critical for your Corridor Lawset:
+</details>
 
-Your current `zapier_fossilize_ritual.py` and `validation/anchors/merkle_forest.py` rely on deterministic behavior and specific library implementations. Python 3.7's `json` and `hashlib` implementations are significantly older; using **Python 3.10 or 3.12** ensures that the **JCS-like serialization** and **domain separation** (`\x00` / `\x01`) used in your Merkle rituals remain consistent with modern security standards.
+---
 
-**Summary of Action:**
+## Enhance an Existing Agent
 
-1. Open your `.github/workflows/*.yml` file.
-2. Update `python-version` to `3.10` or `3.12`.
-3. Update `actions/setup-python@v3` to `@v5`.
+Already have an agent? Add production infrastructure without rewriting it:
 
-This will resolve the "Version not found" error and bring your CI in line with your project's "Material Truth" architecture.
+```bash
+uvx agent-starter-pack enhance
+```
+
+This adds CI/CD, deployment, and observability to your existing project.
+
+---
+
+## Available Agent Templates
+
+| Agent         | Description                                                            |
+| ------------- | ---------------------------------------------------------------------- |
+| `adk`         | Base ReAct agent using Google’s Agent Development Kit                  |
+| `adk_a2a`     | ADK agent with Agent-to-Agent (A2A) protocol support                   |
+| `agentic_rag` | Retrieval-augmented generation with Vertex AI Search and Vector Search |
+| `langgraph`   | ReAct agent built with LangChain’s LangGraph                           |
+| `adk_live`    | Real-time multimodal RAG (audio, video, text) powered by Gemini        |
+
+More templates are added regularly. Feature requests are welcome.
+
+---
+
+## Key Features
+
+* **CI/CD Automation**
+  One-command setup for Google Cloud Build or GitHub Actions.
+
+* **RAG Data Pipelines**
+  Terraform-managed ingestion pipelines for embeddings and search.
+
+* **Remote Templates**
+  Share and consume templates from any Git repository.
+
+* **Gemini CLI Integration**
+  Query your agent architecture and template directly from the terminal.
+
+---
+
+## Architecture Overview
+
+Q.Bot supports the full agent lifecycle:
+
+* Prototyping
+* Evaluation
+* Deployment
+* Monitoring and observability
+
+*(High-level architecture diagram available in the documentation.)*
+
+---
+
+## Requirements
+
+* Python 3.10+
+* Google Cloud SDK
+* Terraform (for deployment)
+* Make
+
+---
+
+## Documentation & Learning
+
+* Documentation site:
+  [https://googlecloudplatform.github.io/agent-starter-pack/](https://googlecloudplatform.github.io/agent-starter-pack/)
+* Getting Started
+* Installation
+* Deployment
+* Agent templates overview
+* CLI reference
+
+### Video Walkthroughs
+
+* Exploring the Agent Starter Pack (full tutorial)
+* 6-minute introduction (Kaggle GenAI Intensive)
+
+---
+
+## Community & Support
+
+* Community showcase of real projects
+* Contributions welcome
+* GitHub issues for bugs and feature requests
+* Email: [agent-starter-pack@google.com](mailto:agent-starter-pack@google.com)
+
+---
+
+## Disclaimer
+
+This repository is for demonstration purposes and is not an officially supported Google product.
+
+---
+
+# 2️⃣ Internal Onboarding Summary (New Engineers – One Page)
+
+## What is Q.Bot?
+
+Q.Bot is a **production-ready agent starter pack** for building GenAI agents on Google Cloud. It gives you templates, infra, and tooling so you don’t have to assemble everything from scratch.
+
+---
+
+## What You’ll Use Most
+
+* Agent templates (ReAct, RAG, real-time)
+* CLI (`agent-starter-pack`)
+* CI/CD + deployment configs
+* Observability hooks
+
+---
+
+## First 15 Minutes
+
+```bash
+uvx agent-starter-pack create
+cd <new-project>
+```
+
+Explore:
+
+* `agents/` – agent logic
+* `infra/` – Terraform + deployment
+* `frontend/` – UI
+* `.github/` or `cloudbuild.yaml` – CI/CD
+
+---
+
+## If You Already Have an Agent
+
+```bash
+uvx agent-starter-pack enhance
+```
+
+This adds deployment, CI/CD, and monitoring without changing your agent logic.
+
+---
+
+## When to Use Q.Bot
+
+Use it when you want:
+
+* A fast path to production
+* Opinionated defaults
+* Cloud-native deployment on Google Cloud
+* RAG or multi-agent patterns without boilerplate
+
+---
+
+## What Q.Bot Is *Not*
+
+* Not a low-level SDK
+* Not a research sandbox
+* Not framework-agnostic by default
+
+It favors **speed, consistency, and production readiness**.
+
+---
+
+## Where to Learn More
+
+* Docs site (primary reference)
+* Agent templates overview
+* Architecture diagram
+* Video walkthroughs
+
+---
+
+## Mental Model
+
+> “Q.Bot gives you the rails.
+> You build the agent.”
+
+---
