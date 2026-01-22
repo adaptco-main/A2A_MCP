@@ -294,6 +294,34 @@ function getEventType(entry) {
   return entry.type || entry.event || entry.name || entry.action;
 }
 
+function isTelemetryEntry(entry) {
+  const type = getEventType(entry);
+  if (typeof type === 'string' && type.toLowerCase().includes('telemetry')) {
+    return true;
+  }
+  return isObject(entry?.payload) && isObject(entry.payload.telemetry);
+}
+
+function extractTelemetryIdentity(payload) {
+  if (!isObject(payload)) {
+    return { runId: null, vehicleId: null };
+  }
+  const telemetry = isObject(payload.telemetry) ? payload.telemetry : payload;
+  const runId = toCleanString(telemetry.run_id || telemetry.runId || payload.run_id || payload.runId);
+  const vehicleId = toCleanString(
+    telemetry.vehicle_id || telemetry.vehicleId || payload.vehicle_id || payload.vehicleId
+  );
+  return { runId, vehicleId };
+}
+
+function enforceTelemetryIdentity(payload) {
+  const identity = extractTelemetryIdentity(payload);
+  if (!identity.runId || !identity.vehicleId) {
+    throw new Error('Identity Breach: run_id and vehicle_id are required for telemetry payloads.');
+  }
+  return identity;
+}
+
 function describeEvent(entry) {
   if (!isObject(entry)) {
     return 'Unknown event';
@@ -460,6 +488,17 @@ function buildEventPayload(entry) {
     return undefined;
   }
   if (isObject(entry.payload)) {
+    if (isTelemetryEntry(entry)) {
+      const identity = enforceTelemetryIdentity(entry.payload);
+      return {
+        schema: 'sovereign.fossil.v2',
+        identity: {
+          run_id: identity.runId,
+          vehicle_id: identity.vehicleId
+        },
+        payload: entry.payload
+      };
+    }
     return entry.payload;
   }
 
@@ -475,7 +514,19 @@ function buildEventPayload(entry) {
   delete rest.time;
   delete rest.date;
 
-  return Object.keys(rest).length ? rest : undefined;
+  const payload = Object.keys(rest).length ? rest : undefined;
+  if (payload && isTelemetryEntry(entry)) {
+    const identity = enforceTelemetryIdentity(payload);
+    return {
+      schema: 'sovereign.fossil.v2',
+      identity: {
+        run_id: identity.runId,
+        vehicle_id: identity.vehicleId
+      },
+      payload
+    };
+  }
+  return payload;
 }
 
 async function readLedger(filePath = ledgerFile) {

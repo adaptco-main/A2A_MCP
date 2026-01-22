@@ -7,11 +7,13 @@
     "dev": "nodemon src/server.js",
     "build": "echo \"no build step\"",
     "test": "jest --runInBand",
+    "test:accelerated": "node src/bin/rehearsal.js --duration=30m --mode=epoch_generation",
     "lint": "eslint .",
     "format": "prettier -w .",
     "start": "node src/server.js",
     "audit": "node src/bin/audit.js",
-    "rehearsal": "node src/bin/rehearsal.js"
+    "rehearsal": "node src/bin/rehearsal.js",
+    "agent:ignite": "pnpm run rehearsal --mode=world_synthesis && pnpm run audit"
   },
   "engines": {
     "node": ">=20"
@@ -19,8 +21,10 @@
   "dependencies": {
     "ajv": "^8.12.0",
     "ajv-formats": "^3.0.1",
+    "commander": "11.1.0",
+    "crypto-js": "4.2.0",
     "express": "^4.19.2",
-    "pino": "^8.17.0"
+    "pino": "8.17.0"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
