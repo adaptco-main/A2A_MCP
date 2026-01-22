@@ -70,9 +70,36 @@ function deriveArtifactId(entries, criteria) {
   }
 
   const { capsuleId, version } = criteria;
-  for (const entry of entries) {
+  const filteredEntries = entries.filter((entry) => {
     const payloadCapsuleId = entry.payload?.capsule?.capsule_id;
+    const capsuleMatch =
+      payloadCapsuleId === capsuleId ||
+      (typeof entry.capsule_id === 'string' && entry.capsule_id.startsWith(`${capsuleId}.`)) ||
+      (typeof entry.capsule_ref === 'string' && entry.capsule_ref.startsWith(`${capsuleId}.`));
+
+    if (!capsuleMatch) {
+      return false;
+    }
+
+    if (!version) {
+      return true;
+    }
+
     const payloadVersion = entry.payload?.capsule?.version || entry.payload?.version;
+    const artifactFromPayload = entry.payload?.id;
+
+    return (
+      payloadVersion === version ||
+      (typeof artifactFromPayload === 'string' &&
+        artifactFromPayload.startsWith(`capsule-${capsuleId}-`) &&
+        artifactFromPayload.slice(`capsule-${capsuleId}-`.length) === version) ||
+      entry.capsule_id === `${capsuleId}.${version}` ||
+      entry.capsule_ref === `${capsuleId}.${version}`
+    );
+  });
+
+  for (const entry of filteredEntries) {
+    const payloadCapsuleId = entry.payload?.capsule?.capsule_id;
     const artifactFromPayload = entry.payload?.id;
 
     const capsuleMatch =
@@ -81,19 +108,6 @@ function deriveArtifactId(entries, criteria) {
       (typeof entry.capsule_ref === 'string' && entry.capsule_ref.startsWith(`${capsuleId}.`));
 
     if (!capsuleMatch) {
-      continue;
-    }
-
-    const versionMatch =
-      !version ||
-      payloadVersion === version ||
-      (typeof artifactFromPayload === 'string' &&
-        artifactFromPayload.startsWith(`capsule-${capsuleId}-`) &&
-        artifactFromPayload.slice(`capsule-${capsuleId}-`.length) === version) ||
-      entry.capsule_id === `${capsuleId}.${version}` ||
-      entry.capsule_ref === `${capsuleId}.${version}`;
-
-    if (!versionMatch) {
       continue;
     }
 
