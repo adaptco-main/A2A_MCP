@@ -88,6 +88,13 @@
             "constraints": {
                 "noise_request_module": "synthetic.noise.injector.v1",
                 "contradiction_request_module": "synthetic.contradiction.synth.v1",
+                "disallowed_modules": [
+                    "CNE",
+                    "FSV",
+                    "content_noise_enricher",
+                    "feature_shift_validator",
+                    "fact_stream_validator"
+                ],
                 "source_registry_allowlist": [
                     "ssot://registry/truthful_inputs",
                     "ssot://registry/trusted_uris"
