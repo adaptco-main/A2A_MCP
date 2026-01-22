@@ -5,7 +5,8 @@ sandbox. The cell exists solely to stress-test truthful, sourced statements
 with **neutral, mechanical perturbations**. No persuasion levers, adversarial
 personas, or real-user data are ever permitted. All runtime behaviors must
 conform to ZERO-DRIFT, DK-1.0, and MIAP controls reflected in
-`manifests/content_integrity_eval.json`, including its
+`manifests/content_integrity_eval.json` and the service registry entry in
+`manifests/services/content_integrity_eval.json`, including their
 `operationalDirectives.allowed_modules` and `input_profile` defaults.
 
 ## 1. Purpose & Scope

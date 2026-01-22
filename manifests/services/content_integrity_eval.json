@@ -26,6 +26,26 @@
       "aggregate_metrics_only": true,
       "ledger_append_only": true,
       "no_per_agent_traces": true
+    },
+    "module_policy": {
+      "retired_modules": [
+        "CNE",
+        "FSV",
+        "content_noise_enricher",
+        "feature_shift_validator",
+        "fact_stream_validator"
+      ],
+      "replacement_map": {
+        "CNE": "synthetic.noise.injector.v1",
+        "FSV": "synthetic.noise.injector.v1",
+        "content_noise_enricher": "synthetic.noise.injector.v1",
+        "feature_shift_validator": "synthetic.noise.injector.v1",
+        "fact_stream_validator": "synthetic.contradiction.synth.v1"
+      },
+      "neutral_perturbation_models": [
+        "synthetic.noise.injector.v1",
+        "synthetic.contradiction.synth.v1"
+      ]
     }
   },
   "modules": [
