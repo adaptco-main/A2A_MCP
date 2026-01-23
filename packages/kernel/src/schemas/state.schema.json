@@ -3,6 +3,7 @@
   "title": "WorldOSState",
   "type": "object",
   "properties": {
+    "world_id": { "type": "string", "minLength": 1 },
     "turn": {"type": "integer", "minimum": 0},
     "coreSync": {"type": "integer", "minimum": 0, "maximum": 100},
     "corruption": {"type": "integer", "minimum": 0},
@@ -85,6 +86,6 @@
       "additionalProperties": false
     }
   },
-  "required": ["turn", "coreSync", "corruption", "safety", "resources", "board", "inventories", "provenance"],
+  "required": ["world_id", "turn", "coreSync", "corruption", "safety", "resources", "board", "inventories", "provenance"],
   "additionalProperties": false
 }
