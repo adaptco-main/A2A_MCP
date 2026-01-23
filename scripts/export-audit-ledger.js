@@ -41,7 +41,7 @@ function readJsonLines(filePath) {
     });
 }
 
-function formatYamlValue(value) {
+function formatYamlScalar(value) {
   if (value === null || value === undefined) {
     return 'null';
   }
@@ -49,17 +49,53 @@ function formatYamlValue(value) {
     return String(value);
   }
   const stringValue = String(value);
-  if (stringValue === '' || /[:#\n]/.test(stringValue)) {
+  if (
+    stringValue === '' ||
+    /[:#\n]/.test(stringValue) ||
+    /^\s|\s$/.test(stringValue)
+  ) {
     return JSON.stringify(stringValue);
   }
   return stringValue;
 }
 
+function toYaml(value, indent = 0) {
+  const pad = ' '.repeat(indent);
+  if (value === null || value === undefined) {
+    return `${pad}null`;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return `${pad}[]`;
+    }
+    return value
+      .map((item) => {
+        if (item && (Array.isArray(item) || typeof item === 'object')) {
+          return `${pad}-\n${toYaml(item, indent + 2)}`;
+        }
+        return `${pad}- ${formatYamlScalar(item)}`;
+      })
+      .join('\n');
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value).filter(([, entryValue]) => entryValue !== undefined);
+    if (entries.length === 0) {
+      return `${pad}{}`;
+    }
+    return entries
+      .map(([key, entryValue]) => {
+        if (entryValue && (Array.isArray(entryValue) || typeof entryValue === 'object')) {
+          return `${pad}${key}:\n${toYaml(entryValue, indent + 2)}`;
+        }
+        return `${pad}${key}: ${formatYamlScalar(entryValue)}`;
+      })
+      .join('\n');
+  }
+  return `${pad}${formatYamlScalar(value)}`;
+}
+
 function toFrontmatter(data) {
-  const lines = Object.entries(data)
-    .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => `${key}: ${formatYamlValue(value)}`);
-  return `---\n${lines.join('\n')}\n---`;
+  return `---\n${toYaml(data)}\n---`;
 }
 
 function extractTelemetry(entry) {
@@ -103,6 +139,7 @@ function main() {
     const telemetry = extractTelemetry(entry);
 
     const frontmatter = toFrontmatter({
+      ...entry,
       sequence_id: sequenceId,
       run_id: entry.run_id ?? entry.runId,
       vehicle_id: entry.vehicle_id ?? entry.vehicleId,
