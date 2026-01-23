@@ -70,17 +70,6 @@
       "merkle_settlement_latency"
     ]
   },
-  "operations": {
-    "next_step": "Define and approve the input bundle for the first official CIE-V1 audit run so the World Engine can trigger evaluation.",
-    "owner": "World Engine ops",
-    "checklist": [
-      "Confirm both neutral perturbation modules are deployed and registered with replaces tags",
-      "Capture canonical source_content with deterministic ordering and UTF-8 normalization",
-      "Set perturbation_profile with entropy budget <=0.15 bits/token and permitted scopes",
-      "Include claim_graph and contradiction_policy when contradiction synthesis is required",
-      "Record capsule_id, capsule_ref, and pre-run hashes for ledger alignment"
-    ]
-  },
   "audit_runs": {
     "first_official": {
       "purpose": "Baseline ZERO-DRIFT enforcement for production onboarding.",
@@ -103,11 +92,6 @@
       ]
     }
   },
-  "next_steps": [
-    "World Engine to approve the manifest pivot to synthetic.noise.injector.v1 and synthetic.contradiction.synth.v1.",
-    "Define and publish the canonical input bundle for the first official run, including source_content, perturbation_profile, claim_graph, and contradiction_policy schemas.",
-    "Schedule the inaugural ZERO-DRIFT evaluation via capsules/content-integrity/eval.v1 and record receipts in the ledger."
-  ],
   "lineage": {
     "canonicalization": "All inputs are normalized before any model call to minimize drift risk.",
     "hashing": "Each ritual stage emits SHA-256 digests of inputs and outputs.",

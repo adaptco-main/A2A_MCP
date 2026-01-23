@@ -7,6 +7,7 @@ Adaptco Core Orchestrator is a Node.js 20 microservice that receives capsule reg
 
 - Health endpoint for uptime monitoring.
 - Capsule registration endpoint with JSON Schema validation using Ajv.
+- Optional preview + SSOT coordination pipeline driven by the Sentinel agent.
 - Append-only ledger that records registration events to JSON Lines for auditing.
 - Structured logging via Pino.
 
@@ -31,6 +32,8 @@ npm install
 | `npm run test` | Runs Jest unit tests. |
 | `npm run lint` | Lints the codebase with ESLint. |
 | `npm run format` | Formats files with Prettier. |
+| `npm run audit` | Runs a wrapper/registry integrity check. |
+| `npm run rehearsal` | Performs a rehearsal-only anchor binding check. |
 
 ## Usage
 
@@ -67,6 +70,71 @@ Example response:
   }
 }
 ```
+
+### Auditing and rehearsal checks
+
+Run an integrity audit of the wrapper and runtime registry (fails on missing registry, ledger, or unbound anchors):
+
+```bash
+npm run audit -- --wrapper capsules/doctrine/capsule.wrapper.adaptco_os.v1.json --registry runtime/capsule.registry.runtime.v1.json
+```
+
+Validate that rehearsal anchors are present and marked with `status: "REHEARSAL"`:
+
+```bash
+npm run rehearsal -- --wrapper capsules/doctrine/capsule.wrapper.adaptco_os.v1.json --registry runtime/capsule.registry.runtime.v1.json
+```
+
+### Optional Operations
+
+Augment the payload with an `operations` object to wire the request into the
+Previz renderer, SSOT asset registry, and the `hash_gen_scroll.py` manifest
+workflow:
+
+```json
+{
+  "capsule_id": "caps-001",
+  "version": "1.0.0",
+  "issued_at": "2024-01-01T00:00:00Z",
+  "author": "example@adaptco.io",
+  "payload": { "type": "demo" },
+  "provenance": { "source": "unit-test" },
+  "operations": {
+    "preview": {
+      "descriptor": {
+        "id": "asset-001",
+        "name": "Hero Render",
+        "type": "image",
+        "sourcePath": "assets/hero.glb"
+      },
+      "out_dir": "/tmp/previews"
+    },
+    "asset": {
+      "payload": {
+        "id": "asset-001",
+        "name": "Hero Render",
+        "kind": "image",
+        "uri": "https://cdn.adaptco.io/assets/hero.png",
+        "tags": ["marketing"],
+        "meta": { "owner": "creative@adaptco.io" }
+      },
+      "path": "/assets"
+    },
+    "hash": {
+      "out_dir": "data/capsules",
+      "events_path": "events.ndjson",
+      "capsule_id": "capsule.validation.v1"
+    }
+  }
+}
+```
+
+When present, the orchestrator will:
+
+1. Invoke the Previz CLI via `SentinelAgent.renderPreview()`.
+2. Register the asset with the SSOT API using `SentinelAgent.registerAsset()`.
+3. Execute `hash_gen_scroll.py` to emit a Merkle-rooted manifest capturing the
+   generated artifacts.
 
 ## Testing
 

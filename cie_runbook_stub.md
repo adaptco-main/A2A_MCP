@@ -11,12 +11,6 @@ Everything is treated as a ceremony: **intake → ignition → binding → settl
 - **Evaluate**: Ingest source content, apply neutral noise, measure drift, and synthesize contradictions for robustness scoring.
 - **Export**: Emit capsule events and robustness metrics to downstream audit ledgers.
 
-## Next operational step (World Engine)
-- Prepare the input bundle for the **first official CIE-V1 audit run** so the World Engine can invoke the evaluate path.
-- Confirm both modules are deployed with their `replaces` metadata set and emitting capsule telemetry.
-- Collect canonicalized `source_content`, configured `perturbation_profile` (entropy budget ≤0.15 bits/token), and optional `claim_graph` plus `contradiction_policy` when contradiction synthesis is needed.
-- Register `capsule_id`/`capsule_ref` and pre-run hashes before submitting to the evaluation interface.
-
 ## Inputs
 - `source_content`: canonical text or structured payload under evaluation (canonicalize before ingestion).
 - `perturbation_profile`: constraints for noise injection (entropy budget, allowed token scopes).
@@ -56,11 +50,6 @@ tion labels for the noise injector.
 - Ignition receipt showing entropy budget proof for `synthetic.noise.injector.v1`.
 - Binding receipt listing contradictions, labels, and per-item hashes.
 - Settlement receipt with Merkle root and dual council attestations.
-
-## Next operational step (World Engine)
-- Approve the pivot to neutral perturbation modules (`synthetic.noise.injector.v1`, `synthetic.contradiction.synth.v1`).
-- Publish the canonical input bundle for the first official run (schemas for `source_content`, `perturbation_profile`, `claim_graph`, `contradiction_policy`).
-- Schedule and execute the inaugural ZERO-DRIFT evaluation via `capsules/content-integrity/eval.v1`, recording all receipts in the ledger.
 
 ## Observability
 - Metrics: `drift_score`, `neutral_noise_rate`, `contradiction_coverage`, `audit_pass_rate`, `merkle_settlement_latency`.

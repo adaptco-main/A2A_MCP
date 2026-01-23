@@ -8,7 +8,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const logger = require('./log');
 
-const REQUIRED_DESCRIPTOR_FIELDS = ['id', 'name', 'type', 'sourcePath'];
+const REQUIRED_DESCRIPTOR_FIELDS = ['id', 'name', 'type', 'sourcePath', 'params'];
 const REQUIRED_ASSET_FIELDS = ['id', 'name', 'kind', 'uri'];
 
 class SentinelAgent {
@@ -43,7 +43,10 @@ class SentinelAgent {
     if (typeof descriptor === 'string') {
       descriptorPath = descriptor;
     } else if (descriptor && typeof descriptor === 'object') {
-      this.#validateDescriptor(descriptor);
+      const validationOptions = {
+        allowMissingParams: Boolean(options.descriptorPath)
+      };
+      this.#validateDescriptor(descriptor, validationOptions);
       descriptorPath = await this.descriptorWriter(descriptor, options.descriptorPath);
       shouldCleanup = !options.descriptorPath;
     } else {
@@ -59,10 +62,14 @@ class SentinelAgent {
     };
 
     logger.debug({ command, outDir }, 'Dispatching PreViz render request');
-    const result = await this.runCommand(command, commandOptions);
 
-    if (shouldCleanup && !options.persistDescriptor) {
-      await safeUnlink(descriptorPath);
+    let result;
+    try {
+      result = await this.runCommand(command, commandOptions);
+    } finally {
+      if (shouldCleanup && !options.persistDescriptor) {
+        await safeUnlink(descriptorPath);
+      }
     }
 
     if (result.exitCode !== 0) {
@@ -132,8 +139,22 @@ class SentinelAgent {
     ];
   }
 
-  #validateDescriptor(descriptor) {
-    const missing = REQUIRED_DESCRIPTOR_FIELDS.filter((key) => !descriptor[key]);
+  #validateDescriptor(descriptor, options = {}) {
+    const missing = REQUIRED_DESCRIPTOR_FIELDS.filter((key) => {
+      if (key === 'params') {
+        if (descriptor.params === undefined) {
+          return !options.allowMissingParams;
+        }
+
+        return (
+          typeof descriptor.params !== 'object' ||
+          descriptor.params === null ||
+          Array.isArray(descriptor.params)
+        );
+      }
+
+      return !descriptor[key];
+    });
     if (missing.length > 0) {
       throw new Error(`Descriptor missing required fields: ${missing.join(', ')}`);
     }
@@ -152,6 +173,45 @@ class SentinelAgent {
 
     if (typeof asset.meta !== 'object' || asset.meta === null) {
       missing.push('meta');
+    }
+
+    const registry = asset.registry;
+    if (!registry || typeof registry !== 'object') {
+      missing.push('registry');
+    } else {
+      if (registry.capsule_id !== 'ssot.registry.v1') {
+        missing.push('registry.capsule_id');
+      }
+
+      const entry = registry.entry;
+      if (!entry || typeof entry !== 'object') {
+        missing.push('registry.entry');
+      } else {
+        if (!entry.canonical_sha256) {
+          missing.push('registry.entry.canonical_sha256');
+        }
+        if (!entry.merkle_root) {
+          missing.push('registry.entry.merkle_root');
+        }
+        const attestation = entry.council_attestation;
+        if (!attestation || !Array.isArray(attestation.signatures) || attestation.signatures.length === 0) {
+          missing.push('registry.entry.council_attestation.signatures');
+        }
+      }
+
+      const lineage = registry.lineage;
+      if (!lineage || typeof lineage !== 'object') {
+        missing.push('registry.lineage');
+      } else if (typeof lineage.immutable !== 'boolean') {
+        missing.push('registry.lineage.immutable');
+      }
+
+      const replay = registry.replay;
+      if (!replay || typeof replay !== 'object') {
+        missing.push('registry.replay');
+      } else if (!Array.isArray(replay.conditions) || replay.conditions.length === 0) {
+        missing.push('registry.replay.conditions');
+      }
     }
 
     if (missing.length > 0) {
@@ -195,9 +255,7 @@ function createDescriptorWriter(baseDir) {
     const targetPath = explicitPath ? path.resolve(explicitPath) : await createDescriptorPath(baseDir, descriptor);
     const payload = JSON.stringify(descriptor, null, 2);
 
-    if (!explicitPath) {
-      await fsp.mkdir(path.dirname(targetPath), { recursive: true });
-    }
+    await fsp.mkdir(path.dirname(targetPath), { recursive: true });
 
     await fsp.writeFile(targetPath, payload, 'utf8');
     return targetPath;

@@ -1,3 +1,16 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+.env
+.env.*
+.tmp/
+*.pid
+*.log
+coverage/
+dist/
 # Operating System
 ##################
 .DS_Store
@@ -17,7 +30,9 @@ yarn.lock
 ##################
 dist/
 build/
+.out/
 out/
+.out/
 tmp/
 temp/
 
@@ -84,3 +99,8 @@ openapi-diff.cache/
 ##################################
 scripts/local-*.*
 fixtures/*.json
+!fixtures/plan_release_candidate_input.json
+*.qcap
+
+# CIE smoke artifacts
+runtime/cie_v1_smoke.log.jsonl
