@@ -7,8 +7,12 @@ def sha256_hex(data: str) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
-def execute_fossilization(input_data: dict[str, Any]) -> dict[str, Any]:
+def execute_fossilization(input_data: dict[str, Any] | None) -> dict[str, Any]:
     """Canonicalize a CIE-V1 inquiry payload and derive deterministic IDs."""
+    if input_data is None:
+        input_data = {}
+    if not isinstance(input_data, dict):
+        raise TypeError("input_data must be a dict of inquiry fields")
     # 1. Field Extraction (The New Schema)
     customer_id = input_data.get("customer_id")
     inquiry_type = input_data.get("inquiry_type")
