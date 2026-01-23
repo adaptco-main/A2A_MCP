@@ -56,4 +56,5 @@ def execute_fossilization(input_data: dict[str, Any]) -> dict[str, Any]:
 
 
 # Zapier Entry Point
-output = execute_fossilization(input_data)
+_input_data = globals().get("input_data", {})
+output = execute_fossilization(_input_data)
