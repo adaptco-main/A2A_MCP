@@ -27,6 +27,7 @@ export interface Entity {
 }
 
 export interface State {
+  world_id: string;
   turn: number;
   coreSync: number;
   corruption: number;
@@ -59,6 +60,7 @@ export function stableHash(input: unknown): string {
 
 export function initialState(): State {
   return {
+    world_id: "world-1",
     turn: 0,
     coreSync: 10,
     corruption: 0,
@@ -229,3 +231,4 @@ export function stateHash(state: State): string {
 }
 
 export { stateSchema, actionSchema, validateState, validateAction };
+export * from "./physics";
