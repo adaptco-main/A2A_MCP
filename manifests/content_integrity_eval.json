@@ -167,6 +167,18 @@
                         "json"
                     ]
                 }
+            },
+            {
+                "package_id": "cie_v1_inputs.run_001",
+                "run_id": "cie_v1_audit_run_001",
+                "path": "inputs/cie_v1_audit/",
+                "payloads": "payloads.ndjson",
+                "metadata": "metadata.json",
+                "validation_chain": [
+                    "synthetic.noise.injector.v1",
+                    "synthetic.contradiction.synth.v1"
+                ],
+                "status": "sealed"
             }
         ]
     },
