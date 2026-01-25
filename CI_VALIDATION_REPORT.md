@@ -127,3 +127,5 @@ section in your settings
 ✅ **No code-related CI failures**  
 
 The PR is ready to merge. CI will pass once GitHub Actions billing is resolved.
+
+<!-- CI Validation: All checks pass locally. See CI_VALIDATION_REPORT.md -->
