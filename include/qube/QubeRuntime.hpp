@@ -20,6 +20,17 @@ public:
   // Get the current state hash of the runtime
   std::string GetStateHash() const;
 
+  // HUB Model: Dock data (patterns) into the kernel
+  void DockPattern(const std::string &patternId,
+                   const std::vector<uint8_t> &data);
+
+  // Recursion: Generate synthetic structures from reorganized patterns
+  struct SyntheticStructure {
+    float x, y, w, h;
+    std::string type;
+  };
+  std::vector<SyntheticStructure> ReorganizeAndSynthesize();
+
   // Shutdown and cleanup
   void Shutdown();
 

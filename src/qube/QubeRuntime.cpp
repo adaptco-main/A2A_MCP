@@ -73,4 +73,39 @@ void QubeRuntime::UpdateHash(const TokenPixel &pixel) {
   currentStateHash_ = std::to_string(h);
 }
 
+void QubeRuntime::DockPattern(const std::string &patternId,
+                              const std::vector<uint8_t> &data) {
+  std::cout << "[QUBE] HUB Docking Pattern: " << patternId
+            << " | Size: " << data.size() << " bytes" << std::endl;
+  // Rehash state based on docked pattern
+  std::stringstream ss;
+  ss << currentStateHash_ << patternId << data.size();
+  currentStateHash_ = std::to_string(std::hash<std::string>{}(ss.str()));
+  auditLog_.push_back(currentStateHash_);
+}
+
+std::vector<QubeRuntime::SyntheticStructure>
+QubeRuntime::ReorganizeAndSynthesize() {
+  std::cout
+      << "[QUBE] Reorganizing clusters of pattern into synthetic structures..."
+      << std::endl;
+  std::vector<SyntheticStructure> structures;
+
+  // Deterministic generation from state hash for recursion
+  size_t seed = std::hash<std::string>{}(currentStateHash_);
+  int count = (seed % 3) + 1; // 1 to 3 structures
+
+  for (int i = 0; i < count; ++i) {
+    SyntheticStructure s;
+    s.x = static_cast<float>((seed % 400)) - 200.0f + (i * 50.0f);
+    s.y = static_cast<float>((seed % 20)) + 5.0f;
+    s.w = 50.0f + static_cast<float>((seed % 100));
+    s.h = 10.0f;
+    s.type = "SyntheticPlatform";
+    structures.push_back(s);
+  }
+
+  return structures;
+}
+
 } // namespace qube

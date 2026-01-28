@@ -18,10 +18,14 @@ void WorldModel::LoadLevel(int levelId) {
   tiles_.push_back({TileType::Platform, {{500, -100}, {520, 10}}});
 
   // Level Specifics
-  if (levelId == 1) {
-    // Simple platforms
-    tiles_.push_back({TileType::Platform, {{50, 5}, {70, 6}}});
-  } else if (levelId == 9) {
+  if (levelId == 0) {
+    // HOME WORLD / HUB: Stable, symmetric training environment
+    // Y-down coordinates: floor at Y=20
+    tiles_.push_back({TileType::Platform, {{-400, 20}, {400, 25}}});
+    tiles_.push_back({TileType::Platform, {{-200, 15}, {-100, 16}}});
+    tiles_.push_back({TileType::Platform, {{100, 15}, {200, 16}}});
+    spawnPoint_ = {0, 10};
+  } else if (levelId == 1) {
     // Wily Castle logic
   }
 

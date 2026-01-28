@@ -42,3 +42,8 @@ test_engine: $(OBJS)
 	# Filter out main.o if it exists in OBJS to avoid multiple main() definitions
 	$(CXX) $(CXXFLAGS) tests/engine_test.cpp $(filter-out $(BUILD_DIR)/src/main.o, $(OBJS)) -o $(BIN_DIR)/engine_test
 	./$(BIN_DIR)/engine_test
+
+test_jurassic: $(OBJS)
+	# Jurassic Pixels verification: Home World + HUB + Synthesis
+	$(CXX) $(CXXFLAGS) tests/jurassic_pixels_test.cpp $(filter-out $(BUILD_DIR)/src/main.o, $(OBJS)) -o $(BIN_DIR)/jurassic_pixels_test
+	./$(BIN_DIR)/jurassic_pixels_test

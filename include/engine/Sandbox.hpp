@@ -13,6 +13,7 @@ namespace engine {
 class Sandbox {
 public:
   Sandbox();
+  virtual ~Sandbox();
   void Initialize();
   void LoadLevel(int levelId);
   void SpawnPlane(Vector2 origin, float width, float height);

@@ -8,6 +8,8 @@ namespace engine {
 
 Sandbox::Sandbox() : world_(std::make_unique<WorldModel>()) {}
 
+Sandbox::~Sandbox() = default;
+
 void Sandbox::Initialize() {
   std::cout << "Initializing Sandbox..." << std::endl;
   world_->LoadLevel(1); // Default to level 1

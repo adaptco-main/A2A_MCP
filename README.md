@@ -20,7 +20,7 @@ To host this codebase in Git:
 
 ### Repository Structure
 
-```
+```text
 root/
 ├── src/                # C++ Source Code
 ├── include/            # C++ Headers

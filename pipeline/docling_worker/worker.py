@@ -107,25 +107,32 @@ def parse_document(job_payload: dict) -> dict:
     }
     ledger.append(ledger_record)
     
-    # Enqueue chunks for embedding
+    # Enqueue chunks for embedding in batches
+    batch_size = 32
     chunks = create_chunks(doc)
-    for i, chunk in enumerate(chunks):
-        embed_queue.enqueue(
-            "tasks.embed_chunk",
-            {
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i:i + batch_size]
+        batch_payload = []
+        for j, chunk in enumerate(batch):
+            batch_payload.append({
                 "bundle_id": bundle_id,
                 "doc_id": doc_id,
-                "chunk_index": i,
+                "chunk_index": i + j,
                 "chunk_text": chunk["text"],
                 "source_block_refs": chunk["refs"]
-            }
+            })
+        
+        embed_queue.enqueue(
+            "tasks.embed_batch",
+            {"batch": batch_payload}
         )
     
     return {
         "status": "parsed",
         "doc_id": doc_id,
         "pages": len(pages),
-        "chunks_queued": len(chunks)
+        "chunks_queued": len(chunks),
+        "batches_queued": (len(chunks) + batch_size - 1) // batch_size
     }
 
 
