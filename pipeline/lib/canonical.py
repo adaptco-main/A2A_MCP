@@ -1,7 +1,7 @@
 import hashlib
 import json
 import os
-from Typing import Any, Dict
+from typing import Any, Dict
 
 def jcs_canonical_bytes(obj: Any) -> bytes:
     """
