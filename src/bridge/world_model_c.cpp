@@ -1,6 +1,5 @@
 #include "bridge/world_model_c.h"
 #include "engine/WorldModel.hpp"
-#include <cstring>
 
 extern "C" {
 
