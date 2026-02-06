@@ -27,15 +27,23 @@ void WorldModel::LoadLevel(int levelId) {
     spawnPoint_ = {0, 10};
   } else if (levelId == 1) {
     // Wily Castle logic
+    // Floor
+    tiles_.push_back({TileType::Platform, {{-100, 50}, {500, 60}}});
+    // Spikes
+    tiles_.push_back({TileType::Spikes, {{100, 48}, {200, 50}}});
+    // Boss Gate
+    tiles_.push_back({TileType::BossGate, {{400, 40}, {410, 50}}});
+    spawnPoint_ = {-50, 40};
   }
 
-  spawnPoint_ = {0, 0};
+  // BUG FIX: Do not reset spawnPoint_ here!
 }
 
 bool WorldModel::IsSolid(const Vector2 &pos) const {
   // Simple point check against AABBs
   for (const auto &tile : tiles_) {
-    if (tile.type == TileType::Platform) {
+    // Platform, Spikes, and BossGate are considered solid for this simple check
+    if (tile.type == TileType::Platform || tile.type == TileType::Spikes || tile.type == TileType::BossGate) {
       if (pos.x >= tile.bounds.min.x && pos.x <= tile.bounds.max.x &&
           pos.y >= tile.bounds.min.y && pos.y <= tile.bounds.max.y) {
         return true;
