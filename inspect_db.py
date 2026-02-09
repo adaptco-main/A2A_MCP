@@ -1,35 +1,30 @@
-from orchestrator.storage import DBManager
-from schemas.database import ArtifactModel
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-import os
-
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:pass@localhost:5432/mcp_db")
-
-def inspect_artifacts():
-    """
-    Retrieves and displays all persistent artifacts to verify 
-    the A2A-MCP self-healing trace.
-    """
-    engine = create_engine(DATABASE_URL)
-    SessionLocal = sessionmaker(bind=engine)
-    db = SessionLocal()
-
-    print("\n--- 📜 A2A-MCP Artifact Trace Log ---")
-    artifacts = db.query(ArtifactModel).order_by(ArtifactModel.created_at).all()
-
-    if not artifacts:
-        print("No artifacts found in the database.")
-        return
-
-    for art in artifacts:
-        print(f"[{art.created_at.strftime('%H:%M:%S')}] {art.agent_name} (v{art.version})")
-        print(f"  Type: {art.type}")
-        print(f"  ID: {art.id}")
-        print(f"  Parent: {art.parent_artifact_id}")
-        print("-" * 40)
-
-    db.close()
-
-if __name__ == "__main__":
-    inspect_artifacts()
+import sqlite3
+    import pandas as pd
+    from schemas.database import ArtifactModel
+    
+    def inspect_artifacts():
+        # Connect to the local SQLite database
+        # Adjust 'a2a_mcp.db' if your database name is different in storage.py
+        conn = sqlite3.connect('a2a_mcp.db')
+        
+        query = "SELECT * FROM artifacts ORDER BY created_at DESC"
+        df = pd.read_sql_query(query, conn)
+        
+        if df.empty:
+            print("📭 No artifacts found in the database yet.")
+        else:
+            print(f"📂 Found {len(df)} artifacts:")
+            print(df[['id', 'type', 'agent_name', 'created_at']].to_string(index=False))
+            
+            # Show the most recent content
+            print("
+📝 Most Recent Artifact Content:")
+            print("-" * 30)
+            print(df.iloc[0]['content'])
+            print("-" * 30)
+        
+        conn.close()
+    
+    if __name__ == "__main__":
+        inspect_artifacts()
+    
