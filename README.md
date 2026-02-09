@@ -12,6 +12,7 @@ graph TD
     Hub -->|Context| A2[Coder]
     A2 -->|Solution| Hub
 
+
 Standardized Artifact Schema
 class MCPArtifact(BaseModel):
     artifact_id: str
