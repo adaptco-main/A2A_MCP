@@ -1,12 +1,8 @@
 import asyncio
-import sys
 import uuid
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from agents.pinn_agent import PINNAgent
 from agents.tester import TestReport

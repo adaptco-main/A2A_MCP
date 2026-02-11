@@ -2,5 +2,9 @@ sqlalchemy
 psycopg2-binary
 pydantic
 pytest
-asyncio
+pytest-asyncio
 python-dotenv
+requests
+httpx
+fastapi
+uvicorn
