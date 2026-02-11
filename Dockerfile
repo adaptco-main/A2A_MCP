@@ -1,58 +1,25 @@
-# Stage 1: Build the C++ Engine
-FROM gcc:13 AS engine-builder
+# For more information, please refer to https://aka.ms/vscode-docker-python
+FROM python:3-slim
+
+EXPOSE 8000
+
+# Keeps Python from generating .pyc files in the container
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Turns off buffering for easier container logging
+ENV PYTHONUNBUFFERED=1
+
+# Install pip requirements
+COPY requirements.txt .
+RUN python -m pip install -r requirements.txt
 
 WORKDIR /app
+COPY . /app
 
-# Copy source files
-COPY include/ include/
-COPY src/ src/
-COPY Makefile .
+# Creates a non-root user with an explicit UID and adds permission to access the /app folder
+# For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
+RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
+USER appuser
 
-# Build the engine
-RUN mkdir -p bin && \
-    g++ -I./include -std=c++17 \
-    src/main.cpp \
-    src/engine/*.cpp \
-    src/agents/*.cpp \
-    src/safety/*.cpp \
-    -o bin/ghost-void_engine
-
-# Stage 2: Build the React Frontend
-FROM node:20-alpine AS frontend-builder
-
-WORKDIR /app/server/react-client
-
-COPY server/react-client/package*.json ./
-RUN npm ci
-
-COPY server/react-client/ ./
-RUN npm run build
-
-# Stage 3: Runtime
-FROM node:20-alpine
-
-WORKDIR /app
-
-# Install dependencies for running native binaries
-RUN apk add --no-cache libstdc++ libgcc
-
-# Copy built engine from stage 1
-COPY --from=engine-builder /app/bin/ghost-void_engine ./bin/ghost-void_engine
-RUN chmod +x ./bin/ghost-void_engine
-
-# Copy server files
-COPY server/package*.json ./server/
-WORKDIR /app/server
-RUN npm ci --omit=dev
-
-# Copy server source
-COPY server/*.js ./
-
-# Copy built frontend from stage 2
-COPY --from=frontend-builder /app/server/react-client/dist ./public/
-
-WORKDIR /app/server
-
-EXPOSE 8080
-
-CMD ["node", "server.js"]
+# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker", "toolquest.semantic\embedding_pipeline:app"]
