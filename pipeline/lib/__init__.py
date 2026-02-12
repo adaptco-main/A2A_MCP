@@ -1,42 +1,37 @@
-"""Library package for Docling pipeline utilities."""
+"""
+Docling Core Libraries.
+Provides unified access to canonicalization, normalization, and ledger utilities.
+"""
 from .canonical import (
     jcs_canonical_bytes,
     sha256_hex,
     hash_canonical_without_integrity,
-    append_to_ledger
+    append_to_ledger,
+    compute_chunk_id,
+    compute_doc_id
 )
 from .normalize import (
     normalize_text,
-    l2_normalize
+    l2_normalize,
+    normalize_unicode,
+    collapse_whitespace
+)
+from .ledger import (
+    Ledger,
+    get_ledger
 )
 
 __all__ = [
-    # Canonical
     "jcs_canonical_bytes",
     "sha256_hex",
     "hash_canonical_without_integrity",
     "append_to_ledger",
-    # Normalize
+    "compute_chunk_id",
+    "compute_doc_id",
     "normalize_text",
     "l2_normalize",
-]
-
-__all__ = [
-    # Canonical
-    "jcs_canonical_bytes",
-    "sha256_hex",
-    "hash_canonical",
-    "hash_canonical_without_integrity",
-    "compute_doc_id",
-    "compute_chunk_id",
-    # Ledger
-    "Ledger",
-    "get_ledger",
-    # Normalize
     "normalize_unicode",
     "collapse_whitespace",
-    "normalize_line_endings",
-    "normalize_text",
-    "stable_block_sort_key",
-    "serialize_table_row_major",
+    "Ledger",
+    "get_ledger"
 ]
