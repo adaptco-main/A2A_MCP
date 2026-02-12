@@ -20,3 +20,17 @@ ENV/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Runtime artifacts
+*.db
+
+# Agent temp files
+tmpclaude-*
+
+# Test output dumps
+test_output*.txt
+test_results*.txt
+test_full_output*.txt
+
+# Pytest
+.pytest_cache/
