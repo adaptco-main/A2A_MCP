@@ -1,32 +1,127 @@
-============================= test session starts =============================
-platform win32 -- Python 3.13.7, pytest-9.0.2, pluggy-1.6.0
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\.venv\Scripts\python.exe
+cachedir: .pytest_cache
 rootdir: C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP
 configfile: pyproject.toml
 plugins: anyio-4.12.1, asyncio-1.3.0
 asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collected 43 items / 2 errors
+collecting ... collected 48 items
 
-=================================== ERRORS ====================================
-__________________ ERROR collecting tests/test_mcp_agents.py __________________
-ImportError while importing test module 'C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\tests\test_mcp_agents.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-C:\Python313\Lib\importlib\__init__.py:88: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-tests\test_mcp_agents.py:3: in <module>
-    from fastmcp import Client
-E   ModuleNotFoundError: No module named 'fastmcp'
-__________________ ERROR collecting tests/test_stateflow.py ___________________
-ImportError while importing test module 'C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\tests\test_stateflow.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-C:\Python313\Lib\importlib\__init__.py:88: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-tests\test_stateflow.py:3: in <module>
-    from A2A_MCP.orchestrator.stateflow import StateMachine, State, PartialVerdict
-E   ModuleNotFoundError: No module named 'A2A_MCP'
+tests/test_cicd_pipeline.py::TestCICDPipeline::test_full_pipeline_run PASSED [  2%]
+tests/test_cicd_pipeline.py::TestCICDPipeline::test_artifact_traceability PASSED [  4%]
+tests/test_cicd_pipeline.py::TestCICDPipeline::test_chain_integrity PASSED [  6%]
+tests/test_cicd_pipeline.py::TestCICDPipeline::test_lora_config_persists PASSED [  8%]
+tests/test_cicd_pipeline.py::TestCICDPipeline::test_deterministic_replay PASSED [ 10%]
+tests/test_cicd_pipeline.py::TestCICDPipeline::test_weights_hash_preserved PASSED [ 12%]
+tests/test_cicd_pipeline.py::TestCICDPipeline::test_execution_report_format PASSED [ 14%]
+tests/test_cicd_pipeline.py::TestPipelineFailure::test_invalid_initial_state PASSED [ 16%]
+tests/test_full_pipeline.py::TestFullPipeline::test_happy_path_all_pass PASSED [ 18%]
+tests/test_full_pipeline.py::TestFullPipeline::test_self_healing_fail_then_pass PASSED [ 20%]
+tests/test_full_pipeline.py::TestFullPipeline::test_all_fail_reports_failure PASSED [ 22%]
+tests/test_full_pipeline.py::TestFullPipeline::test_artifact_counts PASSED [ 25%]
+tests/test_full_pipeline.py::TestFullPipeline::test_legacy_execute_plan_still_works PASSED [ 27%]
+tests/test_healing_loop.py::test_healing_loop_convergence PASSED         [ 29%]
+tests/test_ingestion_api.py::test_ingestion_with_valid_handshake PASSED  [ 31%]
+tests/test_ingestion_api.py::test_ingestion_missing_token PASSED         [ 33%]
+tests/test_intent_engine.py::test_pinn_deterministic_embedding_is_stable PASSED [ 35%]
+tests/test_intent_engine.py::test_intent_engine_executes_plan PASSED     [ 37%]
+tests/test_lora_harness.py::TestLoRADataSynthesis::test_synthesize_from_recovery_nodes PASSED [ 39%]
+tests/test_lora_harness.py::TestLoRADataSynthesis::test_instruction_format PASSED [ 41%]
+tests/test_lora_harness.py::TestLoRADataSynthesis::test_empty_nodes_produce_empty_data PASSED [ 43%]
+tests/test_lora_harness.py::TestLoRADataSynthesis::test_deterministic_synthesis PASSED [ 45%]
+tests/test_lora_harness.py::TestLoRAConfig::test_default_config PASSED   [ 47%]
+tests/test_lora_harness.py::TestLoRAConfig::test_custom_config PASSED    [ 50%]
+tests/test_lora_harness.py::TestLoRAWithStateTransition::test_lora_adapt_state PASSED [ 52%]
+tests/test_lora_harness.py::TestLoRAWithStateTransition::test_full_lifecycle_with_lora PASSED [ 54%]
+tests/test_plan_state_persistence.py::test_plan_state_save_load_roundtrip PASSED [ 56%]
+tests/test_rag_pipeline.py::TestRAGInjection::test_inject_documents PASSED [ 58%]
+tests/test_rag_pipeline.py::TestRAGInjection::test_dimension_mismatch_raises PASSED [ 60%]
+tests/test_rag_pipeline.py::TestRAGRetrieval::test_semantic_retrieval PASSED [ 62%]
+tests/test_rag_pipeline.py::TestRAGRetrieval::test_deterministic_retrieval PASSED [ 64%]
+tests/test_rag_pipeline.py::TestRAGWithModelArtifact::test_embed_then_query_transition PASSED [ 66%]
+tests/test_rag_pipeline.py::TestHashChainIntegrity::test_hash_chain PASSED [ 68%]
+tests/test_state_space.py::TestStateTransitions::test_init_to_embedding PASSED [ 70%]
+tests/test_state_space.py::TestStateTransitions::test_full_happy_path PASSED [ 72%]
+tests/test_state_space.py::TestStateTransitions::test_invalid_transition_raises PASSED [ 75%]
+tests/test_state_space.py::TestStateTransitions::test_healing_retry_loop PASSED [ 77%]
+tests/test_state_space.py::TestStateTransitions::test_failure_rollback PASSED [ 79%]
+tests/test_state_space.py::TestStateTransitions::test_converged_is_terminal PASSED [ 81%]
+tests/test_state_space.py::TestDeterminism::test_same_inputs_same_hash PASSED [ 83%]
+tests/test_state_space.py::TestDeterminism::test_artifact_immutability PASSED [ 85%]
+tests/test_state_space.py::TestDeterminism::test_parent_chain_integrity PASSED [ 87%]
+tests/test_state_space.py::TestLoRAConfig::test_attach_lora_config PASSED [ 89%]
+tests/test_state_space.py::TestLoRAConfig::test_lora_config_survives_transition PASSED [ 91%]
+tests/test_stateflow.py::test_happy_path PASSED                          [ 93%]
+tests/test_stateflow.py::test_retry_limit_exceeded PASSED                [ 95%]
+tests/test_stateflow.py::test_override_forward_only PASSED               [ 97%]
+tests/test_storage.py::test_artifact_persistence_lifecycle FAILED        [100%]
+
+================================== FAILURES ===================================
+_____________________ test_artifact_persistence_lifecycle _____________________
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlite3.ProgrammingError: Error binding parameter 6: type 'dict' is not supported
+
+The above exception was the direct cause of the following exception:
+tests\test_storage.py:25: in test_artifact_persistence_lifecycle
+    db.save_artifact(artifact)
+orchestrator\storage.py:31: in save_artifact
+    db.commit()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:1286: in _prepare_impl
+    self.session.flush()
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4331: in flush
+    self._flush(objects)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4466: in _flush
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv\Lib\site-packages\sqlalchemy\orm\session.py:4427: in _flush
+    flush_context.execute()
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:466: in execute
+    rec.execute(self)
+.venv\Lib\site-packages\sqlalchemy\orm\unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:93: in save_obj
+    _emit_insert_statements(
+.venv\Lib\site-packages\sqlalchemy\orm\persistence.py:1048: in _emit_insert_statements
+    result = connection.execute(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1419: in execute
+    return meth(
+.venv\Lib\site-packages\sqlalchemy\sql\elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv\Lib\site-packages\sqlalchemy\engine\base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv\Lib\site-packages\sqlalchemy\engine\default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.ProgrammingError: (sqlite3.ProgrammingError) Error binding parameter 6: type 'dict' is not supported
+E   [SQL: INSERT INTO artifacts (id, parent_artifact_id, agent_name, version, type, content, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)]
+E   [parameters: ('6e2246b5-6e78-4f94-994d-5cab1fd257a9', None, 'UnknownAgent', '1.0.0', 'unit_test_artifact', {'status': 'verified'}, '2026-02-12 04:57:12.598822')]
+E   (Background on this error at: https://sqlalche.me/e/20/f405)
 ============================== warnings summary ===============================
 schemas\database.py:6
   C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\schemas\database.py:6: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
@@ -40,9 +135,39 @@ agents\tester.py:6
   C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\agents\tester.py:6: PytestCollectionWarning: cannot collect test class 'TestReport' because it has a __init__ constructor (from: tests/test_intent_engine.py)
     class TestReport(BaseModel):
 
+tests/test_cicd_pipeline.py: 8 warnings
+tests/test_lora_harness.py: 2 warnings
+tests/test_rag_pipeline.py: 1 warning
+tests/test_state_space.py: 10 warnings
+  C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\schemas\model_artifact.py:65: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+tests/test_cicd_pipeline.py: 40 warnings
+tests/test_lora_harness.py: 8 warnings
+tests/test_rag_pipeline.py: 2 warnings
+tests/test_state_space.py: 25 warnings
+  C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\schemas\model_artifact.py:86: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "timestamp": datetime.utcnow().isoformat()
+
+tests/test_full_pipeline.py: 81 warnings
+tests/test_storage.py: 1 warning
+  C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\schemas\agent_artifacts.py:12: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+tests/test_full_pipeline.py: 28 warnings
+  C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\.venv\Lib\site-packages\pydantic\main.py:250: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+
+tests/test_plan_state_persistence.py::test_plan_state_save_load_roundtrip
+tests/test_plan_state_persistence.py::test_plan_state_save_load_roundtrip
+tests/test_plan_state_persistence.py::test_plan_state_save_load_roundtrip
+tests/test_plan_state_persistence.py::test_plan_state_save_load_roundtrip
+tests/test_plan_state_persistence.py::test_plan_state_save_load_roundtrip
+tests/test_storage.py::test_artifact_persistence_lifecycle
+  C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\.venv\Lib\site-packages\sqlalchemy\sql\schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 =========================== short test summary info ===========================
-ERROR tests/test_mcp_agents.py
-ERROR tests/test_stateflow.py
-!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!
-======================== 3 warnings, 2 errors in 0.90s ========================
+FAILED tests/test_storage.py::test_artifact_persistence_lifecycle - sqlalchem...
+================= 1 failed, 47 passed, 215 warnings in 1.64s ==================
