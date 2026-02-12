@@ -1,0 +1,19 @@
+{
+  "name": "ghost-void-validation-agent",
+  "version": "1.0.0",
+  "description": "Autonomous validation agent for Ghost Void Engine game builds",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "validate": "node agent/validate.mjs",
+    "validate:quick": "node agent/validate.mjs --level quick",
+    "validate:full": "node agent/validate.mjs --level full",
+    "validate:json": "node agent/validate.mjs --report json",
+    "test:integration": "node .github/scripts/validate-game.mjs",
+    "test:determinism": "node .github/scripts/determinism-check.mjs",
+    "report": "node .github/scripts/generate-report.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
