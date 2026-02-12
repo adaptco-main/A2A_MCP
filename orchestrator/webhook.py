@@ -2,11 +2,19 @@
 from fastapi import FastAPI, HTTPException, Body
 from orchestrator.stateflow import StateMachine
 from orchestrator.utils import extract_plan_id_from_path
+from orchestrator.storage import save_plan_state
 
-app = FastAPI(...)
+app = FastAPI(title="A2A Plan Orchestrator")
 
 # in-memory map (replace with DB-backed persistence or plan state store in prod)
 PLAN_STATE_MACHINES = {}
+
+def persistence_callback(plan_id: str, state_dict: dict) -> None:
+    """Callback to persist FSM state to database."""
+    try:
+        save_plan_state(plan_id, state_dict)
+    except Exception as e:
+        print(f"Warning: Failed to persist plan state for {plan_id}: {e}")
 
 @app.post("/plans/ingress")
 async def plan_ingress(payload: dict = Body(...)):
@@ -27,9 +35,8 @@ async def plan_ingress(payload: dict = Body(...)):
     # Create or reuse an FSM for plan
     sm = PLAN_STATE_MACHINES.get(plan_id)
     if not sm:
-        # create the state machine; you might pass persistence hook here
-        from orchestrator.stateflow import StateMachine
-        sm = StateMachine(max_retries=3)
+        # Create the state machine with persistence callback
+        sm = StateMachine(max_retries=3, persistence_callback=persistence_callback)
         sm.plan_id = plan_id
         PLAN_STATE_MACHINES[plan_id] = sm
 

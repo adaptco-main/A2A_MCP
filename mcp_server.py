@@ -1,14 +1,15 @@
 from mcp.server.fastmcp import FastMCP
-from orchestrator.database_utils import SessionLocal
+from orchestrator.storage import DBManager
 from schemas.database import ArtifactModel
 
 # Initialize FastMCP Server
 mcp = FastMCP("A2A_Orchestrator")
+db_manager = DBManager()
 
 @mcp.tool()
 def get_artifact_trace(root_id: str):
     """Retrieves the full Research -> Code -> Test trace for a specific run."""
-    db = SessionLocal()
+    db = db_manager.SessionLocal()
     try:
         artifacts = db.query(ArtifactModel).filter(
             (ArtifactModel.id == root_id) | (ArtifactModel.parent_artifact_id == root_id)
