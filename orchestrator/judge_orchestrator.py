@@ -4,9 +4,9 @@ Provides judge evaluation of agent actions and avatar personality integration.
 """
 
 from typing import Dict, Any, List, Optional
-from judge.decision import JudgmentModel, ActionScore, CriteriaType
+from judge.decision import JudgmentModel, ActionScore
 from avatars.registry import get_avatar_registry, AvatarRegistry
-from avatars.avatar import Avatar, AvatarProfile, AvatarStyle
+from avatars.avatar import Avatar
 from avatars.setup import setup_default_avatars
 
 
@@ -142,9 +142,16 @@ class JudgeOrchestrator:
 _judge_orchestrator: Optional[JudgeOrchestrator] = None
 
 
-def get_judge_orchestrator(preset: str = "simulation") -> JudgeOrchestrator:
+def get_judge_orchestrator(
+    preset: str = "simulation",
+    reset: bool = False,
+) -> JudgeOrchestrator:
     """Access the global JudgeOrchestrator singleton."""
     global _judge_orchestrator
-    if _judge_orchestrator is None:
+    if (
+        _judge_orchestrator is None
+        or reset
+        or _judge_orchestrator._preset != preset
+    ):
         _judge_orchestrator = JudgeOrchestrator(judge_preset=preset)
     return _judge_orchestrator

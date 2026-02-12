@@ -104,7 +104,6 @@ def setup_default_avatars() -> None:
 
 
 def reset_avatars() -> None:
-    """Clear and reinitialize avatars (for testing)."""
+    """Clear avatar registry state (for tests that need isolation)."""
     registry = get_avatar_registry()
     registry.clear()
-    setup_default_avatars()
