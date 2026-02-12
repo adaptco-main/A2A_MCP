@@ -1,22 +1,24 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from schemas.database import Base, ArtifactModel, PlanStateModel
+from schemas.agent_artifacts import MCPArtifact
 import os
 import json
-from typing import Optional
+from typing import Optional, Dict, Any
 
 # Database Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./a2a_mcp.db")
 
 class DBManager:
-    def __init__(self):
+    def __init__(self) -> None:
         # check_same_thread is required for SQLite
         connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
         self.engine = create_engine(DATABASE_URL, connect_args=connect_args)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         Base.metadata.create_all(bind=self.engine)
 
-    def save_artifact(self, artifact):
+    def save_artifact(self, artifact: MCPArtifact) -> ArtifactModel:
+        """Save an MCPArtifact to the database."""
         db = self.SessionLocal()
         try:
             db_artifact = ArtifactModel(
@@ -36,17 +38,21 @@ class DBManager:
         finally:
             db.close()
 
-    def get_artifact(self, artifact_id):
+    def get_artifact(self, artifact_id: str) -> Optional[ArtifactModel]:
+        """Retrieve an artifact by ID from the database."""
         db = self.SessionLocal()
-        artifact = db.query(ArtifactModel).filter(ArtifactModel.id == artifact_id).first()
-        db.close()
-        return artifact
+        try:
+            artifact = db.query(ArtifactModel).filter(ArtifactModel.id == artifact_id).first()
+            return artifact
+        finally:
+            db.close()
 
 
 _db_manager = DBManager()
 
 
-def save_plan_state(plan_id: str, snapshot: dict) -> None:
+def save_plan_state(plan_id: str, snapshot: Dict[str, Any]) -> None:
+    """Save FSM plan state snapshot to the database."""
     db = _db_manager.SessionLocal()
     try:
         serialized_snapshot = json.dumps(snapshot)
@@ -63,7 +69,8 @@ def save_plan_state(plan_id: str, snapshot: dict) -> None:
         db.close()
 
 
-def load_plan_state(plan_id: str) -> Optional[dict]:
+def load_plan_state(plan_id: str) -> Optional[Dict[str, Any]]:
+    """Load FSM plan state snapshot from the database."""
     db = _db_manager.SessionLocal()
     try:
         state = db.query(PlanStateModel).filter(PlanStateModel.plan_id == plan_id).first()
@@ -73,7 +80,8 @@ def load_plan_state(plan_id: str) -> Optional[dict]:
     finally:
         db.close()
 
-def init_db():
+def init_db() -> None:
+    """Initialize database tables."""
     connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
     engine = create_engine(DATABASE_URL, connect_args=connect_args)
     Base.metadata.create_all(bind=engine)
