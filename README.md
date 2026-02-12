@@ -1,110 +1,103 @@
-# 🤖 Ghost Void — Game Validation Coding Agent
+# A2A_MCP — Multi-Agent Orchestrator
 
-An autonomous validation agent that runs after coding agents complete their work on the Ghost Void Engine. It validates the entire game stack — from C++ engine compilation to React frontend builds — and posts structured reports to pull requests.
+A production-grade multi-agent pipeline with MCP (Model Context Protocol) tooling, a finite-state-machine orchestrator, and self-healing code generation.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  🎮 Game Validation Agent                               │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  Phase 1: 📁 Source Integrity                           │
-│    └─ Critical files, header guards, test presence      │
-│                                                         │
-│  Phase 2: 🔧 Build Verification                        │
-│    └─ make all → binary output + size check             │
-│                                                         │
-│  Phase 3: 🧪 Test Execution                            │
-│    ├─ SafetyLayer (bounds, NaN injection)               │
-│    ├─ Engine (Orchestrator, WorldModel, Sandbox)        │
-│    └─ Jurassic Pixels (HUB, Synthesis, Replay)         │
-│                                                         │
-│  Phase 4: 🔁 Determinism Replay                        │
-│    └─ N-run hash comparison for hash chain integrity    │
-│                                                         │
-│  Phase 5: 💨 Runtime Smoke Test                        │
-│    └─ Process lifecycle, exit code, startup time        │
-│                                                         │
-│  Output: 📊 Validation Report (MD/JSON)                │
-│    └─ PR comment + artifact upload                      │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                    A2A_MCP Pipeline                         │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  ManagingAgent ──► OrchestrationAgent ──► ArchitectureAgent│
+│                                               │            │
+│                                    ┌──────────┘            │
+│                                    ▼                       │
+│                              CoderAgent ◄──► TesterAgent   │
+│                              (self-healing loop)           │
+│                                    │                       │
+│                                    ▼                       │
+│                           ┌──────────────┐                 │
+│                           │  StateMachine │                │
+│                           │  (FSM)        │                │
+│                           └──────┬───────┘                 │
+│                                  ▼                         │
+│                          SQLite / Postgres                  │
+│                                                            │
+│  MCP Server ──► FastAPI Webhook ──► IntentEngine           │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ## Quick Start
 
 ```bash
-# Run standard validation locally
-npm run validate
+# Clone and install
+git clone <repo-url> && cd A2A_MCP
+python -m venv .venv && .venv/Scripts/Activate.ps1   # Windows
+pip install -r requirements.txt
 
-# Quick mode (build + tests only)
-npm run validate:quick
+# Run tests
+python -m pytest -q
 
-# Full depth with JSON report
-npm run validate:full
-node agent/validate.mjs --report json
+# Start the webhook server
+uvicorn orchestrator.webhook:app --reload --port 8000
+
+# Start the MCP server
+python mcp_server.py
 ```
 
-## GitHub Actions
-
-The workflow triggers automatically on:
-
-| Trigger | Condition |
-|---------|-----------|
-| `push` | `main`, `master`, `develop` branches (src/include/tests changes) |
-| `pull_request` | To `main` or `master` |
-| `workflow_dispatch` | Manual with validation level selector |
-
-### Pipeline Stages
-
-1. **Engine Build** — Compiles C++ with cached artifacts
-2. **Engine Tests** — Matrix: safety × engine × jurassic (parallel)
-3. **Frontend Build** — React SPA compilation
-4. **Integration Tests** — Server ↔ Engine communication
-5. **Code Quality** — `cppcheck` static analysis
-6. **Determinism Check** — Multi-run output hash comparison
-7. **Validation Report** — Aggregated markdown with PR comment
-
-## File Structure
+## Project Structure
 
 ```
-shining-equinox/
-├── .github/
-│   ├── workflows/
-│   │   └── game-validation.yml     # CI pipeline
-│   └── scripts/
-│       ├── validate-game.mjs       # Integration tests
-│       ├── determinism-check.mjs   # Replay idempotency
-│       └── generate-report.mjs     # Report generator
-├── agent/
-│   ├── validate.mjs                # Agent entry point
-│   └── agent-config.json           # Agent configuration
-├── package.json                    # npm scripts
-└── README.md                       # This file
+A2A_MCP/
+├── agents/                  # Agent implementations
+│   ├── architecture_agent.py    # System architecture mapper
+│   ├── coder.py                 # Code generation + persistence
+│   ├── managing_agent.py        # Task categorization
+│   ├── orchestration_agent.py   # Blueprint builder
+│   ├── pinn_agent.py            # Physics-informed agent
+│   ├── researcher.py            # Research document generator
+│   └── tester.py                # Validation + self-healing
+├── orchestrator/            # Core orchestration engine
+│   ├── intent_engine.py         # 5-agent pipeline coordinator
+│   ├── main.py                  # MCPHub entry point
+│   ├── stateflow.py             # Thread-safe FSM
+│   ├── storage.py               # DB persistence layer
+│   ├── utils.py                 # Path utilities
+│   └── webhook.py               # FastAPI endpoints
+├── schemas/                 # Data contracts
+│   ├── agent_artifacts.py       # MCPArtifact / AgentTask
+│   ├── database.py              # SQLAlchemy ORM models
+│   ├── model_artifact.py        # Model lifecycle schema
+│   ├── project_plan.py          # ProjectPlan / PlanAction
+│   └── world_model.py           # World state schema
+├── tests/                   # Test suite (48 tests)
+├── pipeline/                # Vector ingestion & determinism
+├── scripts/                 # Utility scripts
+├── docs/                    # API documentation
+├── mcp_server.py            # MCP tool server
+├── conftest.py              # Pytest root config
+└── pyproject.toml           # Project metadata (v0.2.0)
 ```
 
-## Agent CLI
+## API Endpoints
 
-```
-node agent/validate.mjs [options]
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/orchestrate` | Full 5-agent pipeline trigger |
+| `POST` | `/plans/ingress` | Plan state machine ingress |
 
-Options:
-  --level <quick|standard|full>  Validation depth (default: standard)
-  --report <markdown|json>       Report format (default: markdown)
-  --watch                        Re-run on file changes
-  --verbose                      Detailed output
-  --root <path>                  Project root directory
-```
+See [docs/API.md](docs/API.md) for full documentation.
 
-## Integration with Ghost Void
+## Key Features
 
-This agent expects the Ghost Void Engine project structure:
+- **5-Agent Pipeline** — ManagingAgent → OrchestrationAgent → ArchitectureAgent → CoderAgent → TesterAgent
+- **Self-Healing Loop** — Automatic code regeneration on test failure (configurable retries)
+- **Stateflow FSM** — Thread-safe state machine with persistence hooks and override auditing
+- **MCP Integration** — Artifact tracing and pipeline triggering via MCP tools
+- **Contract-First Design** — Pydantic schemas enforce agent communication contracts
 
-- `src/` — C++ engine source
-- `include/` — C++ headers
-- `tests/` — C++ test files
-- `server/` — Node.js WebSocket shell
-- `Makefile` — Build targets (`all`, `test`, `test_engine`, `test_jurassic`)
+## License
 
-Copy or symlink the `.github/` and `agent/` directories into the Ghost Void project root to activate.
+See [LICENSE](LICENSE).
