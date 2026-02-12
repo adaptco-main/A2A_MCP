@@ -1,10 +1,11 @@
 sqlalchemy
 psycopg2-binary
 pydantic
-pytest
-pytest-asyncio
-asyncio
 python-dotenv
 mcp[cli]
-fastapi 
+fastapi
+uvicorn
 httpx
+requests
+pytest
+pytest-asyncio
