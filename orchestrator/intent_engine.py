@@ -1,24 +1,16 @@
-# A2A_MCP/orchestrator/intent_engine.py
-"""
-IntentEngine — Core pipeline coordinator.
+"""Core pipeline coordinator for multi-agent orchestration."""
 
-Provides two execution modes:
-
-1. ``execute_plan(plan)`` — legacy action-level Coder→Tester loop.
-2. ``run_full_pipeline(description)`` — full 5-agent end-to-end pipeline:
-      ManagingAgent → OrchestrationAgent → ArchitectureAgent
-                                          → CoderAgent → TesterAgent
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from agents.architecture_agent import ArchitectureAgent
 from agents.coder import CoderAgent
 from agents.managing_agent import ManagingAgent
 from agents.orchestration_agent import OrchestrationAgent
 from agents.tester import TesterAgent
+from orchestrator.judge_orchestrator import get_judge_orchestrator
 from orchestrator.storage import DBManager
 from schemas.agent_artifacts import MCPArtifact
 from schemas.project_plan import ProjectPlan
@@ -45,11 +37,8 @@ class IntentEngine:
         self.architect = ArchitectureAgent()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
+        self.judge = get_judge_orchestrator()
         self.db = DBManager()
-
-    # ------------------------------------------------------------------
-    # Full 5-agent pipeline
-    # ------------------------------------------------------------------
 
     async def run_full_pipeline(
         self,
@@ -57,17 +46,7 @@ class IntentEngine:
         requester: str = "system",
         max_healing_retries: int = 3,
     ) -> PipelineResult:
-        """
-        End-to-end orchestration:
-
-        1. **ManagingAgent** — categorise *description* into PlanActions.
-        2. **OrchestrationAgent** — build a typed blueprint with delegation.
-        3. **ArchitectureAgent** — map system architecture + WorldModel.
-        4. **CoderAgent** — generate code artifacts for each action.
-        5. **TesterAgent** — validate artifacts; self-heal on failure.
-
-        Returns a ``PipelineResult`` with all intermediary artefacts.
-        """
+        """Run the full Managing -> Orchestrator -> Architect -> Coder -> Tester flow."""
         result = PipelineResult(
             plan=ProjectPlan(
                 plan_id="pending",
@@ -81,11 +60,9 @@ class IntentEngine:
             ),
         )
 
-        # ── Stage 1: ManagingAgent ──────────────────────────────────
         plan = await self.manager.categorize_project(description, requester)
         result.plan = plan
 
-        # ── Stage 2: OrchestrationAgent ─────────────────────────────
         task_descriptions = [a.instruction for a in plan.actions]
         blueprint = await self.orchestrator.build_blueprint(
             project_name=plan.project_name,
@@ -94,62 +71,74 @@ class IntentEngine:
         )
         result.blueprint = blueprint
 
-        # ── Stage 3: ArchitectureAgent ──────────────────────────────
         arch_artifacts = await self.architect.map_system(blueprint)
         result.architecture_artifacts = arch_artifacts
 
-        # ── Stage 4 + 5: CoderAgent → TesterAgent (self-healing) ────
         for action in blueprint.actions:
             action.status = "in_progress"
 
+            coder_context = self.judge.get_agent_system_context("CoderAgent")
+            coding_task = (
+                f"{coder_context}\n\n"
+                "Implement this task with tests and safety checks:\n"
+                f"{action.instruction}"
+            )
             artifact = await self.coder.generate_solution(
                 parent_id=blueprint.plan_id,
-                feedback=action.instruction,
+                feedback=coding_task,
             )
             self.db.save_artifact(artifact)
 
-            # Self-healing loop
             healed = False
             for attempt in range(max_healing_retries):
                 report = await self.tester.validate(artifact.artifact_id)
+                judgment = self.judge.judge_action(
+                    action=(
+                        f"TesterAgent verdict for {artifact.artifact_id}: "
+                        f"{report.status}"
+                    ),
+                    context={
+                        "attempt": attempt + 1,
+                        "max_retries": max_healing_retries,
+                        "artifact_id": artifact.artifact_id,
+                    },
+                    agent_name="TesterAgent",
+                )
                 result.test_verdicts.append(
-                    {"artifact": artifact.artifact_id, "status": report.status}
+                    {
+                        "artifact": artifact.artifact_id,
+                        "status": report.status,
+                        "judge_score": f"{judgment.overall_score:.3f}",
+                    }
                 )
 
                 if report.status == "PASS":
                     healed = True
                     break
 
-                # Re-generate with tester feedback
+                refine_context = self.judge.get_agent_system_context("CoderAgent")
                 artifact = await self.coder.generate_solution(
                     parent_id=artifact.artifact_id,
-                    feedback=report.critique,
+                    feedback=(
+                        f"{refine_context}\n\n"
+                        f"Tester feedback:\n{report.critique}"
+                    ),
                 )
                 self.db.save_artifact(artifact)
 
             result.code_artifacts.append(artifact)
             action.status = "completed" if healed else "failed"
 
-        result.success = all(
-            a.status == "completed" for a in blueprint.actions
-        )
+        result.success = all(a.status == "completed" for a in blueprint.actions)
         return result
 
-    # ------------------------------------------------------------------
-    # Legacy action-level loop (backward compat)
-    # ------------------------------------------------------------------
-
     async def execute_plan(self, plan: ProjectPlan) -> List[str]:
-        """
-        Walk through every action in the plan, invoking the coder and tester
-        for each one, and return a list of all artifact IDs produced.
-        """
+        """Legacy action-level coder->tester loop for backward compatibility."""
         artifact_ids: List[str] = []
 
         for action in plan.actions:
             action.status = "in_progress"
 
-            # Generate code solution
             artifact = await self.coder.generate_solution(
                 parent_id=plan.plan_id,
                 feedback=action.instruction,
@@ -157,11 +146,9 @@ class IntentEngine:
             self.db.save_artifact(artifact)
             artifact_ids.append(artifact.artifact_id)
 
-            # Validate the artifact
             report = await self.tester.validate(artifact.artifact_id)
             artifact_ids.append(report.status)
 
-            # Produce a refinement pass
             refined = await self.coder.generate_solution(
                 parent_id=artifact.artifact_id,
                 feedback=report.critique,
