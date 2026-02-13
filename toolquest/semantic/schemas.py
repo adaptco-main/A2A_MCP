@@ -98,3 +98,11 @@ class ChallengeRequest(BaseModel):
     target_tool_id: str = Field(..., description="ID of the tool to center the challenge around")
     user_history: List[str] = Field(default_factory=list, description="List of previously used tool IDs")
 
+
+class AttractorRerankRequest(BaseModel):
+    """Request to rerank tools based on a Feature Attractor."""
+    attractor_name: str = Field(..., description="Name of the feature attractor")
+    vector_queries: List[str] = Field(..., min_items=1, description="Keywords to form the context vector")
+    limit: int = Field(default=10, ge=1, le=100)
+
+
