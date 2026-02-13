@@ -68,9 +68,9 @@ class Avatar:
         augmented_prompt = f"{self.get_system_context()}\n\n{prompt}"
 
         # Delegate to agent (signature depends on agent type)
-        # This is a placeholder; actual delegation varies by agent
+        parent_id = (context or {}).get("artifact_id", "avatar_context")
         result = await self.agent.generate_solution(
-            parent_id="avatar_context",
+            parent_id=parent_id,
             feedback=augmented_prompt
         )
         return result.content if hasattr(result, 'content') else str(result)

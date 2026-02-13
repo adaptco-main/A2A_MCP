@@ -167,3 +167,31 @@ class ContextWindow:
 
     def __repr__(self) -> str:
         return f"<ContextWindow turns={len(self._turns)}/{self._turn_count} pinned={len(self._pinned_artifacts)}>"
+
+
+if __name__ == "__main__":
+    # Quick demo of context window
+    print("--- [CONTEXT_WINDOW] Initializing sliding window (size=5) ---")
+    cx = ContextWindow(window_size=5, compression_threshold=8)
+    
+    # 1. Simulate turns
+    for i in range(7):
+        cx.add_turn(
+            agent_message=f"Agent response for turn {i}",
+            user_feedback=f"Good work on {i}" if i % 2 == 0 else "Needs tweak",
+            metadata={"speed": 60 + i}
+        )
+    
+    # 2. Pin an artifact
+    cx.pin_artifact("safety_policy", "Maximum speed set to 120 mph", "Collision avoidance")
+
+    # 3. Trigger compression
+    print(" - Adding turn 8 (triggers compression)...")
+    cx.add_turn("Final stabilizing move", "Looks perfect", pinned=True)
+
+    print("\n--- [CONTEXT_WINDOW] Live Prompt Context ---")
+    print(cx.get_context())
+    
+    print("\n[CONTEXT_WINDOW] Final Registry State:")
+    print(cx)
+

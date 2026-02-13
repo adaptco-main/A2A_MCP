@@ -59,6 +59,23 @@ class AvatarRegistry:
                     "icon": "🏁",
                     "theme": "neon"
                 }
+            ),
+            "scaffold": AvatarProfile(
+                avatar_id="avatar-scaffold-001",
+                name="Scaffold Avatar",
+                style=AvatarStyle.ENGINEER,
+                bound_agent="GatingAgent",
+                system_prompt=(
+                    "You are the Gating Agent for the Network Node. "
+                    "Your role is to enforce ADK specifications and provide attestation "
+                    "to the ledger for every proposed action or artifact. Ensure all high-quality "
+                    "sources are verified before embedding."
+                ),
+                ui_config={
+                    "color": "#00D2D3",
+                    "icon": "🛡️",
+                    "theme": "cyber-gate"
+                }
             )
         }
 
