@@ -1,103 +1,161 @@
+"""Core pipeline coordinator for multi-agent orchestration."""
+
 from __future__ import annotations
 
-import uuid
-from typing import List
+from dataclasses import dataclass, field
+from typing import Dict, List
 
+from agents.architecture_agent import ArchitectureAgent
 from agents.coder import CoderAgent
-from agents.pinn_agent import PINNAgent
+from agents.managing_agent import ManagingAgent
+from agents.orchestration_agent import OrchestrationAgent
 from agents.tester import TesterAgent
+from orchestrator.judge_orchestrator import get_judge_orchestrator
 from orchestrator.storage import DBManager
 from schemas.agent_artifacts import MCPArtifact
 from schemas.project_plan import ProjectPlan
 
 
+@dataclass
+class PipelineResult:
+    """Typed output of a full 5-agent pipeline run."""
+
+    plan: ProjectPlan
+    blueprint: ProjectPlan
+    architecture_artifacts: List[MCPArtifact] = field(default_factory=list)
+    code_artifacts: List[MCPArtifact] = field(default_factory=list)
+    test_verdicts: List[Dict[str, str]] = field(default_factory=list)
+    success: bool = False
+
+
 class IntentEngine:
-    """Coordinates coder/tester/PINN execution for a project plan."""
+    """Coordinates multi-agent execution across the full swarm."""
 
     def __init__(self) -> None:
-        self.db = DBManager()
+        self.manager = ManagingAgent()
+        self.orchestrator = OrchestrationAgent()
+        self.architect = ArchitectureAgent()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
-        self.pinn = PINNAgent()
+        self.judge = get_judge_orchestrator()
+        self.db = DBManager()
+
+    async def run_full_pipeline(
+        self,
+        description: str,
+        requester: str = "system",
+        max_healing_retries: int = 3,
+    ) -> PipelineResult:
+        """Run the full Managing -> Orchestrator -> Architect -> Coder -> Tester flow."""
+        result = PipelineResult(
+            plan=ProjectPlan(
+                plan_id="pending",
+                project_name=description[:80],
+                requester=requester,
+            ),
+            blueprint=ProjectPlan(
+                plan_id="pending",
+                project_name=description[:80],
+                requester=requester,
+            ),
+        )
+
+        plan = await self.manager.categorize_project(description, requester)
+        result.plan = plan
+
+        task_descriptions = [a.instruction for a in plan.actions]
+        blueprint = await self.orchestrator.build_blueprint(
+            project_name=plan.project_name,
+            task_descriptions=task_descriptions,
+            requester=requester,
+        )
+        result.blueprint = blueprint
+
+        arch_artifacts = await self.architect.map_system(blueprint)
+        result.architecture_artifacts = arch_artifacts
+
+        for action in blueprint.actions:
+            action.status = "in_progress"
+
+            coder_context = self.judge.get_agent_system_context("CoderAgent")
+            coding_task = (
+                f"{coder_context}\n\n"
+                "Implement this task with tests and safety checks:\n"
+                f"{action.instruction}"
+            )
+            artifact = await self.coder.generate_solution(
+                parent_id=blueprint.plan_id,
+                feedback=coding_task,
+            )
+            self.db.save_artifact(artifact)
+
+            healed = False
+            for attempt in range(max_healing_retries):
+                report = await self.tester.validate(artifact.artifact_id)
+                judgment = self.judge.judge_action(
+                    action=(
+                        f"TesterAgent verdict for {artifact.artifact_id}: "
+                        f"{report.status}"
+                    ),
+                    context={
+                        "attempt": attempt + 1,
+                        "max_retries": max_healing_retries,
+                        "artifact_id": artifact.artifact_id,
+                    },
+                    agent_name="TesterAgent",
+                )
+                result.test_verdicts.append(
+                    {
+                        "artifact": artifact.artifact_id,
+                        "status": report.status,
+                        "judge_score": f"{judgment.overall_score:.3f}",
+                    }
+                )
+
+                if report.status == "PASS":
+                    healed = True
+                    break
+
+                refine_context = self.judge.get_agent_system_context("CoderAgent")
+                artifact = await self.coder.generate_solution(
+                    parent_id=artifact.artifact_id,
+                    feedback=(
+                        f"{refine_context}\n\n"
+                        f"Tester feedback:\n{report.critique}"
+                    ),
+                )
+                self.db.save_artifact(artifact)
+
+            result.code_artifacts.append(artifact)
+            action.status = "completed" if healed else "failed"
+
+        result.success = all(a.status == "completed" for a in blueprint.actions)
+        return result
 
     async def execute_plan(self, plan: ProjectPlan) -> List[str]:
+        """Legacy action-level coder->tester loop for backward compatibility."""
         artifact_ids: List[str] = []
-        parent_id = plan.plan_id
 
         for action in plan.actions:
             action.status = "in_progress"
 
             artifact = await self.coder.generate_solution(
-                parent_id=parent_id,
+                parent_id=plan.plan_id,
                 feedback=action.instruction,
             )
             self.db.save_artifact(artifact)
             artifact_ids.append(artifact.artifact_id)
 
             report = await self.tester.validate(artifact.artifact_id)
-            report_artifact = MCPArtifact(
-                artifact_id=str(uuid.uuid4()),
-                parent_artifact_id=artifact.artifact_id,
-                agent_name=getattr(self.tester, "agent_name", "TesterAgent-Alpha"),
-                version="1.0.0",
-                type="test_report",
-                content=report.model_dump_json(),
-            )
-            self.db.save_artifact(report_artifact)
-            artifact_ids.append(report_artifact.artifact_id)
+            artifact_ids.append(report.status)
 
-            pinn_token = self.pinn.ingest_artifact(
-                artifact_id=artifact.artifact_id,
-                content=str(artifact.content),
-                parent_id=parent_id,
-            )
-            artifact_ids.append(pinn_token.token_id)
-
-            if report.status == "PASS":
-                action.status = "completed"
-                action.validation_feedback = report.critique
-                parent_id = artifact.artifact_id
-                continue
-
-            action.status = "failed"
-            action.validation_feedback = report.critique
-
-            retry_artifact = await self.coder.generate_solution(
+            refined = await self.coder.generate_solution(
                 parent_id=artifact.artifact_id,
                 feedback=report.critique,
             )
-            self.db.save_artifact(retry_artifact)
-            artifact_ids.append(retry_artifact.artifact_id)
-
-            retry_report = await self.tester.validate(retry_artifact.artifact_id)
-            retry_report_artifact = MCPArtifact(
-                artifact_id=str(uuid.uuid4()),
-                parent_artifact_id=retry_artifact.artifact_id,
-                agent_name=getattr(self.tester, "agent_name", "TesterAgent-Alpha"),
-                version="1.0.0",
-                type="test_report",
-                content=retry_report.model_dump_json(),
-            )
-            self.db.save_artifact(retry_report_artifact)
-            artifact_ids.append(retry_report_artifact.artifact_id)
-
-            self.pinn.ingest_artifact(
-                artifact_id=retry_artifact.artifact_id,
-                content=str(retry_artifact.content),
-                parent_id=artifact.artifact_id,
-            )
-
-            if retry_report.status != "PASS":
-                raise RuntimeError(
-                    f"Plan action {action.action_id} failed after retry: {retry_report.critique}"
-                )
+            self.db.save_artifact(refined)
+            artifact_ids.append(refined.artifact_id)
 
             action.status = "completed"
-            action.validation_feedback = retry_report.critique
-            parent_id = retry_artifact.artifact_id
 
         return artifact_ids
-
-    async def process_plan(self, plan: ProjectPlan) -> List[str]:
-        """Backward-compatible wrapper for legacy callers."""
-        return await self.execute_plan(plan)
