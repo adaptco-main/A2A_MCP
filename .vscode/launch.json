@@ -7,9 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/bin/jurassic_pixels_test.exe",
             "args": [],
-            "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
             "console": "integratedTerminal",
             "preLaunchTask": "Build Jurassic Pixels Test (Debug)"
         },
