@@ -1,16 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "(Windows) Launch Jurassic Pixels Test",
-            "type": "cppvsdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/bin/jurassic_pixels_test.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "console": "integratedTerminal",
-            "preLaunchTask": "Build Jurassic Pixels Test (Debug)"
-        },
+
         {
             "name": "Containers: Python - Fastapi",
             "type": "docker",
