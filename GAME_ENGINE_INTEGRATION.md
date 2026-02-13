@@ -4,7 +4,7 @@
 
 This document integrates six new modules into the A2A_MCP foundation for game engine asset generation and agent deployment.
 
-```
+```text
 A2A_MCP (Foundation: v1.0.0-foundation)
 ├── Orchestrator (agent pipeline, FSM, persistence)
 ├── Avatars (personality wrappers)
@@ -24,12 +24,14 @@ A2A_MCP (Foundation: v1.0.0-foundation)
 **Purpose**: Thin personality wrappers over agents.
 
 **Key Classes**:
+
 - `Avatar`: Wrapper with bound agent + personality config
 - `AvatarProfile`: Config dataclass (name, style, UI, voice, system prompt)
 - `AvatarStyle`: Enum (ENGINEER, DESIGNER, DRIVER)
 - `AvatarRegistry`: Singleton for avatar lifecycle
 
 **Usage**:
+
 ```python
 from avatars.registry import get_registry
 
@@ -53,12 +55,14 @@ response = await avatar.respond("Generate function for movement control", contex
 **Purpose**: Logical 4×4×3 world grid for WHAM navigation.
 
 **Key Classes**:
+
 - `Base44Grid`: 44-cell grid (0-43) with 3 layers (ground, elevated, aerial)
 - `GridCell`: Cell with bounds, spawn points, WASD blocking map
 - `WorldBounds`: 3D bounding box for collision/navigation
 - `ZoneChangeEvent`: Event when crossing cell boundaries
 
 **Usage**:
+
 ```python
 from base44.grid import Base44Grid
 
@@ -81,11 +85,13 @@ if neighbors["N"]:  # North neighbor exists
 **Purpose**: Semantic embedding vault for pattern matching and RAG.
 
 **Key Classes**:
+
 - `VectorVault`: Persistent vault with cosine similarity search + k-NN
 - `EmbeddingEncoder`: Pluggable text→vector encoder (768-dim default)
 - `Embedding`: Vector + metadata container
 
 **Usage**:
+
 ```python
 from world_vectors.vault import VectorVault
 
@@ -113,11 +119,13 @@ vault.add_entry(
 **Purpose**: Multi-criteria decision analysis (MCDA) for action scoring.
 
 **Key Classes**:
+
 - `JudgmentModel`: Synchronous per-frame scorer
 - `DecisionCriteria`: Criterion with weight + scorer function
 - `ActionScore`: Scored action with breakdown
 
 **Usage**:
+
 ```python
 from judge.decision import JudgmentModel
 
@@ -147,12 +155,14 @@ print(f"Best action: {best.action} (score {best.overall_score:.3f})")
 **Purpose**: Game loop with decoupled physics and WebGL rendering.
 
 **Key Classes**:
+
 - `WHAMEngine`: Async game loop (runs at target FPS)
 - `Entity`: Game object (position, velocity, mesh ref)
 - `PhysicsEngine`: Decoupled physics simulation
 - `EngineConfig`: Configuration (FPS, entity cap, render backend)
 
 **Usage**:
+
 ```python
 from wham_engine.engine import WHAMEngine, Entity, Transform, EngineConfig
 import asyncio
@@ -188,11 +198,13 @@ asyncio.run(engine.run())
 **Purpose**: Token management with sliding history + semantic compression.
 
 **Key Classes**:
+
 - `ContextWindow`: Sliding window (default 15 recent turns verbatim)
 - `Turn`: Conversation turn (agent + user feedback)
 - Compression: Old turns → semantic summaries when threshold exceeded
 
 **Usage**:
+
 ```python
 from context.window import ContextWindow
 
@@ -265,6 +277,7 @@ print(full_context)
 ## Configuration Files
 
 Create `game_config.yaml`:
+
 ```yaml
 game:
   title: "Supra Driver"

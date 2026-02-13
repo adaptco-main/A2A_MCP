@@ -1,21 +1,58 @@
 {
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "Containers: Python - Fastapi",
-            "type": "docker",
+            "name": "[PHASE_SPACE] Ghost-Void Tick (Python Geodesic)",
+            "type": "debugpy",
             "request": "launch",
-            "preLaunchTask": "docker-run: debug",
-            "python": {
-                "pathMappings": [
-                    {
-                        "localRoot": "${workspaceFolder}",
-                        "remoteRoot": "/app"
-                    }
-                ],
-                "projectType": "fastapi"
+            "program": "${workspaceFolder}/phase_space_tick.py",
+            "console": "integratedTerminal",
+            "args": [
+                "Jurassic Voxel Expansion"
+            ],
+            "env": {
+                "ENERGY_THRESHOLD": "HYPERBOLIC_GEODESIC",
+                "PHASE_MODE": "TICK"
             }
+        },
+        {
+            "name": "[ONTOLOGICAL_DOCK] Hub Socket Server (Node)",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/server/server.js",
+            "cwd": "${workspaceFolder}/server",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "env": {
+                "PORT": "8080",
+                "ENGINE_PATH": "${workspaceFolder}/bin/ghost-void_engine.exe"
+            }
+        },
+        {
+            "name": "[GEODESIC_ROUNDTRIP] Full System Debug",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/server/server.js",
+            "cwd": "${workspaceFolder}/server",
+            "serverReadyAction": {
+                "pattern": "Server started on http://localhost:([0-9]+)",
+                "uriFormat": "http://localhost:%s",
+                "action": "openExternally"
+            },
+            "env": {
+                "AUTO_TICK": "true",
+                "PHASE_DUMP": "pixel_vector"
+            }
+        }
+    ],
+    "compounds": [
+        {
+            "name": "[CORE_STABILIZATION] Multi-Agent Hub",
+            "configurations": [
+                "[PHASE_SPACE] Ghost-Void Tick (Python Geodesic)",
+                "[ONTOLOGICAL_DOCK] Hub Socket Server (Node)"
+            ]
         }
     ]
 }
