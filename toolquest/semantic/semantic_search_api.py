@@ -8,9 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from qdrant_client import QdrantClient
 from sentence_transformers import SentenceTransformer
 
-from schemas import SearchQuery, SearchResult, ToolEmbedding, SemanticChallenge
+from schemas import SearchQuery, SearchResult, ToolEmbedding, SemanticChallenge, ChallengeRequest, AttractorRerankRequest
 from challenge_generator import ChallengeGenerator
-
+from reranker import VectorReranker
 
 app = FastAPI(
     title="ToolQuest Semantic Search API",
@@ -32,6 +32,7 @@ model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
 qdrant = QdrantClient(host="localhost", port=6333)
 COLLECTION_NAME = "toolquest_tools"
 challenge_gen = ChallengeGenerator(qdrant, COLLECTION_NAME)
+reranker = VectorReranker(qdrant_host="localhost", qdrant_port=6333, collection_name=COLLECTION_NAME)
 
 
 @app.get("/health")
@@ -42,6 +43,21 @@ async def health_check():
         "model": "all-mpnet-base-v2",
         "collection": COLLECTION_NAME
     }
+
+# ... (omitted existing endpoints for brevity) ...
+
+@app.post("/api/semantic/rerank", response_model=List[SearchResult])
+async def rerank_tools(request: AttractorRerankRequest):
+    """
+    Rerank tools based on a high-level Feature Attractor.
+    Takes a list of weighted keywords, computes a centroid, and finds nearest tools.
+    """
+    try:
+        results = reranker.rerank_tools(request)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @app.post("/api/semantic/search", response_model=List[SearchResult])
