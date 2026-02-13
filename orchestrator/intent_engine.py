@@ -21,6 +21,7 @@ from agents.coder import CoderAgent
 from agents.managing_agent import ManagingAgent
 from agents.orchestration_agent import OrchestrationAgent
 from agents.tester import TesterAgent
+from agents.action_modeling_agent import ActionModelingAgent
 from orchestrator.storage import DBManager
 from schemas.agent_artifacts import MCPArtifact
 from schemas.project_plan import ProjectPlan
@@ -49,6 +50,7 @@ class IntentEngine:
         self.architect = ArchitectureAgent()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
+        self.action_modeler = ActionModelingAgent()
         self.db = DBManager()
 
         # RBAC integration (optional, gracefully degrades)
@@ -157,6 +159,23 @@ class IntentEngine:
         result.success = all(
             a.status == "completed" for a in blueprint.actions
         )
+        return result
+
+    async def automate_task_action(self, task_file: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Sub-function of the Orchestration Model.
+        Automates the next task in the task list by modeling it as a Working Model Action.
+        """
+        if task_file:
+            self.action_modeler.set_task_file(task_file)
+        
+        result = await self.action_modeler.automate_next_task()
+        
+        if result["status"] == "ACTION_PENDING":
+            self._logger.info("Task '%s' modeled as Action.", result['task_name'])
+            # Optional: Here we could automatically trigger the coder/tester pipeline
+            # for the modeled action, but for now we follow the 'Modeling' phase.
+        
         return result
 
     # ------------------------------------------------------------------

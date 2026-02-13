@@ -26,3 +26,11 @@ def l2_normalize(x: torch.Tensor, eps: float = 1e-12) -> torch.Tensor:
     """
     norm = torch.norm(x, p=2, dim=-1, keepdim=True)
     return x / torch.clamp(norm, min=eps)
+
+def normalize_unicode(text: str) -> str:
+    """NFKC normalization."""
+    return unicodedata.normalize("NFKC", text)
+
+def collapse_whitespace(text: str) -> str:
+    """Collapses multiple spaces/tabs into a single space."""
+    return re.sub(r"[ \t]+", " ", text)
