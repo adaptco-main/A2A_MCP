@@ -20,17 +20,24 @@ from lib import (
 from lib.normalize import l2_normalize
 from schemas import ChunkEmbeddingV1, Chunker, Embedding, Provenance
 
+from sentence_transformers import SentenceTransformer
+
 # Configuration from environment
-EMBEDDER_MODEL_ID = os.environ.get("EMBEDDER_MODEL_ID", "text-embedder-v1")
+EMBEDDER_MODEL_ID = os.environ.get("EMBEDDER_MODEL_ID", "all-MiniLM-L6-v2")
 CHUNKER_VERSION = os.environ.get("CHUNKER_VERSION", "chunk.v1")
+WEIGHTS_HASH = os.environ.get("WEIGHTS_HASH", "sha256:unknown")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 QDRANT_HOST = os.environ.get("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.environ.get("QDRANT_PORT", "6333"))
 COLLECTION_NAME = "document_chunks"
-EMBEDDING_DIM = 768
+EMBEDDING_DIM = 384 # MiniLM-L6-v2 dimension
 
 redis_conn = Redis.from_url(REDIS_URL)
 qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+
+# Initialize model
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = SentenceTransformer(EMBEDDER_MODEL_ID, device=device)
 
 # Ensure collection exists
 try:
@@ -40,9 +47,6 @@ except Exception:
         collection_name=COLLECTION_NAME,
         vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE)
     )
-
-# Mock weights hash (in production, compute from actual model weights)
-WEIGHTS_HASH = "sha256:mock_weights_hash_for_scaffolding"
 
 
 class ChunkDataset(torch.utils.data.Dataset):
@@ -59,38 +63,15 @@ class ChunkDataset(torch.utils.data.Dataset):
 
 def get_embeddings(texts: List[str]) -> torch.Tensor:
     """
-    Generate embeddings for a batch of texts using PyTorch.
-    Uses DataLoader logic to maximize throughput/GPU utilization.
+    Generate embeddings for a batch of texts using SentenceTransformers.
     """
-    dataset = ChunkDataset(texts)
-    # Prefetching and parallel loading for high-velocity inference
-    dataloader = torch.utils.data.DataLoader(
-        dataset, 
-        batch_size=len(texts), 
-        shuffle=False,
-        num_workers=0  # Set > 0 for multi-process loading in production
+    embeddings = model.encode(
+        texts, 
+        convert_to_tensor=True, 
+        show_progress_bar=False,
+        normalize_embeddings=True # This performs L2 normalization
     )
-    
-    all_embeddings = []
-    
-    # In a real implementation:
-    # with torch.no_grad():
-    #     for batch_texts in dataloader:
-    #         inputs = tokenizer(batch_texts, padding=True, truncation=True, return_tensors="pt").to(device)
-    #         outputs = model(**inputs)
-    #         embeddings = outputs.last_hidden_state.mean(dim=1)
-    #         all_embeddings.append(embeddings)
-    
-    # Mock: Processing through the DataLoader
-    for batch_texts in dataloader:
-        batch_embeddings = []
-        for text in batch_texts:
-            torch.manual_seed(hash(text) % (2**32))
-            batch_embeddings.append(torch.randn(EMBEDDING_DIM))
-        all_embeddings.append(torch.stack(batch_embeddings))
-    
-    batch_tensor = torch.cat(all_embeddings)
-    return l2_normalize(batch_tensor)
+    return embeddings
 
 
 def embed_batch(job_payload: dict) -> dict:

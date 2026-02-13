@@ -15,7 +15,8 @@ services:
 
   ingest-api:
     build: 
-      context: ./ingest_api
+      context: .
+      dockerfile: ./ingest_api/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -25,7 +26,8 @@ services:
 
   docling-worker:
     build:
-      context: ./docling_worker
+      context: .
+      dockerfile: ./docling_worker/Dockerfile
     environment:
       - REDIS_URL=redis://redis:6379/0
       - PIPELINE_VERSION=v0.1.0
@@ -38,7 +40,8 @@ services:
 
   embed-worker:
     build:
-      context: ./embed_worker
+      context: .
+      dockerfile: ./embed_worker/Dockerfile
     environment:
       - REDIS_URL=redis://redis:6379/0
       - QDRANT_HOST=qdrant

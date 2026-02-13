@@ -2,16 +2,15 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install dependencies
-COPY requirements.txt .
+# Copy dependencies and application code
+COPY ./ingest_api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY main.py .
+COPY ./ingest_api/main.py .
 
 # Copy shared libraries
-COPY ../../lib /app/lib
-COPY ../../schemas /app/schemas
+COPY ./lib /app/lib
+COPY ./schemas /app/schemas
 
 # Create ledger directory
 RUN mkdir -p /app/ledger

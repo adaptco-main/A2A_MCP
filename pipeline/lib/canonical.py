@@ -68,3 +68,15 @@ def append_to_ledger(record: Dict[str, Any], ledger_path: str) -> str:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
         
     return record["ledger_hash"]
+def compute_doc_id(content: bytes) -> str:
+    """Compute deterministic document ID from content."""
+    return f"sha256:{sha256_hex(content)}"
+
+def compute_chunk_id(doc_id: str, chunk_index: int, chunk_text: str) -> str:
+    """Compute deterministic chunk ID from doc_id, index, and text."""
+    payload = {
+        "doc_id": doc_id,
+        "chunk_index": chunk_index,
+        "chunk_text": chunk_text
+    }
+    return f"sha256:{sha256_hex(jcs_canonical_bytes(payload))}"
