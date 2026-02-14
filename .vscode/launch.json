@@ -4,16 +4,17 @@
         {
             "type": "cmake",
             "request": "launch",
-            "name": "CMake: Script debugging",
-            "cmakeDebugType": "script",
-            "scriptPath": "${workspaceFolder}/<...>.cmake"
+            "name": "CMake: Configure project",
+            "cmakeDebugType": "configure",
+            "clean": false,
+            "configureAll": false
         },
         {
-            "type": "cmake",
+            "name": "Launch Chrome",
             "request": "launch",
-            "name": "CMake: Externally launched",
-            "cmakeDebugType": "external",
-            "pipeName": "<...>"
+            "type": "chrome",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}"
         },
         {
             "name": "Launch Edge",
@@ -52,20 +53,6 @@
             "name": "Run npm start",
             "request": "launch",
             "type": "node-terminal"
-        },
-        {
-            "type": "cmake",
-            "request": "launch",
-            "name": "CMake: Script debugging",
-            "cmakeDebugType": "script",
-            "scriptPath": "${workspaceFolder}/<...>.cmake"
-        },
-        {
-            "type": "cmake",
-            "request": "launch",
-            "name": "CMake: Externally launched",
-            "cmakeDebugType": "external",
-            "pipeName": "<...>"
         },
         {
             "type": "cmake",
