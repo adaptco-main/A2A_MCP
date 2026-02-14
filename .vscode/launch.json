@@ -3,7 +3,7 @@
     "configurations": [
         {
             "name": "Python: Current File",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
@@ -13,7 +13,7 @@
         },
         {
             "name": "Python: FastAPI",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
             "args": [
@@ -27,7 +27,7 @@
         },
         {
             "name": "Python: Run CI/CD Pipeline Tests",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "pytest",
             "args": [
@@ -40,7 +40,7 @@
         },
         {
             "name": "Python: Run RAG Pipeline Tests",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "pytest",
             "args": [
@@ -53,7 +53,7 @@
         },
         {
             "name": "Python: Run State Space Tests",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "pytest",
             "args": [
@@ -66,7 +66,7 @@
         },
         {
             "name": "Jurassic Pixels: Training",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/jurassic_pixels/parker_train.py",
             "args": [
