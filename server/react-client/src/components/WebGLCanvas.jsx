@@ -17,7 +17,7 @@ const WebGLCanvas = ({ gameState }) => {
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     mountRef.current.appendChild(renderer.domElement);
 
@@ -26,7 +26,7 @@ const WebGLCanvas = ({ gameState }) => {
     // 2. Lights
     const ambientLight = new THREE.AmbientLight(0x404040);
     scene.add(ambientLight);
-    
+
     const pointLight = new THREE.PointLight(0xffffff, 1, 100);
     pointLight.position.set(5, 5, 5);
     scene.add(pointLight);
@@ -37,32 +37,64 @@ const WebGLCanvas = ({ gameState }) => {
     const cube = new THREE.Mesh(geometry, material);
     scene.add(cube);
 
+    // 4. WebSocket Connection
+    // Connection to the Node.js server which proxies the C++ engine
+    const ws = new WebSocket('ws://localhost:8080');
+
+    ws.onopen = () => {
+      console.log('Connected to Game Server');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        // Assume engine sends JSON state
+        // For now, we just log it, but in real impl we'd parse and update scene
+        const data = JSON.parse(event.data);
+        console.log('Engine State:', data);
+
+        // Example: If engine sends rotation
+        if (data.rotation) {
+          cube.rotation.x = data.rotation.x;
+          cube.rotation.y = data.rotation.y;
+        }
+      } catch (e) {
+        // console.error('Failed to parse engine state:', e);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('Disconnected from Game Server');
+    };
+
     const animate = () => {
       requestAnimationFrame(animate);
-      cube.rotation.x += 0.01;
-      cube.rotation.y += 0.01;
+      // Fallback animation if no server data
+      cube.rotation.x += 0.005;
+      cube.rotation.y += 0.005;
+
       renderer.render(scene, camera);
     };
 
     animate();
 
-    // 4. Cleanup
+    // 5. Cleanup
     return () => {
+      ws.close();
       mountRef.current?.removeChild(renderer.domElement);
     };
   }, []);
 
   return (
-    <div 
-      ref={mountRef} 
-      style={{ 
-        width: '100%', 
-        height: '100%', 
-        position: 'absolute', 
-        top: 0, 
+    <div
+      ref={mountRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        top: 0,
         left: 0,
-        zIndex: 1 
-      }} 
+        zIndex: 1
+      }}
     />
   );
 };

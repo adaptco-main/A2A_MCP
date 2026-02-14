@@ -20,7 +20,7 @@ server.listen(PORT, () => {
 
 // Path to the compiled engine executable
 // Assuming it's in ../bin/ghost-void_engine.exe
-const enginePath = path.resolve(__dirname, '../bin/ghost-void_engine.exe');
+const enginePath = path.resolve(__dirname, '../bin/ghost-void_engine');
 
 wss.on('connection', (ws) => {
     console.log('Client connected');
