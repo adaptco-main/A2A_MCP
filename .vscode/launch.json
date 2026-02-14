@@ -65,6 +65,7 @@
             "args": ["--episodes", "10", "--export"],
             "console": "integratedTerminal"
         },
+        /*
         {
             "name": "Jurassic Pixels: C++ Test (GDB)",
             "type": "cppdbg",
@@ -74,6 +75,7 @@
             "cwd": "${workspaceFolder}",
             "MIMode": "gdb"
         },
+        */
         {
             "name": "Jurassic Pixels: Interactive Mode (Python)",
             "type": "debugpy",
