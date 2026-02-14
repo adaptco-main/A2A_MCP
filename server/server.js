@@ -30,30 +30,31 @@ wss.on('connection', (ws) => {
         stdio: ['pipe', 'pipe', 'inherit'] // Pipe stdin/stdout, inherit stderr
     });
 
+    let buffer = '';
     engine.stdout.on('data', (data) => {
-        // Send engine output (state) to the client
-        try {
-            // Data might come in chunks, for this scaffolding we assume line-delimited JSON
-            const lines = data.toString().split('\n');
-            for (const line of lines) {
-                if (line.trim()) {
-                    // Validate JSON before broadcasting
-                    try {
-                        const json = JSON.parse(line.trim());
-                        const payload = JSON.stringify(json);
-                        // Broadcast to all connected clients (Frontend & Agent)
-                        wss.clients.forEach((client) => {
-                            if (client.readyState === WebSocket.OPEN) {
-                                client.send(payload);
-                            }
-                        });
-                    } catch (parseError) {
-                        console.error('Invalid JSON from engine:', line.trim());
-                    }
+        buffer += data.toString();
+
+        let boundary = buffer.indexOf('\n');
+        while (boundary !== -1) {
+            const line = buffer.substring(0, boundary).trim();
+            buffer = buffer.substring(boundary + 1);
+            boundary = buffer.indexOf('\n');
+
+            if (line) {
+                // Validate JSON before broadcasting
+                try {
+                    const json = JSON.parse(line);
+                    const payload = JSON.stringify(json);
+                    // Broadcast to all connected clients (Frontend & Agent)
+                    wss.clients.forEach((client) => {
+                        if (client.readyState === WebSocket.OPEN) {
+                            client.send(payload);
+                        }
+                    });
+                } catch (parseError) {
+                    console.error('Invalid JSON from engine:', line.substring(0, 100) + '...');
                 }
             }
-        } catch (e) {
-            console.error('Error sending data to client:', e);
         }
     });
 
