@@ -21,7 +21,7 @@
                     "${workspaceFolder}",
                     "${workspaceFolder}/include"
                 ],
-                "limitSymbolsToIncludedHeaders": true
+                "limitSymbolsToIncludedHeaders": "true"
             }
         }
     ],
