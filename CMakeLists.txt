@@ -22,5 +22,8 @@ add_executable(ghost-void_engine ${MAIN_SOURCE} ${ENGINE_SOURCES} ${AGENT_SOURCE
 # or we'll create a minimal test wrapper later.
 add_executable(jurassic_pixels_test ${MAIN_SOURCE} ${ENGINE_SOURCES} ${AGENT_SOURCES})
 
+# Minimal Test Target
+add_executable(hello_world src/simple_main.cpp)
+
 # Output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
