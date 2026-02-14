@@ -4,6 +4,9 @@ project(A2A_MCP)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Output directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+
 include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 
@@ -26,4 +29,6 @@ add_executable(jurassic_pixels_test ${MAIN_SOURCE} ${ENGINE_SOURCES} ${AGENT_SOU
 add_executable(hello_world src/simple_main.cpp)
 
 # Output directory
+# Output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+
