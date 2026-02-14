@@ -15,13 +15,27 @@ const WebGLCanvas = ({ gameState }) => {
     scene.background = new THREE.Color(0x050505);
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Use OrthographicCamera for 2D pixel-art style rendering
+    // Assuming engine coordinates are in pixels (0,0 top-left typically, but let's check)
+    // Three.js standard: Y up. Engine Y seems to go up? 
+    // Let's assume (0,0) is center or bottom-left. 
+    // Sandbox uses positive coords like (300, 100).
+    // Let's set (0,0) to bottom-left for now.
 
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    // Width/Height from window
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // config: left, right, top, bottom, near, far
+    // To match typical screen coords (0,0 top left, Y down), we do top=0, bottom=-height?
+    // Or just flip Sprite Y.
+    // Let's map 0..width, 0..height.
+    const camera = new THREE.OrthographicCamera(0, width, height, 0, 0.1, 1000);
+    camera.position.z = 10;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: false }); // Disable AA for crisp pixels
+    renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
-
-    camera.position.z = 5;
 
     // 2. Lights
     const ambientLight = new THREE.AmbientLight(0x404040);
