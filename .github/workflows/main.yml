@@ -8,29 +8,48 @@ on:
 jobs:
   ingress-job:
     runs-on: ubuntu-latest
-    # This line is critical! It connects the job to your new 'env' environment
+    # Connects the job to the 'env' environment secrets
     environment: env
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Connection Health Check
+        env:
+          MCP_ENDPOINT: ${{ secrets.MCP_ENDPOINT }}
+        run: |
+          echo "Pinging MCP Orchestrator..."
+          # Performs a simple GET to the base URL to check heartbeat/existence
+          if curl -s --head --request GET "$MCP_ENDPOINT" | grep "200" > /dev/null; then
+            echo "✅ Endpoint is online."
+          else
+            echo "⚠️ Warning: Could not confirm endpoint health, but proceeding with ingress..."
+          fi
+
       - name: Trigger plan ingress
         env:
-          # Use 'vars' because they are Environment Variables, not Secrets
-          MCP_ENDPOINT: ${{ vars.MCP_ENDPOINT }}
-          MCP_TOKEN: ${{ vars.MCP_TOKEN }}
+          MCP_ENDPOINT: ${{ secrets.MCP_ENDPOINT }}
+          MCP_TOKEN: ${{ secrets.MCP_TOKEN }}
         run: |
           PLAN_ID="daily-game-design-run"
           
-          echo "Connecting to endpoint: $MCP_ENDPOINT"
+          echo "Initiating ingress for Plan: $PLAN_ID"
           
-          if [ -z "$MCP_ENDPOINT" ]; then
-            echo "Error: MCP_ENDPOINT is empty. Check your Environment Variables."
-            exit 1
-          fi
-
-          curl -X POST "$MCP_ENDPOINT/ingress" \
+          # Execute the POST request to the ingress endpoint
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$MCP_ENDPOINT/ingress" \
             -H "Authorization: Bearer $MCP_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"plan_id\": \"$PLAN_ID\"}"
+            -d "{\"plan_id\": \"$PLAN_ID\"}")
+
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_STATUS" -eq 200 ] || [ "$HTTP_STATUS" -eq 201 ]; then
+            echo "✅ Success: Plan ingress triggered."
+            echo "Response: $BODY"
+          else
+            echo "❌ Error: Ingress failed with status $HTTP_STATUS"
+            echo "Response: $BODY"
+            exit 1
+          fi
