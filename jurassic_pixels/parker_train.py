@@ -15,16 +15,41 @@ def train(episodes: int, export: bool):
         with open("parker_model.zip", "w") as f:
             f.write("mock_model_data")
 
-def interactive():
-    print("Starting interactive mode. Type 'exit' to quit.")
-    while True:
-        try:
-            cmd = input("Parker> ")
-            if cmd == "exit":
+import asyncio
+import websockets
+import json
+import random
+
+async def agent_loop():
+    uri = "ws://server:8080"
+    print(f"Connecting to {uri}...")
+    async with websockets.connect(uri) as websocket:
+        print("Connected to Game Server")
+        while True:
+            try:
+                message = await websocket.recv()
+                data = json.loads(message)
+                # print(f"Received observation: {data}")
+                
+                # Simple Logic: Randomly move
+                action = {
+                    "type": "move",
+                    "direction": random.choice(["left", "right", "jump", "idle"])
+                }
+                await websocket.send(json.dumps(action))
+                
+            except websockets.exceptions.ConnectionClosed:
+                print("Connection closed")
                 break
-            print(f"Parker received: {cmd}")
-        except EOFError:
-            break
+            except Exception as e:
+                print(f"Error: {e}")
+                break
+
+def interactive():
+    try:
+        asyncio.run(agent_loop())
+    except KeyboardInterrupt:
+        print("Agent stopped.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Parker RL Agent")

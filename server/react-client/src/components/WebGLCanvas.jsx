@@ -45,18 +45,32 @@ const WebGLCanvas = ({ gameState }) => {
       console.log('Connected to Game Server');
     };
 
+    // Map to track meshes
+    const spriteMeshes = useRef(new Map());
+
     ws.onmessage = (event) => {
       try {
-        // Assume engine sends JSON state
-        // For now, we just log it, but in real impl we'd parse and update scene
         const data = JSON.parse(event.data);
-        console.log('Engine State:', data);
+        // console.log('Engine State:', data);
 
-        // Example: If engine sends rotation
-        if (data.rotation) {
-          cube.rotation.x = data.rotation.x;
-          cube.rotation.y = data.rotation.y;
+        if (data.type === 'render_frame' && data.sprites && Array.isArray(data.sprites)) {
+          // Very naive rendering: Clear all and redraw
+          // Optimizations would involve object pooling or updating existing meshes
+          spriteMeshes.current.forEach(mesh => scene.remove(mesh));
+          spriteMeshes.current.clear();
+
+          data.sprites.forEach((sprite, i) => {
+            const geometry = new THREE.PlaneGeometry(sprite.w, sprite.h);
+            // Random color based on texture ID hash to differentiate
+            // For now just green
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(sprite.x, sprite.y, 0);
+            scene.add(mesh);
+            spriteMeshes.current.set(i, mesh);
+          });
         }
+
       } catch (e) {
         // console.error('Failed to parse engine state:', e);
       }
@@ -68,10 +82,6 @@ const WebGLCanvas = ({ gameState }) => {
 
     const animate = () => {
       requestAnimationFrame(animate);
-      // Fallback animation if no server data
-      cube.rotation.x += 0.005;
-      cube.rotation.y += 0.005;
-
       renderer.render(scene, camera);
     };
 

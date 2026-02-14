@@ -34,5 +34,5 @@ services:
       - SERVER_URL=ws://server:8080
     depends_on:
       - server
-    command: ["python", "-m", "jurassic_pixels.parker_train", "--episodes", "100"]
+    command: ["python", "-m", "jurassic_pixels.parker_train", "--interactive"]
 

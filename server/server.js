@@ -37,7 +37,19 @@ wss.on('connection', (ws) => {
             const lines = data.toString().split('\n');
             for (const line of lines) {
                 if (line.trim()) {
-                    ws.send(line.trim());
+                    // Validate JSON before broadcasting
+                    try {
+                        const json = JSON.parse(line.trim());
+                        const payload = JSON.stringify(json);
+                        // Broadcast to all connected clients (Frontend & Agent)
+                        wss.clients.forEach((client) => {
+                            if (client.readyState === WebSocket.OPEN) {
+                                client.send(payload);
+                            }
+                        });
+                    } catch (parseError) {
+                        console.error('Invalid JSON from engine:', line.trim());
+                    }
                 }
             }
         } catch (e) {
