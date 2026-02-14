@@ -1,62 +1,58 @@
-import json
 import os
+import json
+from pathlib import Path
+from typing import Dict, List, Optional
+from uuid import uuid4
 
 class SystemsArchitect:
     """
-    Architect agent responsible for policy schema definition and governance.
+    Agent responsible for spawning Orthogonal Directory Structures.
+    Embeds ZKP Gate Policies at the node level to enforce access control.
     """
-    def __init__(self):
-        self.policy_dir = "agency_hub/architect"
-        self.policy_path = os.path.join(self.policy_dir, "gate_policy.json")
-        self.schema_path = os.path.join(self.policy_dir, "gate_policy.schema.json")
-
-    def initialize_policies(self):
-        """
-        Creates the initial gate policy and local-resolvable schema.
-        """
-        print("SystemsArchitect: Initializing policies...")
+    
+    def __init__(self, root_path: str = "src/nodes"):
+        self.root_path = Path(root_path)
         
-        # 1. Create Schema
-        schema = {
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "type": "object",
-            "properties": {
-                "identity": {"type": "string"},
-                "permissions": {
-                    "type": "array",
-                    "items": {"type": "string"}
-                },
-                "proof_config": {
-                    "type": "object",
-                    "properties": {
-                        "enabled": {"type": "boolean"},
-                        "method": {"type": "string"}
-                    }
-                }
-            },
-            "required": ["identity", "permissions"]
-        }
+    def spawn_directory(self, node_id: str, feature_name: str, required_proofs: List[str] = None):
+        """
+        Creates the feature directory at the specified Base44 node.
+        Embeds a gate_policy.json file.
+        """
+        if required_proofs is None:
+            required_proofs = ["physics_compliance"]
+            
+        # 1. Calculate Path
+        # Sanitize feature name
+        safe_name = "".join([c if c.isalnum() else "_" for c in feature_name]).lower()
+        target_dir = self.root_path / node_id / "features" / safe_name
         
-        os.makedirs(self.policy_dir, exist_ok=True)
-        with open(self.schema_path, 'w') as f:
-            json.dump(schema, f, indent=2)
-        print(f"SystemsArchitect: Local schema created at {self.schema_path}")
-
-        # 2. Create Policy with relative $schema URI
+        # 2. Create Directory Structure
+        target_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 3. Generate Gate Policy
         policy = {
-            "$schema": "./gate_policy.schema.json",
-            "identity": "ghost-void-core",
-            "permissions": ["read", "execute", "test"],
-            "proof_config": {
-                "enabled": True,
-                "method": "sha256-anchored"
-            }
+            "$schema": "https://adk.io/schemas/v0/gate_policy.schema.json",
+            "gate_id": str(uuid4()),
+            "allowed_roles": ["coder", "architect", "manager"],
+            "required_proofs": [
+                {
+                    "proof_type": proof,
+                    "circuit_id": f"circuit_{proof}_v1",
+                    "parameters": {"node_id": node_id}
+                } for proof in required_proofs
+            ],
+            "enforcement_level": "strict"
         }
         
-        with open(self.policy_path, 'w') as f:
+        # 4. Write Policy
+        policy_path = target_dir / "gate_policy.json"
+        with open(policy_path, "w") as f:
             json.dump(policy, f, indent=2)
-        print(f"SystemsArchitect: Policy created with local schema reference at {self.policy_path}")
+            
+        return str(target_dir)
 
 if __name__ == "__main__":
-    architect = SystemsArchitect()
-    architect.initialize_policies()
+    # Test run
+    architect = SystemsArchitect(root_path="temp_nodes")
+    path = architect.spawn_directory("B7", "Supra Drift Logic", ["physics_compliance", "integrity_check"])
+    print(f"Spawned: {path}")

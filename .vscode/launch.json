@@ -4,6 +4,38 @@
         {
             "type": "cmake",
             "request": "launch",
+            "name": "CMake: Script debugging",
+            "cmakeDebugType": "script",
+            "scriptPath": "${workspaceFolder}/<...>.cmake"
+        },
+        {
+            "type": "cmake",
+            "request": "launch",
+            "name": "CMake: Externally launched",
+            "cmakeDebugType": "external",
+            "pipeName": "<...>"
+        },
+        {
+            "name": "Launch Edge",
+            "request": "launch",
+            "type": "msedge",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}"
+        },
+        {
+            "name": "Python Debugger: FastAPI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "main:app",
+                "--reload"
+            ],
+            "jinja": true
+        },
+        {
+            "type": "cmake",
+            "request": "launch",
             "name": "CMake: Configure project",
             "cmakeDebugType": "configure",
             "clean": false,
@@ -44,13 +76,6 @@
             "configureAll": false
         },
         {
-            "name": "Launch Chrome",
-            "request": "launch",
-            "type": "chrome",
-            "url": "http://localhost:8080",
-            "webRoot": "${workspaceFolder}"
-        },
-        {
             "name": "Attach to Chrome",
             "port": 9222,
             "request": "attach",
@@ -82,7 +107,11 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}\\jurassic_pixels\\parker_train.py",
-            "args": ["--episodes", "10", "--export"],
+            "args": [
+                "--episodes",
+                "10",
+                "--export"
+            ],
             "console": "integratedTerminal"
         },
         /*
@@ -101,7 +130,9 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}\\jurassic_pixels\\parker_train.py",
-            "args": ["--interactive"],
+            "args": [
+                "--interactive"
+            ],
             "console": "integratedTerminal"
         }
     ]
