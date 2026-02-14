@@ -2,114 +2,82 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "cmake",
+            "name": "Python: Current File",
+            "type": "python",
             "request": "launch",
-            "name": "CMake: Configure project",
-            "cmakeDebugType": "configure",
-            "clean": false,
-            "configureAll": false
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
         {
-            "name": "Launch Chrome",
-            "request": "launch",
-            "type": "chrome",
-            "url": "http://localhost:8080",
-            "webRoot": "${workspaceFolder}"
-        },
-        {
-            "name": "Launch Edge",
-            "request": "launch",
-            "type": "msedge",
-            "url": "http://localhost:8080",
-            "webRoot": "${workspaceFolder}"
-        },
-        {
-            "name": "Python Debugger: FastAPI",
-            "type": "debugpy",
+            "name": "Python: FastAPI",
+            "type": "python",
             "request": "launch",
             "module": "uvicorn",
             "args": [
                 "main:app",
                 "--reload"
             ],
-            "jinja": true
+            "jinja": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
         {
-            "type": "cmake",
+            "name": "Python: Run CI/CD Pipeline Tests",
+            "type": "python",
             "request": "launch",
-            "name": "CMake: Configure project",
-            "cmakeDebugType": "configure",
-            "clean": false,
-            "configureAll": false
+            "module": "pytest",
+            "args": [
+                "tests/test_cicd_pipeline.py"
+            ],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
         {
-            "type": "node",
-            "request": "attach",
-            "name": "Containers: Attach to Node",
-            "remoteRoot": "/usr/src/app"
-        },
-        {
-            "command": "npm start",
-            "name": "Run npm start",
+            "name": "Python: Run RAG Pipeline Tests",
+            "type": "python",
             "request": "launch",
-            "type": "node-terminal"
+            "module": "pytest",
+            "args": [
+                "tests/test_rag_pipeline.py"
+            ],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
         {
-            "type": "cmake",
+            "name": "Python: Run State Space Tests",
+            "type": "python",
             "request": "launch",
-            "name": "CMake: Configure project",
-            "cmakeDebugType": "configure",
-            "clean": false,
-            "configureAll": false
+            "module": "pytest",
+            "args": [
+                "tests/test_state_space.py"
+            ],
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         },
         {
-            "name": "Attach to Chrome",
-            "port": 9222,
-            "request": "attach",
-            "type": "chrome",
-            "webRoot": "${workspaceFolder}"
-        },
-        {
-            "name": "[PHASE_SPACE] Ghost-Void Tick (Python Geodesic)",
-            "type": "debugpy",
+            "name": "Jurassic Pixels: Training",
+            "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/phase_space_tick.py",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "PowerShell Launch Script",
-            "type": "PowerShell",
-            "request": "launch",
-            "script": "${workspaceFolder}/src/foo.ps1",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "name": "PowerShell: Interactive Session",
-            "type": "PowerShell",
-            "request": "launch",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "name": "Jurassic Pixels: Training (Python)",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}\\jurassic_pixels\\parker_train.py",
+            "program": "${workspaceFolder}/jurassic_pixels/parker_train.py",
             "args": [
                 "--episodes",
                 "10",
                 "--export"
             ],
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Jurassic Pixels: Interactive Mode (Python)",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}\\jurassic_pixels\\parker_train.py",
-            "args": [
-                "--interactive"
-            ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
         }
     ]
 }
