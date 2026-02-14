@@ -4,6 +4,26 @@
         {
             "type": "cmake",
             "request": "launch",
+            "name": "CMake: Configure project",
+            "cmakeDebugType": "configure",
+            "clean": false,
+            "configureAll": false
+        },
+        {
+            "type": "node",
+            "request": "attach",
+            "name": "Containers: Attach to Node",
+            "remoteRoot": "/usr/src/app"
+        },
+        {
+            "command": "npm start",
+            "name": "Run npm start",
+            "request": "launch",
+            "type": "node-terminal"
+        },
+        {
+            "type": "cmake",
+            "request": "launch",
             "name": "CMake: Script debugging",
             "cmakeDebugType": "script",
             "scriptPath": "${workspaceFolder}/<...>.cmake"
@@ -61,7 +81,7 @@
             "name": "Jurassic Pixels: Training (Python)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/jurassic_pixels/parker_train.py",
+            "program": "${workspaceFolder}\\jurassic_pixels\\parker_train.py",
             "args": ["--episodes", "10", "--export"],
             "console": "integratedTerminal"
         },
@@ -80,7 +100,7 @@
             "name": "Jurassic Pixels: Interactive Mode (Python)",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/jurassic_pixels/parker_train.py",
+            "program": "${workspaceFolder}\\jurassic_pixels\\parker_train.py",
             "args": ["--interactive"],
             "console": "integratedTerminal"
         }
