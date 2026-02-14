@@ -115,15 +115,6 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Jurassic Pixels: C++ Test (GDB)",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/bin/jurassic_pixels_test.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "MIMode": "gdb"
-        },
-        {
             "name": "Jurassic Pixels: Interactive Mode (Python)",
             "type": "debugpy",
             "request": "launch",
