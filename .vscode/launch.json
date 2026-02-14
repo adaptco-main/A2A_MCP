@@ -85,6 +85,36 @@
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             }
+        },
+        {
+            "name": "C++: Launch Engine (Windows)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/ghost-void_engine.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "console": "externalTerminal"
+        },
+        {
+            "name": "Web: Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/server/react-client"
+        },
+        {
+            "name": "Web: Edge",
+            "type": "msedge",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/server/react-client"
+        },
+        {
+            "name": "PowerShell: Current File",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": "${file}",
+            "cwd": "${file}"
         }
     ]
 }
