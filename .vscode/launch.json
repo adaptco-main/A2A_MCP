@@ -2,6 +2,28 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "cmake",
+            "request": "launch",
+            "name": "CMake: Script debugging",
+            "cmakeDebugType": "script",
+            "scriptPath": "${workspaceFolder}/<...>.cmake"
+        },
+        {
+            "type": "cmake",
+            "request": "launch",
+            "name": "CMake: Externally launched",
+            "cmakeDebugType": "external",
+            "pipeName": "<...>"
+        },
+        {
+            "type": "cmake",
+            "request": "launch",
+            "name": "CMake: Configure project",
+            "cmakeDebugType": "configure",
+            "clean": false,
+            "configureAll": false
+        },
+        {
             "name": "Launch Chrome",
             "request": "launch",
             "type": "chrome",
@@ -34,6 +56,31 @@
             "type": "PowerShell",
             "request": "launch",
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Jurassic Pixels: Training (Python)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/jurassic_pixels/parker_train.py",
+            "args": ["--episodes", "10", "--export"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Jurassic Pixels: C++ Test (GDB)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/bin/jurassic_pixels_test.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb"
+        },
+        {
+            "name": "Jurassic Pixels: Interactive Mode (Python)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/jurassic_pixels/parker_train.py",
+            "args": ["--interactive"],
+            "console": "integratedTerminal"
         }
     ]
 }
