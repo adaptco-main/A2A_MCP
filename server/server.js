@@ -63,8 +63,16 @@ wss.on('connection', (ws) => {
         engine.stdin.write(message + '\n');
     });
 
+    // Start Game Loop (Drive the engine)
+    const gameLoop = setInterval(() => {
+        if (engine.exitCode === null) {
+            engine.stdin.write('tick\n');
+        }
+    }, 1000 / 60); // 60 FPS
+
     ws.on('close', () => {
         console.log('Client disconnected');
+        clearInterval(gameLoop);
         engine.kill();
     });
 
