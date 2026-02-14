@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Node.js Server & Game Engine
+  server:
+    image: node:18-slim
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./server:/app/server
+      - ./bin:/app/bin # Map local bin to container bin (assuming engine is cross-compiled or handled)
+    command: sh -c "cd server && npm install && node server.js"
+    environment:
+      - PORT=8080
+
+  # MCP Gateway (Docker pattern)
+  mcp-gateway:
+    image: docker/mcp-gateway:latest
+    ports:
+      - "8811:8811"
+    command:
+      - --transport=sse
+      - --servers=default # Configure servers here or via volume mount
+    environment:
+      - DEBUG=true
+
+  # Jurassic Pixels Agent (Parker)
+  jurassic-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    volumes:
+      - ./jurassic_pixels:/app/jurassic_pixels
+      - ./adk:/app/adk
+    environment:
+      - SERVER_URL=ws://server:8080
+    depends_on:
+      - server
+    command: ["python", "-m", "jurassic_pixels.parker_train", "--episodes", "100"]
+
