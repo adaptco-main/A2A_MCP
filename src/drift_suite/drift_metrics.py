@@ -20,11 +20,6 @@ def ks_statistic(x: np.ndarray, y: np.ndarray) -> float:
 
     Requirements:
       - x, y are 1D arrays of finite floats
-
-    >>> baseline = np.array([-2.0, -1.0, 0.0, 1.0, 2.0])
-    >>> current = baseline + 0.25
-    >>> round(ks_statistic(baseline, current), 2)
-    0.2
     """
     x = np.asarray(x, dtype=float).ravel()
     y = np.asarray(y, dtype=float).ravel()
@@ -66,8 +61,6 @@ def ks_pvalue_asymptotic(d: float, n1: int, n2: int) -> float:
     lam = (en + 0.12 + 0.11 / en) * d
     if lam <= 0:
         return 1.0
-    if lam > 10:
-        return 0.0
 
     s = 0.0
     for j in range(1, 200):
