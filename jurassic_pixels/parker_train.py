@@ -1,8 +1,19 @@
 import argparse
 import sys
 import time
+import asyncio
+import os
+import uuid
+from datetime import datetime
+from pathlib import Path
 
-def train(episodes: int, export: bool):
+# Add project root to sys.path to allow imports from orchestrator
+sys.path.append(str(Path(__file__).parent.parent))
+
+from orchestrator.storage import PostgresEventStore
+from orchestrator.observers import WhatsAppEventObserver
+
+async def train(episodes: int, export: bool):
     print(f"Starting training for {episodes} episodes...")
     # Simulate RL training loop
     for i in range(episodes):
@@ -14,8 +25,37 @@ def train(episodes: int, export: bool):
         # Simulate export
         with open("parker_model.zip", "w") as f:
             f.write("mock_model_data")
+        
+        # Notify MLOps Ticker
+        print("📢 Notifying MLOps Ticker...")
+        try:
+            # Initialize Observer with Env Vars (graceful fallback if not set)
+            api_token = os.getenv("WHATSAPP_API_TOKEN")
+            phone_id = os.getenv("WHATSAPP_PHONE_ID")
+            channel_id = os.getenv("WHATSAPP_CHANNEL_ID")
+            
+            observers = []
+            if api_token and phone_id and channel_id:
+                observers.append(WhatsAppEventObserver(api_token, phone_id, channel_id))
+            else:
+                print("⚠️ WhatsApp credentials not found. Skipping notification.")
 
-import asyncio
+            if observers:
+                store = PostgresEventStore(observers=observers)
+                
+                event_data = {
+                    "pipeline": "parker-rl-training",
+                    "execution_id": str(uuid.uuid4())[:8],
+                    "state": "DEPLOYED",
+                    "hash": str(uuid.uuid4()), # Mock hash
+                    "details": {"episodes": episodes, "reward_mean": episodes*10}
+                }
+                
+                await store.append_event(event_data)
+                print("✅ detailed DEPLOYED event emitted to ticker.")
+        except Exception as e:
+            print(f"❌ Failed to notify ticker: {e}")
+
 import websockets
 import json
 import random
@@ -62,4 +102,4 @@ if __name__ == "__main__":
     if args.interactive:
         interactive()
     else:
-        train(args.episodes, args.export)
+        asyncio.run(train(args.episodes, args.export))

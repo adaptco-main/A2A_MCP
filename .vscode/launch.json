@@ -6,7 +6,7 @@
             "request": "launch",
             "name": "CMake: Script debugging",
             "cmakeDebugType": "script",
-            "scriptPath": "${workspaceFolder}/<...>.cmake"
+            "scriptPath": "${workspaceFolder}/scripts/setup.cmake"
         },
         {
             "name": "Python: Current File",
