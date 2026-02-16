@@ -1,8 +1,10 @@
 from fastapi import FastAPI, HTTPException, Body
 from orchestrator.stateflow import StateMachine
 from orchestrator.utils import extract_plan_id_from_path
+from orchestrator.verify_api import router as verify_router
 
 app = FastAPI(title="A2A MCP Webhook")
+app.include_router(verify_router)
 
 # in-memory map (replace with DB-backed persistence or plan state store in prod)
 PLAN_STATE_MACHINES = {}
