@@ -16,9 +16,9 @@ async def test_tetris_aggregator_buffers_and_flushes():
     
     # We use ModelArtifact as our proxy for events in the new system
     events = [
-        ModelArtifact(model_id="t1", weights_hash="h1", embedding_dim=1, category="gaming", state="SCORE_FINALIZED", metadata={"score": 100}),
-        ModelArtifact(model_id="t2", weights_hash="h2", embedding_dim=1, category="gaming", state="SCORE_FINALIZED", metadata={"score": 200}),
-        ModelArtifact(model_id="t3", weights_hash="h3", embedding_dim=1, category="gaming", state="SCORE_FINALIZED", metadata={"score": 300}),
+        ModelArtifact(artifact_id="t1", model_id="tetris", weights_hash="h1", embedding_dim=1, category="gaming", state=AgentLifecycleState.SCORE_FINALIZED, content="score event", metadata={"score": 100}),
+        ModelArtifact(artifact_id="t2", model_id="tetris", weights_hash="h2", embedding_dim=1, category="gaming", state=AgentLifecycleState.SCORE_FINALIZED, content="score event", metadata={"score": 200}),
+        ModelArtifact(artifact_id="t3", model_id="tetris", weights_hash="h3", embedding_dim=1, category="gaming", state=AgentLifecycleState.SCORE_FINALIZED, content="score event", metadata={"score": 300}),
     ]
     
     # 1. Dispatch events to aggregator
@@ -51,7 +51,7 @@ async def test_tetris_aggregator_ignores_mlops_events():
     mock_wa_observer._send_whatsapp_message = AsyncMock()
     aggregator = TetrisScoreAggregator(mock_wa_observer, flush_interval_seconds=1)
     
-    mlops_event = ModelArtifact(model_id="m1", weights_hash="h", embedding_dim=1, category="mlops", state=AgentLifecycleState.INIT)
+    mlops_event = ModelArtifact(artifact_id="m1", model_id="m1", weights_hash="h", embedding_dim=1, category="mlops", state=AgentLifecycleState.INIT, content="mlops event")
     
     await aggregator.on_state_change(mlops_event)
     
