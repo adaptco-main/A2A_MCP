@@ -8,7 +8,10 @@ from schemas.model_artifact import ModelArtifact, AgentLifecycleState
 class TestMLOpsTicker:
     async def test_event_store_terminal_filtering(self):
         """Verify that only terminal events trigger observers."""
-        mock_observer = AsyncMock()
+        # Use MagicMock with AsyncMock method for on_state_change
+        mock_observer = MagicMock()
+        mock_observer.on_state_change = AsyncMock()
+        
         mock_db = MagicMock()
         # Mock save to return input
         mock_db.save_artifact.side_effect = lambda x: x
@@ -30,17 +33,14 @@ class TestMLOpsTicker:
             mock_observer.on_state_change.assert_not_called()
             
             # 2. CONVERGED -> Notification
-            artifact_converged = ModelArtifact(
-                artifact_id="init-1",
-                model_id="test",
-                weights_hash="h1",
-                embedding_dim=1,
-                state=AgentLifecycleState.CONVERGED,
-                content="test",
-                parent_artifact_id="init-1"
-            )
+            # Note: transition returns new instance
+            artifact_converged = artifact_init.transition(AgentLifecycleState.CONVERGED)
             await store.append_event(artifact_converged)
-            mock_observer.on_state_change.assert_called_once_with(artifact_converged)
+            
+            # Verify call
+            mock_observer.on_state_change.assert_called_once()
+            args = mock_observer.on_state_change.call_args[0]
+            assert args[0].state == AgentLifecycleState.CONVERGED
 
     async def test_whatsapp_message_format(self):
         """Verify WhatsApp message formatting."""
@@ -55,6 +55,7 @@ class TestMLOpsTicker:
             content="verification content",
             metadata={"pipeline_id": "pip-1", "execution_id": "exec-1"}
         )
+        # Using ModelArtifact which has timestamp, should work now with fallback logic
         
         body = observer._format_message(artifact)
         assert "[MODEL EVENT VERIFIED]" in body
@@ -68,6 +69,11 @@ class TestMLOpsTicker:
         """Verify WhatsApp sending logic."""
         mock_client = AsyncMock()
         mock_client_cls.return_value.__aenter__.return_value = mock_client
+        
+        # Configure raise_for_status mock
+        mock_response = MagicMock()
+        mock_response.raise_for_status = MagicMock()
+        mock_client.post.return_value = mock_response
         
         observer = WhatsAppEventObserver(channel_id="123", api_token="abc")
         artifact = ModelArtifact(

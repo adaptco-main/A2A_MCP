@@ -67,7 +67,7 @@ class WhatsAppEventObserver:
             f"[MODEL EVENT VERIFIED]\n"
             f"pipeline: {pipeline}\n"
             f"execution: {execution}\n"
-            f"state: {getattr(event, 'state', 'UNKNOWN')}\n"
+            f"state: {getattr(event, 'state', 'UNKNOWN').value if hasattr(getattr(event, 'state', 'UNKNOWN'), 'value') else str(getattr(event, 'state', 'UNKNOWN'))}\n"
             f"hash: {weights_hash[:12]}...\n"
             f"timestamp: {ts}"
         )

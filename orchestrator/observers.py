@@ -60,7 +60,7 @@ class WhatsAppEventObserver(EventObserver):
 
     async def _send_whatsapp_message(self, body_text: str):
         """
-        Sends the message via Meta Cloud API.
+        Sends the message via Meta Cloud API with minimal retry strategy.
         """
         payload = {
             "messaging_product": "whatsapp",
@@ -69,16 +69,28 @@ class WhatsAppEventObserver(EventObserver):
             "text": {"body": body_text}
         }
         
+        max_retries = 3
+        base_delay = 1.0
+
         async with httpx.AsyncClient(timeout=10.0) as client:
-            try:
-                response = await client.post(
-                    self.base_url, 
-                    headers=self.headers, 
-                    json=payload
-                )
-                response.raise_for_status()
-                logger.info(f"WhatsApp ticker updated: {response.json().get('messages', [{}])[0].get('id')}")
-            except httpx.HTTPError as e:
-                logger.error(f"Failed to send WhatsApp message: {e}")
-                if hasattr(e, 'response'):
-                    logger.error(f"Response: {e.response.text}")
+            for attempt in range(max_retries + 1):
+                try:
+                    response = await client.post(
+                        self.base_url, 
+                        headers=self.headers, 
+                        json=payload
+                    )
+                    response.raise_for_status()
+                    logger.info(f"WhatsApp ticker updated: {response.json().get('messages', [{}])[0].get('id')}")
+                    return
+                except httpx.HTTPError as e:
+                    if attempt == max_retries:
+                        logger.error(f"Failed to send WhatsApp message after {max_retries} retries: {e}")
+                        if hasattr(e, 'response'):
+                            logger.error(f"Response: {e.response.text}")
+                    else:
+                        delay = base_delay * (2 ** attempt)
+                        logger.warning(f"WhatsApp send failed (attempt {attempt+1}/{max_retries}). Retrying in {delay}s...")
+                        import asyncio
+                        await asyncio.sleep(delay)
+
