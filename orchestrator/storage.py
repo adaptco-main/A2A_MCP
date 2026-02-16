@@ -26,7 +26,9 @@ class DBManager:
                 agent_name=getattr(artifact, 'agent_name', 'UnknownAgent'),
                 version=getattr(artifact, 'version', '1.0.0'),
                 type=artifact.type,
-                content=artifact.content
+                content=artifact.content,
+                state=getattr(artifact, 'state', None),
+                meta_data=json.dumps(getattr(artifact, 'metadata', {}))
             )
             db.add(db_artifact)
             db.commit()

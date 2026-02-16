@@ -15,6 +15,8 @@ class ArtifactModel(Base):
     version = Column(String, default="1.0.0")
     type = Column(String, nullable=False)  # e.g., 'code', 'test_report'
     content = Column(Text, nullable=False)
+    state = Column(String, nullable=True)
+    meta_data = Column(Text, nullable=True)  # JSON serialized metadata
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):
