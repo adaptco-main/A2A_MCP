@@ -88,7 +88,7 @@
         },
         {
             "name": "C++: Launch Engine (Windows)",
-            "type": "cppvsdbg",
+            "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/ghost-void_engine.exe",
             "args": [],

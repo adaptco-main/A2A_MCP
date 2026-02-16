@@ -10,8 +10,8 @@ from pathlib import Path
 # Add project root to sys.path to allow imports from orchestrator
 sys.path.append(str(Path(__file__).parent.parent))
 
-from orchestrator.storage import PostgresEventStore
-from orchestrator.observers import WhatsAppEventObserver
+from middleware import AgenticRuntime, WhatsAppEventObserver
+from schemas.model_artifact import ModelArtifact, AgentLifecycleState
 
 async def train(episodes: int, export: bool):
     print(f"Starting training for {episodes} episodes...")
@@ -41,18 +41,25 @@ async def train(episodes: int, export: bool):
                 print("⚠️ WhatsApp credentials not found. Skipping notification.")
 
             if observers:
-                store = PostgresEventStore(observers=observers)
+                runtime = AgenticRuntime(observers=observers)
                 
-                event_data = {
-                    "pipeline": "parker-rl-training",
-                    "execution_id": str(uuid.uuid4())[:8],
-                    "state": "DEPLOYED",
-                    "hash": str(uuid.uuid4()), # Mock hash
-                    "details": {"episodes": episodes, "reward_mean": episodes*10}
-                }
+                # Use ModelArtifact for better schema alignment
+                artifact = ModelArtifact(
+                    artifact_id=f"parker-rl-{str(uuid.uuid4())[:8]}",
+                    model_id="parker-rl-v1",
+                    weights_hash=str(uuid.uuid4()),
+                    embedding_dim=128,
+                    state=AgentLifecycleState.CONVERGED, # Assuming training completion is convergence
+                    content="RL training completed",
+                    metadata={
+                        "pipeline": "parker-rl-training",
+                        "episodes": episodes,
+                        "reward_mean": episodes*10
+                    }
+                )
                 
-                await store.append_event(event_data)
-                print("✅ detailed DEPLOYED event emitted to ticker.")
+                await runtime.emit_event(artifact)
+                print("✅ detailed CONVERGED event emitted to ticker via AgenticRuntime.")
         except Exception as e:
             print(f"❌ Failed to notify ticker: {e}")
 
