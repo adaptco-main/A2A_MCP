@@ -7,6 +7,7 @@ from agency_hub.genie_bridge import GenieBridge
 from schemas.model_artifact import AgentLifecycleState
 from agents.coder import CoderAgent
 from agents.tester import TesterAgent
+from agents.gemini_agent import GeminiAgent
 
 from agency_hub.spokes.ghost_void_spoke import GhostVoidSpoke
 from agency_hub.architect.locomotion import LocomotionController
@@ -22,6 +23,9 @@ class MCPHub:
         wa_observer = WhatsAppEventObserver()
         tetris_aggregator = TetrisScoreAggregator(wa_observer)
         self.runtime = AgenticRuntime(observers=[wa_observer, tetris_aggregator])
+        
+        # Gemini Cluster Layer
+        self.gemini_agent = GeminiAgent(runtime=self.runtime)
         
         # Locomotion Model Layer
         self.spoke = GhostVoidSpoke()
@@ -42,6 +46,14 @@ class MCPHub:
         else:
             print("MCPHub: Movement failed or timed out.")
         return success
+
+    async def distill_knowledge_for_lora(self, task_goal: str, query_vector: Any, knowledge_base: Dict[str, Any]):
+        """
+        Use the Gemini Model Cluster to distill RAG context into a LoRA dataset.
+        """
+        print(f"MCPHub: Initiating knowledge distillation for: {task_goal}")
+        artifact = await self.gemini_agent.distill_context_for_lora(task_goal, query_vector, knowledge_base)
+        return artifact
 
     async def run_healing_loop(self, task_description: str, max_retries=3):
         """
