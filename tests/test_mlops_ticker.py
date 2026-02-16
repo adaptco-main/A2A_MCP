@@ -34,7 +34,15 @@ class TestMLOpsTicker:
             
             # 2. CONVERGED -> Notification
             # Note: transition returns new instance
-            artifact_converged = artifact_init.transition(AgentLifecycleState.CONVERGED)
+            artifact_converged = ModelArtifact(
+                artifact_id="init-1",
+                model_id="test",
+                weights_hash="h1",
+                embedding_dim=1,
+                state=AgentLifecycleState.CONVERGED,
+                content="test",
+                parent_artifact_id="init-1"
+            )
             await store.append_event(artifact_converged)
             
             # Verify call
