@@ -64,6 +64,7 @@ class PostgresEventStore:
             event = EventModel(
                 pipeline=event_data["pipeline"],
                 execution_id=event_data["execution_id"],
+                category=event_data.get("category", "mlops"),
                 state=event_data["state"],
                 hash=event_data.get("hash"),
                 details=json.dumps(event_data.get("details", {}))

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-from orchestrator.event_store import PostgresEventStore
-from orchestrator.whatsapp import WhatsAppEventObserver
+from middleware.events import PostgresEventStore
+from middleware.observers.whatsapp import WhatsAppEventObserver
 from schemas.model_artifact import ModelArtifact, AgentLifecycleState
 
 @pytest.mark.asyncio
@@ -16,8 +16,8 @@ class TestMLOpsTicker:
         # Mock save to return input
         mock_db.save_artifact.side_effect = lambda x: x
         
-        # Patch the module-level _db_manager in event_store
-        with patch("orchestrator.event_store._db_manager", mock_db):
+        # Patch the module-level _db_manager in middleware.events
+        with patch("middleware.events._db_manager", mock_db):
             store = PostgresEventStore(observers=[mock_observer])
             
             # 1. INIT -> No notification
@@ -32,17 +32,9 @@ class TestMLOpsTicker:
             await store.append_event(artifact_init)
             mock_observer.on_state_change.assert_not_called()
             
-            # 2. CONVERGED -> Notification
-            # Note: transition returns new instance
-            artifact_converged = ModelArtifact(
-                artifact_id="init-1",
-                model_id="test",
-                weights_hash="h1",
-                embedding_dim=1,
-                state=AgentLifecycleState.CONVERGED,
-                content="test",
-                parent_artifact_id="init-1"
-            )
+            # 2. Terminal state (DIRECT SET for testing filtering)
+            # We bypass transition check to test the filtering logic independently
+            artifact_converged = artifact_init.model_copy(update={"state": AgentLifecycleState.CONVERGED})
             await store.append_event(artifact_converged)
             
             # Verify call
@@ -63,7 +55,6 @@ class TestMLOpsTicker:
             content="verification content",
             metadata={"pipeline_id": "pip-1", "execution_id": "exec-1"}
         )
-        # Using ModelArtifact which has timestamp, should work now with fallback logic
         
         body = observer._format_message(artifact)
         assert "[MODEL EVENT VERIFIED]" in body

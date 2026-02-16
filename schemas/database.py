@@ -41,6 +41,7 @@ class EventModel(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     pipeline = Column(String, nullable=False)
     execution_id = Column(String, nullable=False)
+    category = Column(String, nullable=False, default="mlops") # e.g. 'mlops', 'gaming'
     state = Column(String, nullable=False)
     hash = Column(String, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)

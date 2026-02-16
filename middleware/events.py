@@ -2,6 +2,7 @@ from typing import List, Any
 import logging
 from orchestrator.storage import _db_manager
 
+# Terminal states that trigger external notifications
 TERMINAL_STATES = {"DEPLOYED", "ROLLED_BACK", "DRIFT_BLOCKED", "FINALIZED", "VERIFIED", "CONVERGED", "FAILED"}
 
 class PostgresEventStore:
@@ -14,14 +15,12 @@ class PostgresEventStore:
         """
         Persist the artifact as an event and notify observers if terminal state reached.
         """
-        # Save event using DB manager (synchronous call)
         try:
             saved_artifact = self.db_manager.save_artifact(artifact)
         except Exception as e:
             self.logger.error(f"Failed to save artifact {getattr(artifact, 'artifact_id', 'unknown')}: {e}")
             raise
 
-        # Dispatch to observers if terminal state
         state = getattr(saved_artifact, 'state', None)
         if state in TERMINAL_STATES:
              self.logger.info(f"Event {saved_artifact.artifact_id} reached terminal state {state}. Notifying observers.")

@@ -9,7 +9,6 @@ class WhatsAppEventObserver:
         self.channel_id = channel_id or os.getenv("WHATSAPP_CHANNEL_ID")
         self.api_token = api_token or os.getenv("WHATSAPP_API_TOKEN")
         self.api_version = "v20.0"
-        # Verify if channel_id is phone number ID or WABA ID. Usually Phone Number ID for sending messages.
         self.base_url = f"https://graph.facebook.com/{self.api_version}/{self.channel_id}/messages"
         self.headers = {
             "Authorization": f"Bearer {self.api_token}",
@@ -26,7 +25,7 @@ class WhatsAppEventObserver:
 
         payload = {
             "messaging_product": "whatsapp",
-            "to": self.channel_id,  # For channel/broadcast, this might need adjustment based on provider
+            "to": self.channel_id,
             "type": "text",
             "text": {"body": body}
         }
@@ -40,7 +39,6 @@ class WhatsAppEventObserver:
                 self.logger.error(f"Failed to send WhatsApp notification: {e}")
 
     def _format_message(self, event):
-        # Extract metadata safely
         meta = {}
         if hasattr(event, "meta_data") and event.meta_data:
              try:
@@ -57,17 +55,20 @@ class WhatsAppEventObserver:
         execution = meta.get("execution_id", "unknown-execution")
         weights_hash = getattr(event, "weights_hash", "no-hash")
         
-        # fallback
         if weights_hash == "no-hash":
              weights_hash = meta.get("weights_hash", "no-hash")
 
         ts = getattr(event, "created_at", None) or getattr(event, "timestamp", "UNKNOWN_TIME")
 
+        state_val = getattr(event, 'state', 'UNKNOWN')
+        if hasattr(state_val, 'value'):
+            state_val = state_val.value
+
         return (
             f"[MODEL EVENT VERIFIED]\n"
             f"pipeline: {pipeline}\n"
             f"execution: {execution}\n"
-            f"state: {getattr(event, 'state', 'UNKNOWN').value if hasattr(getattr(event, 'state', 'UNKNOWN'), 'value') else str(getattr(event, 'state', 'UNKNOWN'))}\n"
+            f"state: {state_val}\n"
             f"hash: {weights_hash[:12]}...\n"
             f"timestamp: {ts}"
         )
