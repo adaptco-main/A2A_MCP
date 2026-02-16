@@ -61,11 +61,13 @@ class WhatsAppEventObserver:
         if weights_hash == "no-hash":
              weights_hash = meta.get("weights_hash", "no-hash")
 
+        ts = getattr(event, "created_at", None) or getattr(event, "timestamp", "UNKNOWN_TIME")
+
         return (
             f"[MODEL EVENT VERIFIED]\n"
             f"pipeline: {pipeline}\n"
             f"execution: {execution}\n"
             f"state: {getattr(event, 'state', 'UNKNOWN')}\n"
             f"hash: {weights_hash[:12]}...\n"
-            f"timestamp: {event.created_at}"
+            f"timestamp: {ts}"
         )

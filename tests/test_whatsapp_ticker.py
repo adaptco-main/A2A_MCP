@@ -11,6 +11,13 @@ def mock_httpx_client():
     with patch("httpx.AsyncClient") as mock_client:
         mock_instance = AsyncMock()
         mock_client.return_value.__aenter__.return_value = mock_instance
+        
+        # Configure post response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"messages": [{"id": "wamid.HBgLM..."}]}
+        mock_response.raise_for_status = MagicMock()
+        mock_instance.post.return_value = mock_response
+        
         yield mock_instance
 
 @pytest.mark.asyncio

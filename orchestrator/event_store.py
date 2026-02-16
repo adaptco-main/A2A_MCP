@@ -24,7 +24,7 @@ class PostgresEventStore:
         # Dispatch to observers if terminal state
         state = getattr(saved_artifact, 'state', None)
         if state in TERMINAL_STATES:
-             self.logger.info(f"Event {saved_artifact.id} reached terminal state {state}. Notifying observers.")
+             self.logger.info(f"Event {saved_artifact.artifact_id} reached terminal state {state}. Notifying observers.")
              for obs in self.observers:
                  try:
                      await obs.on_state_change(saved_artifact)
