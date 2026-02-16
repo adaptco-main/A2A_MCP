@@ -1,9 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from schemas.database import Base, ArtifactModel, PlanStateModel
+from schemas.database import Base, ArtifactModel, PlanStateModel, EventModel
 import os
 import json
-from typing import Optional
+from typing import Optional, List
+from orchestrator.observers import EventObserver
 
 # Database Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./a2a_mcp.db")
@@ -45,6 +46,40 @@ class DBManager:
 
 _db_manager = DBManager()
 
+
+class PostgresEventStore:
+    def __init__(self, observers: List[EventObserver] = None):
+        self.db_manager = _db_manager
+        self.observers = observers or []
+
+    async def append_event(self, event_data: dict) -> EventModel:
+        """
+        Appends an event to the store and notifies observers.
+        event_data should contain: pipeline, execution_id, state, hash, details(optional)
+        """
+        db = self.db_manager.SessionLocal()
+        try:
+            event = EventModel(
+                pipeline=event_data["pipeline"],
+                execution_id=event_data["execution_id"],
+                state=event_data["state"],
+                hash=event_data.get("hash"),
+                details=json.dumps(event_data.get("details", {}))
+            )
+            db.add(event)
+            db.commit()
+            db.refresh(event) # Refresh to get timestamp and ID
+
+            # Notify observers
+            for observer in self.observers:
+                await observer.on_state_change(event)
+            
+            return event
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
 def save_plan_state(plan_id: str, snapshot: dict) -> None:
     db = _db_manager.SessionLocal()

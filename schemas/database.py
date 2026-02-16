@@ -31,3 +31,18 @@ class PlanStateModel(Base):
 
     def __repr__(self):
         return f"<PlanState(plan_id={self.plan_id})>"
+
+
+class EventModel(Base):
+    __tablename__ = "events"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    pipeline = Column(String, nullable=False)
+    execution_id = Column(String, nullable=False)
+    state = Column(String, nullable=False)
+    hash = Column(String, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    details = Column(Text, nullable=True)  # JSON string
+
+    def __repr__(self):
+        return f"<Event(pipeline={self.pipeline}, state={self.state}, execution={self.execution_id})>"
