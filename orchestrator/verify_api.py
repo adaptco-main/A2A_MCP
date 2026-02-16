@@ -1,20 +1,31 @@
 from __future__ import annotations
 
-from typing import Any
+import os
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from orchestrator.settlement import PostgresEventStore, verify_execution
 
 router = APIRouter()
 
 
-async def get_tenant_id() -> str:
-    raise NotImplementedError
+async def get_tenant_id(x_tenant_id: str | None = Header(default=None)) -> str:
+    tenant_id = x_tenant_id or os.getenv("DEFAULT_TENANT_ID", "default")
+    tenant_id = tenant_id.strip()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Missing tenant id")
+    return tenant_id
 
 
-async def get_db_connection() -> Any:
-    raise NotImplementedError
+@asynccontextmanager
+async def get_db_connection() -> AsyncIterator[Any]:
+    raise HTTPException(
+        status_code=503,
+        detail="Database connection dependency is not configured",
+    )
+    yield
 
 
 def get_event_store() -> PostgresEventStore:
