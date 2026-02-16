@@ -114,7 +114,7 @@
             "type": "PowerShell",
             "request": "launch",
             "script": "${file}",
-            "cwd": "${file}"
+            "cwd": "${fileDirname}"
         }
     ]
 }

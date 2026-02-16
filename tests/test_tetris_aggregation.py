@@ -1,24 +1,24 @@
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
-from orchestrator.observers.tetris_observer import TetrisScoreAggregator
-from schemas.database import EventModel
+from middleware.observers.tetris import TetrisScoreAggregator
+from schemas.model_artifact import ModelArtifact, AgentLifecycleState
 
 @pytest.mark.asyncio
 async def test_tetris_aggregator_buffers_and_flushes():
     # Setup
-    mock_wa_observer = AsyncMock()
-    # Mock _send_whatsapp_message since it's an internal method we call
+    mock_wa_observer = MagicMock()
     mock_wa_observer._send_whatsapp_message = AsyncMock()
     
     # Use small flush interval for testing
     aggregator = TetrisScoreAggregator(mock_wa_observer, flush_interval_seconds=1)
     
+    # We use ModelArtifact as our proxy for events in the new system
     events = [
-        EventModel(pipeline="tetris-node", state="SCORE_FINALIZED", category="gaming", details={"score": 100}, timestamp=datetime.utcnow()),
-        EventModel(pipeline="tetris-node", state="SCORE_FINALIZED", category="gaming", details={"score": 200}, timestamp=datetime.utcnow()),
-        EventModel(pipeline="tetris-node", state="SCORE_FINALIZED", category="gaming", details={"score": 300}, timestamp=datetime.utcnow()),
+        ModelArtifact(model_id="t1", weights_hash="h1", embedding_dim=1, category="gaming", state="SCORE_FINALIZED", metadata={"score": 100}),
+        ModelArtifact(model_id="t2", weights_hash="h2", embedding_dim=1, category="gaming", state="SCORE_FINALIZED", metadata={"score": 200}),
+        ModelArtifact(model_id="t3", weights_hash="h3", embedding_dim=1, category="gaming", state="SCORE_FINALIZED", metadata={"score": 300}),
     ]
     
     # 1. Dispatch events to aggregator
@@ -47,10 +47,11 @@ async def test_tetris_aggregator_buffers_and_flushes():
 
 @pytest.mark.asyncio
 async def test_tetris_aggregator_ignores_mlops_events():
-    mock_wa_observer = AsyncMock()
+    mock_wa_observer = MagicMock()
+    mock_wa_observer._send_whatsapp_message = AsyncMock()
     aggregator = TetrisScoreAggregator(mock_wa_observer, flush_interval_seconds=1)
     
-    mlops_event = EventModel(pipeline="mlops", state="DEPLOYED", category="mlops", details={}, timestamp=datetime.utcnow())
+    mlops_event = ModelArtifact(model_id="m1", weights_hash="h", embedding_dim=1, category="mlops", state=AgentLifecycleState.INIT)
     
     await aggregator.on_state_change(mlops_event)
     
@@ -59,3 +60,4 @@ async def test_tetris_aggregator_ignores_mlops_events():
     
     await asyncio.sleep(1.2)
     mock_wa_observer._send_whatsapp_message.assert_not_called()
+

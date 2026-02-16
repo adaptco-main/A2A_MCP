@@ -1,12 +1,13 @@
 import asyncio
 import logging
+import json
 from typing import Any, List, Dict
-from datetime import datetime, timedelta
-from orchestrator.observers import EventObserver, WhatsAppEventObserver
+from datetime import datetime
+from middleware.observers.whatsapp import WhatsAppEventObserver
 
 logger = logging.getLogger(__name__)
 
-class TetrisScoreAggregator(EventObserver):
+class TetrisScoreAggregator:
     """
     Aggregates high-frequency scoring events and sends summaries to WhatsApp.
     Prevents "firehose" noise in the public ticker.
@@ -22,16 +23,33 @@ class TetrisScoreAggregator(EventObserver):
         """
         Triggered on every event. Filters for 'gaming' category and 'SCORE_FINALIZED' state.
         """
-        # Ensure EventModel has category support or default to check pipeline name
+        # Align with ModelArtifact and event schemas
         category = getattr(event, 'category', 'mlops')
-        if category != 'gaming' or event.state != 'SCORE_FINALIZED':
+        state = getattr(event, 'state', 'UNKNOWN')
+        if hasattr(state, 'value'):
+            state = state.value
+
+        if category != 'gaming' or state != 'SCORE_FINALIZED':
             return
+
+        # Extract details
+        details = {}
+        if hasattr(event, "metadata") and event.metadata:
+            details = event.metadata
+        elif hasattr(event, "meta_data") and event.meta_data:
+             try:
+                 if isinstance(event.meta_data, str):
+                    details = json.loads(event.meta_data)
+                 else:
+                    details = event.meta_data
+             except:
+                 pass
 
         async with self._lock:
             self.buffer.append({
-                "pipeline": event.pipeline,
-                "score": event.details.get("score", 0) if isinstance(event.details, dict) else 0,
-                "timestamp": event.timestamp
+                "pipeline": details.get("pipeline_id") or getattr(event, 'pipeline', 'unknown'),
+                "score": details.get("score") or 0,
+                "timestamp": getattr(event, 'timestamp', datetime.utcnow())
             })
             
             if self._flush_task is None or self._flush_task.done():

@@ -16,27 +16,32 @@ class WhatsAppEventObserver:
         }
         self.logger = logging.getLogger("WhatsAppObserver")
 
-    async def on_state_change(self, event):
+    async def _send_whatsapp_message(self, message_body: str):
+        """
+        Send a raw text message via the WhatsApp API.
+        """
         if not self.api_token or not self.channel_id:
             self.logger.warning("WhatsApp credentials missing. Skipping notification.")
             return
-
-        body = self._format_message(event)
 
         payload = {
             "messaging_product": "whatsapp",
             "to": self.channel_id,
             "type": "text",
-            "text": {"body": body}
+            "text": {"body": message_body}
         }
         
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(self.base_url, headers=self.headers, json=payload)
                 response.raise_for_status()
-                self.logger.info(f"WhatsApp notification sent for event {event.id}")
+                self.logger.info("WhatsApp message sent successfully.")
             except Exception as e:
-                self.logger.error(f"Failed to send WhatsApp notification: {e}")
+                self.logger.error(f"Failed to send WhatsApp message: {e}")
+
+    async def on_state_change(self, event):
+        body = self._format_message(event)
+        await self._send_whatsapp_message(body)
 
     def _format_message(self, event):
         meta = {}

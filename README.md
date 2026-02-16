@@ -1,64 +1,56 @@
-# Ghost Void Engine
+# Ghost Void & Agentic Runtime
 
-A custom C++ game engine with a Node.js WebSocket shell and React SPA frontend.
+A hybrid ecosystem combining the **Ghost Void Engine** (procedural C++ simulation) with the **Agentic Runtime Middleware** (Python-based lifecycle management and MLOps tickers).
 
 ## Architecture
 
-This project consists of three main components:
+1. **Engine Core (`src/`)**: C++ logic for physics, entity management, and procedural generation.
+2. **Middleware (`middleware/`)**: **[NEW]** Python package for agent lifecycle management, state persistence, and external notifications (WhatsApp).
+3. **Orchestrator (`orchestrator/`)**: High-level agent coordination and self-healing loops.
+4. **Frontend (`server/react-client/`)**: HTML5 Canvas SPA for visual interaction.
 
-1. **Engine Core (`src/`)**: A C++ game engine implementing physics, entity management, and procedural level generation.
-2. **WebSocket Shell (`server/`)**: A Node.js server that spawns the engine process and bridges communication via WebSockets.
-3. **React Frontend (`server/react-client/`)**: A Single Page Application (SPA) that acts as the game client, rendering state on an HTML5 Canvas.
+## Agentic Runtime Middleware
 
-## git Workflow
+The middleware provides a unified interface for agent state management and real-time MLOps tracking.
 
-To host this codebase in Git:
+### Features
 
-1. **Initialize**: Run `git init` (if not already done).
-2. **Ignore**: Ensure `.gitignore` excludes `bin/`, `node_modules/`, and build artifacts.
-3. **Commit**: Add and commit your source files.
+- **Deterministic State Space**: Track agent lifecycle from `INIT` to `CONVERGED`.
+- **WhatsApp MLOps Ticker**: Settlement-grade notifications for critical pipeline events.
+- **Tetris Scoring Aggregator**: High-frequency gaming telemetry summarized via WhatsApp.
+- **Persistence Layer**: SQL-backed artifact and event storage.
 
-### Repository Structure
+### Installation
 
-```text
-root/
-├── src/                # C++ Source Code
-├── include/            # C++ Headers
-├── server/             # Node.js Server
-├──   ├── server.js     # Entry Point
-├──   └── react-client/ # React Source
-└── Makefile            # Build Configuration
+```bash
+# Install core dependencies and the middleware package
+pip install -e .
+```
+
+### Usage
+
+```python
+from middleware import AgenticRuntime, WhatsAppEventObserver
+
+# Initialize runtime with observers
+runtime = AgenticRuntime(observers=[WhatsAppEventObserver()])
+
+# Emit events
+await runtime.emit_event(model_artifact)
 ```
 
 ## How to Run
-
-### Prerequisities
-
-- C++ Compiler (GCC/Clang/MSVC)
-- Node.js & npm
 
 ### 1. Build the Engine
 
 ```sh
 make all
-# OR manually:
-# g++ -I./include -std=c++17 src/main.cpp src/engine/*.cpp src/agents/*.cpp src/safety/*.cpp -o bin/ghost-void_engine.exe
 ```
 
-### 2. Build the Frontend
+### 2. Start the Orchestrator
 
 ```sh
-cd server/react-client
-npm install
-npm run build
+python -m orchestrator.main
 ```
 
-### 3. Start the Server
-
-```sh
-cd server
-npm install
-node server.js
-```
-
-Visit `http://localhost:8080` to play.
+Visit `http://localhost:8080` to interact with the system.

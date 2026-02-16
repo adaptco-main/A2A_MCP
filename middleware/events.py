@@ -3,7 +3,7 @@ import logging
 from orchestrator.storage import _db_manager
 
 # Terminal states that trigger external notifications
-TERMINAL_STATES = {"DEPLOYED", "ROLLED_BACK", "DRIFT_BLOCKED", "FINALIZED", "VERIFIED", "CONVERGED", "FAILED"}
+TERMINAL_STATES = {"DEPLOYED", "ROLLED_BACK", "DRIFT_BLOCKED", "FINALIZED", "VERIFIED", "CONVERGED", "FAILED", "SCORE_FINALIZED"}
 
 class PostgresEventStore:
     def __init__(self, observers: List[Any] = None):

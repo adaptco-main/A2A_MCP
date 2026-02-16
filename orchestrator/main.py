@@ -1,10 +1,16 @@
 import asyncio
 from orchestrator.storage import DBManager
 from orchestrator.llm_util import LLMService
-from middleware import AgenticRuntime, WhatsAppEventObserver
+from middleware import AgenticRuntime, WhatsAppEventObserver, TetrisScoreAggregator
+from middleware.genie_adapter import GenieAdapter
+from agency_hub.genie_bridge import GenieBridge
 from schemas.model_artifact import AgentLifecycleState
 from agents.coder import CoderAgent
 from agents.tester import TesterAgent
+
+from agency_hub.spokes.ghost_void_spoke import GhostVoidSpoke
+from agency_hub.architect.locomotion import LocomotionController
+from typing import Tuple, List, Any
 
 class MCPHub:
     def __init__(self):
@@ -12,8 +18,30 @@ class MCPHub:
         self.coder = CoderAgent()
         self.tester = TesterAgent()
         
-        # Initialize Agentic Runtime Middleware
-        self.runtime = AgenticRuntime(observers=[WhatsAppEventObserver()])
+        # Initialize Agentic Runtime Middleware with observers
+        wa_observer = WhatsAppEventObserver()
+        tetris_aggregator = TetrisScoreAggregator(wa_observer)
+        self.runtime = AgenticRuntime(observers=[wa_observer, tetris_aggregator])
+        
+        # Locomotion Model Layer
+        self.spoke = GhostVoidSpoke()
+        self.locomotion = LocomotionController(self.spoke)
+
+        # Project Genie Interactive Scaffolding
+        self.genie_bridge = GenieBridge(self.spoke)
+        self.genie = GenieAdapter(self.runtime, self.genie_bridge)
+
+    async def process_movement_command(self, target_coords: Tuple[int, int]):
+        """
+        Bridge the conversation loop to the locomotion model.
+        """
+        print(f"MCPHub: Orchestrating movement to {target_coords}")
+        success = await self.locomotion.move_to(target_coords, self.runtime)
+        if success:
+            print("MCPHub: Movement completed successfully.")
+        else:
+            print("MCPHub: Movement failed or timed out.")
+        return success
 
     async def run_healing_loop(self, task_description: str, max_retries=3):
         """

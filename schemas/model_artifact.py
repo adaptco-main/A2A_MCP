@@ -13,8 +13,11 @@ class AgentLifecycleState(str, Enum):
     HEALING = "HEALING"
     CONVERGED = "CONVERGED"
     FAILED = "FAILED"
+    SCORE_FINALIZED = "SCORE_FINALIZED"
+    HANDSHAKE = "HANDSHAKE"
 
 STATE_TRANSITIONS: Dict[AgentLifecycleState, List[AgentLifecycleState]] = {
+    AgentLifecycleState.HANDSHAKE: [AgentLifecycleState.INIT, AgentLifecycleState.FAILED],
     AgentLifecycleState.INIT: [AgentLifecycleState.EMBEDDING],
     AgentLifecycleState.EMBEDDING: [AgentLifecycleState.RAG_QUERY, AgentLifecycleState.FAILED],
     AgentLifecycleState.RAG_QUERY: [AgentLifecycleState.LORA_ADAPT, AgentLifecycleState.FAILED],
@@ -22,6 +25,7 @@ STATE_TRANSITIONS: Dict[AgentLifecycleState, List[AgentLifecycleState]] = {
     AgentLifecycleState.HEALING: [AgentLifecycleState.CONVERGED, AgentLifecycleState.LORA_ADAPT, AgentLifecycleState.FAILED],
     AgentLifecycleState.CONVERGED: [],  # Terminal
     AgentLifecycleState.FAILED: [AgentLifecycleState.INIT],  # Rollback to INIT
+    AgentLifecycleState.SCORE_FINALIZED: [], # Terminal for gaming
 }
 
 class LoRAConfig(BaseModel):
@@ -34,12 +38,14 @@ class LoRAConfig(BaseModel):
 
 class ModelArtifact(MCPArtifact):
     # Core fields
+    artifact_id: str = Field(default_factory=lambda: f"art-{datetime.utcnow().timestamp()}")
     model_id: str = Field(..., description="HuggingFace model identifier")
     weights_hash: str = Field(..., description="SHA256 of model weights")
     embedding_dim: int = Field(..., description="Embedding dimension")
+    category: str = Field(default="mlops", description="Event category: mlops, gaming")
     
     # Lifecycle
-    state: AgentLifecycleState = Field(default=AgentLifecycleState.INIT)
+    state: AgentLifecycleState = Field(default=AgentLifecycleState.HANDSHAKE)
     parent_artifact_id: Optional[str] = None
     agent_name: str = Field(default="ModelRegistry")
     version: str = Field(default="1.0.0")
