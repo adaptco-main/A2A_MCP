@@ -7,8 +7,8 @@ if not os.path.exists(file_path):
     print(f"File not found: {file_path}")
     exit(1)
 
-with open(file_path, 'r', encoding='utf-8') asf:
-    lines = asf.readlines()
+with open(file_path, 'r', encoding='utf-8') as f:
+    lines = f.readlines()
 
 new_lines = []
 for i, line in enumerate(lines):
