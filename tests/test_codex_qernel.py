@@ -101,6 +101,43 @@ class CodexQernelTests(unittest.TestCase):
         self.assertEqual(last_event.event, "codex.scrollstream.rehearsal")
         self.assertTrue(Path(self.config.scrollstream_ledger).exists())
 
+    def test_geodesic_terminal_modeling(self) -> None:
+        qernel = CodexQernel(self.config)
+        model = qernel.model_geodesic_terminal(
+            bridge_name="AxQxOS test bridge",
+            anchors=["north", "mid", "south"],
+            span=90.0,
+            tension=0.75,
+        )
+
+        self.assertEqual(model["bridge_name"], "AxQxOS test bridge")
+        self.assertEqual(model["anchors"], ["north", "mid", "south"])
+        self.assertEqual(len(model["segments"]), 2)
+        self.assertAlmostEqual(model["span"], 90.0)
+        self.assertGreater(model["lattice_frequency"], 0)
+
+        last_event = qernel.read_events(limit=1)[-1]
+        self.assertEqual(last_event.event, "codex.bridge.geodesic.modeled")
+        self.assertEqual(last_event.payload["segments"], 2)
+        self.assertEqual(last_event.payload["anchors"], ["north", "mid", "south"])
+
+    def test_psm_gaussian_action(self) -> None:
+        qernel = CodexQernel(self.config)
+        result = qernel.synthesize_gaussian_action(
+            axqos_flow="audit>query>action: bridge integrity sweep",
+            state_id="cfm.qf4",
+        )
+
+        self.assertIn("predicted_action", result)
+        self.assertIn(result["predicted_action"], {"Commit_Structural_Lock", "Policy_Audit_Required"})
+        self.assertAlmostEqual(result["divergence_score"], 0.069, places=3)
+        self.assertGreaterEqual(result["confidence"], 0.8)
+
+        last_event = qernel.read_events(limit=1)[-1]
+        self.assertEqual(last_event.event, "codex.psm.gaussian_action_synthesized")
+        self.assertEqual(last_event.payload["state_id"], "cfm.qf4")
+        self.assertEqual(last_event.payload["predicted_action"], result["predicted_action"])
+
 
 class ConfigFromEnvTests(unittest.TestCase):
     def test_environment_configuration(self) -> None:

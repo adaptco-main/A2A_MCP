@@ -22,7 +22,7 @@ jobs:
           sha256sum --version || true
 
       - name: Install renderer (optional)
-        if: ${{ secrets.RENDERER_URL != '' }}
+        if: ${{ env.RENDERER_URL != '' }}
         env:
           RENDERER_URL: ${{ secrets.RENDERER_URL }}
         run: |
