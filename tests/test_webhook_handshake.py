@@ -97,7 +97,10 @@ def test_handshake_init_builds_full_state_payload(monkeypatch):
     assert len(state_payload["mcp"]["api_key_fingerprint"]) == 16
 
     assert len(state_payload["onboarded_artifacts"]) == 2
-    assert len(stub_db.saved) == 4  # INIT + EMBEDDING artifacts for each agent
+    assert len(stub_db.saved) == 5  # INIT + EMBEDDING + runtime.assignment.v1 bridge artifact
+    bridge = state_payload["runtime_assignment_artifact"]
+    assert bridge["type"] == "runtime.assignment.v1"
+    assert bridge["content"]["schema_version"] == "runtime.assignment.v1"
 
     assert state_payload["workflow_actions"]
     assert state_payload["token_reconstruction"]["nodes"]
