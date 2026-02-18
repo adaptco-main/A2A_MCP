@@ -23,6 +23,7 @@ from schemas.model_artifact import AgentLifecycleState, LoRAConfig, ModelArtifac
 from schemas.runtime_bridge import (
     KernelVectorControlModel,
     RuntimeAssignmentV1,
+    RuntimeBridgeMetadata,
     RuntimeWorkerAssignment,
 )
 
@@ -178,6 +179,7 @@ def _build_worker_assignments(
                 deployment_mode=deployment_mode,
                 render_backend=render_backend,
                 runtime_shell="wasm",
+                metadata=spec.metadata,
                 mcp={
                     "provider": mcp.provider,
                     "tool_name": mcp.tool_name,
@@ -311,6 +313,7 @@ def _build_runtime_assignment(
     onboarded_artifacts: List[Dict[str, Any]],
     api_key_fingerprint: str,
     kernel_model: KernelVectorControlModel,
+    runtime_bridge_metadata: RuntimeBridgeMetadata,
 ) -> RuntimeAssignmentV1:
     token_stream_stats = {
         "count": len(token_stream),
@@ -337,12 +340,31 @@ def _build_runtime_assignment(
         stateful_artifacts=onboarded_artifacts,
         orchestration_state=orchestration_state,
         kernel_model=kernel_model,
+        runtime_bridge_metadata=runtime_bridge_metadata,
         mcp={
             "provider": payload.mcp.provider,
             "tool_name": payload.mcp.tool_name,
             "endpoint": payload.mcp.endpoint,
             "api_key_fingerprint": api_key_fingerprint,
         },
+    )
+
+
+def _build_runtime_bridge_metadata(
+    *,
+    plan_id: str,
+    handshake_id: str,
+    workers: List[RuntimeWorkerAssignment],
+    token_stream: List[Dict[str, str]],
+    kernel_model: KernelVectorControlModel,
+) -> RuntimeBridgeMetadata:
+    return RuntimeBridgeMetadata(
+        handshake_id=handshake_id,
+        plan_id=plan_id,
+        token_stream_normalized=bool(token_stream),
+        runtime_workers_ready=len(workers),
+        kernel_model_written=True,
+        release_channel=kernel_model.release_channel,
     )
 
 
@@ -396,6 +418,13 @@ def build_handshake_bundle(
         plan_id=plan_id,
         token_stream=normalized_tokens,
     )
+    runtime_bridge_metadata = _build_runtime_bridge_metadata(
+        plan_id=plan_id,
+        handshake_id=handshake_id,
+        workers=workers,
+        token_stream=normalized_tokens,
+        kernel_model=kernel_model,
+    )
     runtime_assignment = _build_runtime_assignment(
         payload=payload,
         handshake_id=handshake_id,
@@ -407,6 +436,7 @@ def build_handshake_bundle(
         onboarded_artifacts=onboarded,
         api_key_fingerprint=api_key_fingerprint,
         kernel_model=kernel_model,
+        runtime_bridge_metadata=runtime_bridge_metadata,
     )
     runtime_assignment_artifact = MCPArtifact(
         artifact_id=f"bridge-{uuid.uuid4().hex[:12]}",
@@ -414,11 +444,7 @@ def build_handshake_bundle(
         agent_name="OrchestrationAgent",
         type="runtime.assignment.v1",
         content=runtime_assignment.model_dump(mode="json"),
-        metadata={
-            "bridge_path": "orchestration_mcp->runtime_mcp",
-            "schema_version": "runtime.assignment.v1",
-            "handshake_id": handshake_id,
-        },
+        metadata=runtime_bridge_metadata.model_dump(mode="json"),
     )
     db_manager.save_artifact(runtime_assignment_artifact)
 
@@ -436,6 +462,7 @@ def build_handshake_bundle(
         "token_reconstruction": workflow_bundle["token_reconstruction"],
         "workflow_actions": workflow_bundle["workflow_actions"],
         "kernel_model": kernel_model.model_dump(mode="json"),
+        "runtime_bridge_metadata": runtime_bridge_metadata.model_dump(mode="json"),
         "worldline_block": worldline_block,
         "runtime_assignment_artifact": runtime_assignment_artifact.model_dump(mode="json"),
     }

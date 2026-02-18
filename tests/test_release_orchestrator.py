@@ -80,3 +80,35 @@ def test_validation_phase_when_kernel_controls_not_ready():
         api_token_release_controlled=False,
     )
     assert model.resolve_phase(signals) == ReleasePhase.RUNNING_VALIDATION
+
+
+def test_running_bot_review_after_validation_and_kernel_controls():
+    model = ReleaseOrchestrator()
+    signals = ReleaseSignals(
+        claude_task_complete=True,
+        tests_passed=True,
+        conflicts_resolved=True,
+        bot_review_complete=False,
+        kernel_model_written=True,
+        root_specs_scaffolded=True,
+        api_token_release_controlled=True,
+    )
+    assert model.resolve_phase(signals) == ReleasePhase.RUNNING_BOT_REVIEW
+
+
+def test_blocked_reason_overrides_all_other_signals():
+    model = ReleaseOrchestrator()
+    signals = ReleaseSignals(
+        claude_task_complete=True,
+        tests_passed=True,
+        conflicts_resolved=True,
+        bot_review_complete=True,
+        kernel_model_written=True,
+        root_specs_scaffolded=True,
+        api_token_release_controlled=True,
+        blocking_reason="runtime bridge metadata mismatch",
+    )
+    state = model.system_state(signals)
+    assert model.resolve_phase(signals) == ReleasePhase.BLOCKED
+    assert state["phase"] == ReleasePhase.BLOCKED.value
+    assert state["next_action"] == "investigate_and_resolve_blocker"

@@ -101,6 +101,16 @@ def test_handshake_init_builds_full_state_payload(monkeypatch):
     bridge = state_payload["runtime_assignment_artifact"]
     assert bridge["type"] == "runtime.assignment.v1"
     assert bridge["content"]["schema_version"] == "runtime.assignment.v1"
+    assert bridge["metadata"]["bridge_path"] == "orchestration_mcp->runtime_mcp"
+
+    runtime_bridge_metadata = state_payload["runtime_bridge_metadata"]
+    assert runtime_bridge_metadata["handshake_id"] == state_payload["handshake_id"]
+    assert runtime_bridge_metadata["plan_id"] == state_payload["plan_id"]
+    assert runtime_bridge_metadata["runtime_workers_ready"] == 2
+    assert runtime_bridge_metadata["kernel_model_written"] is True
+
+    worker_meta = next(w for w in workers if w["agent_name"] == "UnityTrainer")
+    assert worker_meta["metadata"] == {}
 
     assert state_payload["workflow_actions"]
     assert state_payload["token_reconstruction"]["nodes"]
