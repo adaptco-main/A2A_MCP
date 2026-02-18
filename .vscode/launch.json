@@ -155,7 +155,7 @@
             "program": "${workspaceFolder}/bin/ghost-void_engine.exe",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "console": "externalTerminal"
+            "externalConsole": true
         },
         {
             "name": "Web: Chrome",
@@ -179,7 +179,7 @@
             "cwd": "${fileDirname}"
         },
         {
-            "type": "pwa-msedge",
+            "type": "msedge",
             "name": "Launch Microsoft Edge",
             "request": "launch",
             "runtimeArgs": [
@@ -191,7 +191,7 @@
             }
         },
         {
-            "type": "pwa-msedge",
+            "type": "msedge",
             "name": "Launch Microsoft Edge in headless mode",
             "request": "launch",
             "runtimeArgs": [
