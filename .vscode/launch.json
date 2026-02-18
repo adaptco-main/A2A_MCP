@@ -63,13 +63,13 @@
             "console": "integratedTerminal",
             "args": "${command:pickArgs}"
         },
-        {
-            "type": "cmake",
-            "request": "launch",
-            "name": "CMake: Script debugging",
-            "cmakeDebugType": "script",
-            "scriptPath": "${workspaceFolder}/scripts/setup.cmake"
-        },
+        // {
+        //     "type": "cmake",
+        //     "request": "launch",
+        //     "name": "CMake: Script debugging",
+        //     "cmakeDebugType": "script",
+        //     "scriptPath": "${workspaceFolder}/scripts/setup.cmake"
+        // },
         {
             "name": "Python: Current File",
             "type": "debugpy",
