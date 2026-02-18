@@ -1,17 +1,10 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-<<<<<<< ours
 from schemas.database import Base, ArtifactModel, PlanStateModel, EventModel
 import os
 import json
 from typing import Optional, List
 from orchestrator.observers import EventObserver
-=======
-from schemas.database import Base, ArtifactModel, PlanStateModel
-import os
-import json
-from typing import Optional
->>>>>>> theirs
 
 # Database Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./a2a_mcp.db")
@@ -56,13 +49,8 @@ class DBManager:
 _db_manager = DBManager()
 
 
-<<<<<<< ours
-
 # PostgresEventStore has been migrated to middleware.events.py
 
-
-=======
->>>>>>> theirs
 def save_plan_state(plan_id: str, snapshot: dict) -> None:
     db = _db_manager.SessionLocal()
     try:
