@@ -1,10 +1,22 @@
 - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          # Use a quoted string for the version to avoid YAML parsing issues
-          version: "8.15.4"
+          version: "8.15.4" # Quoted to prevent YAML parsing errors
 
       - name: Install dependencies
-        # Use --frozen-lockfile=false because the lockfile is currently missing 
-        # or out of sync in the feature branch
+        # frozen-lockfile=false is required because the branch is out of sync
         run: pnpm install --frozen-lockfile=false
+
+      - name: Deploy
+        # Updated path to check scripts directory and added a safety check
+        run: |
+          if [ -f "./scripts/deploy.sh" ]; then
+            chmod +x ./scripts/deploy.sh
+            ./scripts/deploy.sh
+          elif [ -f "./deploy.sh" ]; then
+            chmod +x ./deploy.sh
+            ./deploy.sh
+          else
+            echo "Error: deploy.sh not found in root or scripts/ directory"
+            exit 1
+          fi
