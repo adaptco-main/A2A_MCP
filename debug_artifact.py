@@ -14,11 +14,11 @@ try:
         artifact = ModelArtifact(
             artifact_id="t1", 
             model_id="tetris", 
-            weights_hash="h1", 
-            embedding_dim=1, 
+            weights_hash="h1",
+            embedding_dim=1,
             category="gaming", 
-            state="SCORE_FINALIZED", 
-            content="score event", 
+            state=AgentLifecycleState.SCORE_FINALIZED, 
+            content="score event",
             metadata={"score": 100}
         )
         print("Instantiation successful.")

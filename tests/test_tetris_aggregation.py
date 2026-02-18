@@ -66,3 +66,25 @@ def test_tetris_aggregator_ignores_mlops_events():
 
     asyncio.run(_test_logic())
 
+
+def test_tetris_aggregator_does_not_flush_empty_buffer():
+    """Sync wrapper for async logic to support environments without pytest-asyncio."""
+    async def _test_logic():
+        # Setup
+        mock_wa_observer = MagicMock()
+        mock_wa_observer._send_whatsapp_message = AsyncMock()
+
+        # Use small flush interval for testing
+        aggregator = TetrisScoreAggregator(mock_wa_observer, flush_interval_seconds=1)
+
+        # 1. Wait for flush interval + small buffer
+        await asyncio.sleep(1.5)
+
+        # 2. Verify WhatsApp observer was NOT called
+        mock_wa_observer._send_whatsapp_message.assert_not_called()
+
+        # 3. Verify buffer is (still) empty
+        async with aggregator._lock:
+            assert len(aggregator.buffer) == 0
+
+    asyncio.run(_test_logic())
