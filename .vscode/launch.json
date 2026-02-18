@@ -1,13 +1,17 @@
 import os
 
-def get_file_path(directory, filename):
+def get_file_path(directory, filename): """
+    Constructs a full file path from a directory and a filename.
+    """
     return os.path.join(directory, filename)
 
 def main():
     directory_name = "data"
-    file_name = "output.txt"
+    file_name = "results.txt"
     
+    # Generate the full path
     full_path = get_file_path(directory_name, file_name)
+    
     print(f"The generated path is: {full_path}")
 
 if __name__ == "__main__":
