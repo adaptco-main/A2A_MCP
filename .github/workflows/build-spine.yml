@@ -25,4 +25,5 @@ jobs:
           node-version: 20
           cache: pnpm
       - name: Install dependencies
+        working-directory: ${{ github.workspace }} # Fixes the 'cwd: undefined' error
         run: pnpm recursive install
