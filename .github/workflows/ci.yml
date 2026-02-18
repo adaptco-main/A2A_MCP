@@ -1,8 +1,7 @@
 - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          # Use a quoted string for the version to avoid YAML parsing issues
-          version: "8.15.4"
+          version: "8.15.4" # Ensure this is a quoted string
 
       - name: Install dependencies
         # Use --frozen-lockfile=false because the lockfile is currently missing 
