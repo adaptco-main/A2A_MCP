@@ -1,1 +1,1 @@
-"""Placeholder for PDF/X export adapter."""
+"""PDF/X backend placeholder."""

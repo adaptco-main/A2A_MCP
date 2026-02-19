@@ -1,12 +1,14 @@
-from prime_directive.sovereignty.chain import event_fingerprint, verify_link
-from prime_directive.sovereignty.event import SovereigntyEvent
+from prime_directive.sovereignty.chain import append_event, verify_chain
 
 
-def test_event_fingerprint_deterministic():
-    event = SovereigntyEvent(event_type="state.transition", state="rendering", payload={"a": 1})
-    assert event_fingerprint(event) == event_fingerprint(event)
+def test_sovereignty_chain_roundtrip() -> None:
+    e1 = append_event(1, "state.transition", "rendered", {"step": "render"})
+    e2 = append_event(2, "gate.preflight", "validated", {"passed": True}, prev_hash=e1.hash_current)
+    assert verify_chain([e1, e2])
 
 
-def test_verify_link():
-    event = SovereigntyEvent(event_type="gate.preflight", state="validating", payload={"ok": True}, prev_hash="abc")
-    assert verify_link(event, "abc")
+def test_sovereignty_chain_detects_tamper() -> None:
+    e1 = append_event(1, "state.transition", "rendered", {"step": "render"})
+    e2 = append_event(2, "gate.preflight", "validated", {"passed": True}, prev_hash=e1.hash_current)
+    tampered = e2.__class__(event=e2.event, hash_current="deadbeef")
+    assert not verify_chain([e1, tampered])

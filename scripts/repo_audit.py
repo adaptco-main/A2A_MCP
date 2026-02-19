@@ -3,63 +3,84 @@ from __future__ import annotations
 
 from pathlib import Path
 
-TARGET_PATHS = {
-    "src/prime_directive/api/app.py": "API entrypoint",
-    "src/prime_directive/pipeline/engine.py": "Pipeline orchestrator",
-    "src/prime_directive/validators/preflight.py": "Preflight validator",
-    "src/prime_directive/sovereignty/chain.py": "Sovereignty chain",
-    "scripts/smoke_ws.sh": "WS smoke script",
-    "docs/architecture/ws_protocol.md": "WS protocol doc",
-}
+ROOT = Path(__file__).resolve().parents[1]
 
-FORBIDDEN_PATTERNS = [
-    "exports/**",
-    "staging/**",
-    "*.db",
-    ".env",
+TARGET_PATHS = [
+    "src/prime_directive/api/app.py",
+    "src/prime_directive/pipeline/engine.py",
+    "src/prime_directive/validators/preflight.py",
+    "src/prime_directive/sovereignty/chain.py",
+    "docs/architecture/ws_protocol.md",
+    "docs/architecture/sovereignty_log.md",
+    "scripts/smoke_ws.sh",
 ]
 
-MOVE_HINTS = {
-    "app/multi_client_api.py": "src/prime_directive/api/app.py (adapter wrap)",
-    "src/multi_client_router.py": "src/prime_directive/pipeline/engine.py (adapter wrap)",
-    "orchestrator/stateflow.py": "src/prime_directive/pipeline/state_machine.py",
-}
+FORBIDDEN_COMMITTED = ["exports", "staging", ".env", "*.db", "*.sqlite"]
 
 
-def _glob_any(pattern: str) -> list[Path]:
-    return [p for p in Path(".").glob(pattern) if p.is_file()]
+def check_target_structure() -> list[str]:
+    findings: list[str] = []
+    for rel in TARGET_PATHS:
+        path = ROOT / rel
+        if not path.exists():
+            findings.append(f"MISSING: {rel}")
+    return findings
+
+
+def flag_forbidden_artifacts() -> list[str]:
+    findings: list[str] = []
+    for path in ROOT.rglob("*"):
+        if ".git" in path.parts:
+            continue
+        rel = path.relative_to(ROOT)
+        if rel.parts and rel.parts[0] in {"exports", "staging"}:
+            findings.append(f"FORBIDDEN_ARTIFACT_DIR: {rel}")
+        if rel.name == ".env" or rel.suffix in {".db", ".sqlite"}:
+            findings.append(f"FORBIDDEN_ARTIFACT_FILE: {rel}")
+    return findings
+
+
+def flag_gate_logic_in_ws() -> list[str]:
+    findings: list[str] = []
+    for path in ROOT.rglob("*.py"):
+        if ".git" in path.parts:
+            continue
+        if "ws" not in path.stem and "websocket" not in path.stem and "webhook" not in path.stem:
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "preflight" in text or "c5" in text or "rsm" in text:
+            findings.append(f"POTENTIAL_WS_GATE_COUPLING: {path.relative_to(ROOT)}")
+    return findings
+
+
+def suggest_moves() -> list[str]:
+    suggestions = []
+    mapping = {
+        "orchestrator/stateflow.py": "src/prime_directive/pipeline/state_machine.py",
+        "orchestrator/settlement.py": "src/prime_directive/sovereignty/chain.py",
+        "orchestrator/webhook.py": "src/prime_directive/api/app.py (adapter first)",
+    }
+    for src, dst in mapping.items():
+        if (ROOT / src).exists():
+            suggestions.append(f"MOVE_CANDIDATE: {src} -> {dst}")
+    return suggestions
 
 
 def main() -> int:
-    print("# PRIME_DIRECTIVE repository audit")
-    print("\n[Target coverage]")
-    for rel, desc in TARGET_PATHS.items():
-        status = "OK" if Path(rel).exists() else "MISSING"
-        print(f"- {status:7} {rel} :: {desc}")
+    findings = []
+    findings.extend(check_target_structure())
+    findings.extend(flag_gate_logic_in_ws())
+    findings.extend(flag_forbidden_artifacts())
+    findings.extend(suggest_moves())
 
-    print("\n[Layering warnings]")
-    ws_candidates = [p for p in Path(".").glob("**/*.py") if "ws" in p.name.lower() or "api" in p.name.lower()]
-    for path in sorted(ws_candidates):
-        text = path.read_text(encoding="utf-8", errors="ignore")
-        if "validate_" in text and "websocket" in text.lower():
-            print(f"- WARN {path}: potential gate logic in transport layer")
+    if not findings:
+        print("Audit OK: no findings")
+        return 0
 
-    print("\n[Forbidden committed artifacts]")
-    any_forbidden = False
-    for pattern in FORBIDDEN_PATTERNS:
-        matches = _glob_any(pattern)
-        for match in matches:
-            any_forbidden = True
-            print(f"- BLOCKER {match}")
-    if not any_forbidden:
-        print("- none")
-
-    print("\n[Suggested move targets]")
-    for src, dst in MOVE_HINTS.items():
-        if Path(src).exists():
-            print(f"- {src} -> {dst}")
-
-    return 0
+    print("Audit findings:")
+    for item in findings:
+        print(f" - {item}")
+    return 1
 
 
 if __name__ == "__main__":

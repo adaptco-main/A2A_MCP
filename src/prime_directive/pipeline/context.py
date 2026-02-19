@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from pathlib import Path
 
 
 @dataclass
 class PipelineContext:
     run_id: str
-    payload: dict[str, Any]
-    gate_results: dict[str, bool] = field(default_factory=dict)
-    artifacts: list[str] = field(default_factory=list)
+    staging_root: Path = field(default_factory=lambda: Path("staging"))
+    export_root: Path = field(default_factory=lambda: Path("exports"))
