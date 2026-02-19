@@ -130,6 +130,7 @@ jobs:
         env:
           MCP_ENDPOINT: ${{ secrets.MCP_ENDPOINT }}
           MCP_TOKEN: ${{ secrets.MCP_TOKEN }}
+          MCP_WEBHOOK_SECRET: ${{ secrets.MCP_WEBHOOK_SECRET }}
           UNIT_RESULT: ${{ needs.unit-tests.result }}
           CONTRACT_RESULT: ${{ needs.contract-artifacts.result }}
         shell: bash
@@ -161,6 +162,12 @@ jobs:
           JSON
           )
 
+          SIG_HEADER=()
+          if [ -n "$MCP_WEBHOOK_SECRET" ]; then
+            SIGNATURE=$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$MCP_WEBHOOK_SECRET" | awk '{print $NF}')
+            SIG_HEADER=(-H "X-Hub-Signature-256: sha256=${SIGNATURE}")
+          fi
+
           curl -sS --fail-with-body \
             --retry 3 \
             --retry-delay 3 \
@@ -169,4 +176,5 @@ jobs:
             -H "Authorization: Bearer ${MCP_TOKEN}" \
             -H "X-GitHub-Event: workflow_run" \
             -H "Content-Type: application/json" \
+            "${SIG_HEADER[@]}" \
             -d "${payload}"

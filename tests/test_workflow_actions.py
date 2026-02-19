@@ -44,6 +44,7 @@ def test_agents_ci_cd_notifies_cicd_monitor():
     workflow_text = (WORKFLOWS_DIR / 'agents-ci-cd.yml').read_text(encoding='utf-8')
     assert '/webhooks/github/actions' in workflow_text
     assert 'X-GitHub-Event: workflow_run' in workflow_text
+    assert 'X-Hub-Signature-256' in workflow_text
 
 
 def test_integration_workflow_is_valid_and_runs_postgres_backed_tests():
@@ -60,7 +61,9 @@ def test_cicd_monitor_hook_tracks_key_workflows():
     workflow = _load_workflow('cicd-monitor.yml')
     trigger = workflow.get('on', workflow.get(True))
     watched = trigger['workflow_run']['workflows']
+    workflow_text = (WORKFLOWS_DIR / 'cicd-monitor.yml').read_text(encoding='utf-8')
 
     assert 'Agents CI/CD' in watched
     assert 'Python application' in watched
     assert 'A2A-MCP Integration Tests' in watched
+    assert 'X-Hub-Signature-256' in workflow_text

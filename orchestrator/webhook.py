@@ -1,7 +1,9 @@
 import os
+import hashlib
+import hmac
 from typing import Optional
 
-from fastapi import Body, FastAPI, Header, HTTPException
+from fastapi import Body, FastAPI, Header, HTTPException, Request
 
 from agents.cicd_monitor_agent import CICDMonitorAgent
 from orchestrator.stateflow import StateMachine
@@ -15,6 +17,7 @@ app.include_router(verify_router)
 PLAN_STATE_MACHINES: dict[str, StateMachine] = {}
 CI_CD_MONITOR = CICDMonitorAgent()
 WEBHOOK_SHARED_SECRET = os.getenv("WEBHOOK_SHARED_SECRET", "")
+GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
 
 
 def _resolve_plan_id(path_plan_id: str | None, payload: dict) -> str | None:
@@ -52,6 +55,28 @@ def _validate_webhook_token(
     token = _extract_webhook_token(authorization, x_webhook_token)
     if token != WEBHOOK_SHARED_SECRET:
         raise HTTPException(status_code=401, detail="Invalid webhook token")
+
+
+def _validate_github_signature(
+    raw_body: bytes,
+    signature_header: Optional[str],
+) -> None:
+    if not GITHUB_WEBHOOK_SECRET:
+        return
+
+    if not signature_header:
+        raise HTTPException(status_code=401, detail="Missing GitHub webhook signature")
+    if not signature_header.startswith("sha256="):
+        raise HTTPException(status_code=401, detail="Invalid GitHub webhook signature format")
+
+    supplied_digest = signature_header.split("=", 1)[1]
+    expected_digest = hmac.new(
+        key=GITHUB_WEBHOOK_SECRET.encode("utf-8"),
+        msg=raw_body,
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(supplied_digest, expected_digest):
+        raise HTTPException(status_code=401, detail="Invalid GitHub webhook signature")
 
 
 def _get_or_create_state_machine(plan_id: str) -> StateMachine:
@@ -120,12 +145,18 @@ async def get_plan_state(plan_id: str):
 
 @app.post("/webhooks/github/actions")
 async def ingest_github_actions_event(
+    request: Request,
     payload: dict = Body(...),
     x_github_event: str = Header(default="workflow_run", alias="X-GitHub-Event"),
     x_webhook_token: Optional[str] = Header(default=None, alias="X-Webhook-Token"),
+    x_hub_signature_256: Optional[str] = Header(default=None, alias="X-Hub-Signature-256"),
     authorization: Optional[str] = Header(default=None),
 ):
-    _validate_webhook_token(authorization=authorization, x_webhook_token=x_webhook_token)
+    raw_body = await request.body()
+    if GITHUB_WEBHOOK_SECRET:
+        _validate_github_signature(raw_body=raw_body, signature_header=x_hub_signature_256)
+    else:
+        _validate_webhook_token(authorization=authorization, x_webhook_token=x_webhook_token)
 
     try:
         snapshot = CI_CD_MONITOR.ingest_github_workflow_event(
