@@ -139,17 +139,18 @@ class IntentEngine:
     async def execute_plan(self, plan: ProjectPlan) -> List[str]:
         """Legacy action-level coder->tester loop for backward compatibility."""
         artifact_ids: List[str] = []
+        last_code_artifact_id = plan.plan_id or "project-plan-root"
 
         for action in plan.actions:
             action.status = "in_progress"
-            parent_id = artifact_ids[-1] if artifact_ids else "project-plan-root"
 
             # 1. Generate Solution
             code_artifact = await self.coder.generate_solution(
-                parent_id=parent_id,
+                parent_id=last_code_artifact_id,
                 feedback=action.instruction,
             )
             artifact_ids.append(code_artifact.artifact_id)
+            last_code_artifact_id = code_artifact.artifact_id
 
             # 2. Validate with Tester
             report = await self.tester.validate(code_artifact.artifact_id)
