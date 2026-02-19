@@ -19,7 +19,7 @@ class PipelineEngine:
     def run(self, ctx: PipelineContext) -> PipelineState:
         self.state = PipelineState.RENDERING
         self.state = PipelineState.VALIDATING
-        if not all(ctx.gate_results.values()):
+        if not ctx.gate_results or not all(ctx.gate_results.values()):
             self.state = PipelineState.HALTED
             return self.state
         self.state = PipelineState.EXPORTING

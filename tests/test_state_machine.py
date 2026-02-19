@@ -7,3 +7,9 @@ def test_engine_halts_when_gate_fails():
     engine = PipelineEngine()
     ctx = PipelineContext(run_id="r1", payload={}, gate_results={"preflight": False})
     assert engine.run(ctx) == PipelineState.HALTED
+
+
+def test_engine_halts_when_no_gates_provided():
+    engine = PipelineEngine()
+    ctx = PipelineContext(run_id="r2", payload={})
+    assert engine.run(ctx) == PipelineState.HALTED
