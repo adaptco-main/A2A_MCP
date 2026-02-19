@@ -141,7 +141,7 @@ class IntentEngine:
 
         for action in plan.actions:
             action.status = "in_progress"
-            parent_id = last_code_artifact_id if last_code_artifact_id else plan.plan_id
+            parent_id = last_code_artifact_id or plan.plan_id
 
             # 1. Generate Solution
             code_artifact = await self.coder.generate_solution(
