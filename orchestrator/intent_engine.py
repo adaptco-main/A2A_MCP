@@ -91,7 +91,6 @@ class IntentEngine:
                 parent_id=blueprint.plan_id,
                 feedback=coding_task,
             )
-            self.db.save_artifact(artifact)
 
             healed = False
             for attempt in range(max_healing_retries):
@@ -128,7 +127,6 @@ class IntentEngine:
                         f"Tester feedback:\n{report.critique}"
                     ),
                 )
-                self.db.save_artifact(artifact)
 
             result.code_artifacts.append(artifact)
             action.status = "completed" if healed else "failed"
@@ -139,10 +137,11 @@ class IntentEngine:
     async def execute_plan(self, plan: ProjectPlan) -> List[str]:
         """Legacy action-level coder->tester loop for backward compatibility."""
         artifact_ids: List[str] = []
-        last_code_artifact_id = plan.plan_id or "project-plan-root"
+        last_code_artifact_id: str | None = None
 
         for action in plan.actions:
             action.status = "in_progress"
+            parent_id = last_code_artifact_id or plan.plan_id
 
             # 1. Generate Solution
             code_artifact = await self.coder.generate_solution(
@@ -184,7 +183,6 @@ class IntentEngine:
                 type="vector_token",
                 content=token.model_dump_json(),
             )
-            self.db.save_artifact(pinn_artifact)
             artifact_ids.append(pinn_artifact_id)
 
             action.status = "completed" if report.status == "PASS" else "failed"
