@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from prime_directive.pipeline.context import PipelineContext
-from prime_directive.pipeline.state_machine import PipelineState
 
 
 class PipelineEngine:
-    """Thin deterministic orchestrator skeleton.
+    """Placeholder orchestration engine for staged migration."""
 
-    Full integration should wire render/validate/export/commit adapters incrementally.
-    """
+    def __init__(self, context: PipelineContext) -> None:
+        self.context = context
 
     def __init__(self) -> None:
         self.state = PipelineState.IDLE

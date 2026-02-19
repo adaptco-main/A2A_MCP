@@ -5,6 +5,7 @@ __pycache__/
 
 # Environments
 .env
+.env.*
 .venv
 env/
 venv/
@@ -28,10 +29,6 @@ specs/tmpclaude-*-cwd
 
 # Local runtime artifacts
 *.sqlite
-
-# PRIME_DIRECTIVE runtime outputs
+*.db
 exports/
 staging/
-*.db
-*.sqlite3
-.env.*

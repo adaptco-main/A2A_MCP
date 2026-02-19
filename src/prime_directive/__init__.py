@@ -1,9 +1,5 @@
-"""PRIME_DIRECTIVE package scaffold.
+"""PRIME_DIRECTIVE package skeleton."""
 
-This package is an overlay architecture that can be wired to existing A2A MCP
-components with adapters while preserving current behavior.
-"""
+from .pipeline.engine import PipelineEngine
 
-__all__ = ["__version__"]
-
-__version__ = "0.1.0"
+__all__ = ["PipelineEngine"]

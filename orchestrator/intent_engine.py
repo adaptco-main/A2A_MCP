@@ -91,7 +91,6 @@ class IntentEngine:
                 parent_id=blueprint.plan_id,
                 feedback=coding_task,
             )
-            self.db.save_artifact(artifact)
 
             healed = False
             for attempt in range(max_healing_retries):
@@ -128,7 +127,6 @@ class IntentEngine:
                         f"Tester feedback:\n{report.critique}"
                     ),
                 )
-                self.db.save_artifact(artifact)
 
             result.code_artifacts.append(artifact)
             action.status = "completed" if healed else "failed"
@@ -185,7 +183,6 @@ class IntentEngine:
                 type="vector_token",
                 content=token.model_dump_json(),
             )
-            self.db.save_artifact(pinn_artifact)
             artifact_ids.append(pinn_artifact_id)
 
             action.status = "completed" if report.status == "PASS" else "failed"

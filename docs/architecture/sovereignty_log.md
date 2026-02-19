@@ -1,39 +1,36 @@
-# Sovereignty log and hash chain
-
-Every state transition and gate result emits a sovereignty event.
+# Sovereignty Log + Hash Chain
 
 ## Event schema
+Each emitted transition or gate event is recorded as a deterministic sovereignty event:
 
 ```json
 {
-  "event_type": "gate.preflight",
-  "state": "validating",
+  "sequence": 7,
+  "event_type": "gate.c5",
+  "state": "validated",
   "payload": {"passed": true},
-  "prev_hash": "<hex-or-null>",
-  "hash": "<sha256(canonical_event_without_hash)>"
+  "prev_hash": "<sha256 hex>",
+  "hash_current": "<sha256 hex>"
 }
 ```
 
-Rules:
-- canonical JSON serialization with sorted keys and compact separators
-- no wall-clock timestamp in fingerprinted payload
-- deterministic sha256 only (never Python `hash()`)
-
-## Chain construction
-
-1. Build canonical payload for event `E_n` excluding `hash`.
-2. Set `prev_hash = hash(E_{n-1})` (or `null` for genesis).
-3. Compute `hash(E_n)`.
-4. Persist append-only.
+## Canonicalization rules
+1. Serialize only logical fields (`sequence`, `event_type`, `state`, `payload`, `prev_hash`).
+2. Use canonical JSON with sorted keys and compact separators.
+3. Compute `hash_current = sha256(canonical_json(event_without_hash_current))`.
+4. Do not include wall-clock timestamps in the fingerprint payload.
+5. Never use Python `hash()` for deterministic IDs/seeding.
 
 ## Verification procedure
+1. Start `expected_prev_hash = ""`.
+2. Iterate events by `sequence` order.
+3. Confirm `event.prev_hash == expected_prev_hash`.
+4. Recompute hash from canonical payload and compare with `hash_current`.
+5. Set `expected_prev_hash = hash_current` and continue.
+6. Fail verification on the first mismatch (broken chain or tampered payload).
 
-1. Recompute each event hash from canonical payload.
-2. Confirm each `prev_hash` equals prior computed hash.
-3. Fail verification on first mismatch.
-4. Report index + event type to support deterministic replay.
-
-## Operational expectation
-
-- `pipeline.halted` must still emit chain events.
-- `export.completed` and `commit.complete` are valid only after all hard-stop gates pass.
+## Operational guidance
+- Emit sovereignty events for **all** state transitions and all gate results.
+- Emit `pipeline.halted` when any hard-stop gate fails.
+- Emit `export.completed` and `commit.complete` only after `validation.passed`.
+- Include sovereignty chain and verification result in each run bundle.

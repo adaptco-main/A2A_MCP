@@ -1,83 +1,88 @@
-# PRIME_DIRECTIVE WS protocol (`/ws/pipeline`)
+# PRIME_DIRECTIVE WebSocket Protocol (`/ws/pipeline`)
 
-The websocket route is **transport-only** and delegates all orchestration to `PipelineEngine`.
+## Control-plane contract
+The WebSocket handler is **transport-only**. It validates envelope shape, forwards to `PipelineEngine`, and streams engine events back to the client. Gate logic must remain in the engine/validators.
 
-## Client message types
+## Required inbound message types
 
-- `render_request`
-- `get_chain`
-- `get_state`
-- `ping`
-
-### Example: `render_request`
+### 1) `render_request`
 ```json
 {
   "type": "render_request",
-  "run_id": "run-001",
+  "request_id": "req-001",
+  "run_id": "run-abc",
   "payload": {
-    "geometry": "16:9-banner",
-    "color_profile": "srgb"
+    "assets": ["staging/input/mock.png"],
+    "profile": "banner"
   }
 }
 ```
 
-### Example: `get_chain`
+### 2) `get_chain`
 ```json
-{ "type": "get_chain", "run_id": "run-001" }
+{
+  "type": "get_chain",
+  "request_id": "req-002",
+  "run_id": "run-abc"
+}
 ```
 
-### Example: `get_state`
+### 3) `get_state`
 ```json
-{ "type": "get_state", "run_id": "run-001" }
+{
+  "type": "get_state",
+  "request_id": "req-003",
+  "run_id": "run-abc"
+}
 ```
 
-### Example: `ping`
+### 4) `ping`
 ```json
-{ "type": "ping", "nonce": "abc123" }
+{
+  "type": "ping",
+  "request_id": "req-004",
+  "ts": "2026-01-01T00:00:00Z"
+}
 ```
 
-## Server-emitted event types
+## Required emitted events
 
+### Lifecycle + render events
 - `state.transition`
-- `render.*`
-- `gate.*`
+- `render.started`
+- `render.completed`
+
+### Gate events
+- `gate.preflight`
+- `gate.c5`
+- `gate.rsm`
+- `gate.provenance` (optional)
 - `validation.passed` **or** `pipeline.halted`
+
+### Output events
 - `export.completed`
 - `commit.complete`
 - `pipeline.pass`
 
-### Example: transition + render start
+## Example success stream
 ```json
-{
-  "type": "state.transition",
-  "state": "rendering",
-  "run_id": "run-001"
-}
+{"type":"state.transition","run_id":"run-abc","from":"idle","to":"rendered"}
+{"type":"render.completed","run_id":"run-abc","artifact":"staging/run-abc/render.png"}
+{"type":"gate.preflight","run_id":"run-abc","passed":true}
+{"type":"gate.c5","run_id":"run-abc","passed":true}
+{"type":"gate.rsm","run_id":"run-abc","passed":true}
+{"type":"validation.passed","run_id":"run-abc"}
+{"type":"export.completed","run_id":"run-abc","artifact":"exports/run-abc/banner.pdf"}
+{"type":"commit.complete","run_id":"run-abc","sha":"abc123"}
+{"type":"pipeline.pass","run_id":"run-abc"}
 ```
 
-### Example: gate event
+## Example failure stream (no export)
 ```json
-{
-  "type": "gate.preflight",
-  "passed": true,
-  "run_id": "run-001"
-}
+{"type":"state.transition","run_id":"run-def","from":"rendered","to":"validated"}
+{"type":"gate.preflight","run_id":"run-def","passed":true}
+{"type":"gate.c5","run_id":"run-def","passed":false,"reason":"missing_bleed_margin"}
+{"type":"pipeline.halted","run_id":"run-def","at_gate":"c5"}
 ```
 
-### Example: halt (no export/commit allowed)
-```json
-{
-  "type": "pipeline.halted",
-  "failed_gate": "c5",
-  "run_id": "run-001"
-}
-```
-
-### Example: final success
-```json
-{
-  "type": "pipeline.pass",
-  "run_id": "run-001",
-  "bundle_path": "exports/run-001"
-}
-```
+`export.completed` and `commit.complete` MUST NOT appear in failure streams.

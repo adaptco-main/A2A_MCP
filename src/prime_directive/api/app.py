@@ -3,11 +3,13 @@ from __future__ import annotations
 from fastapi import FastAPI, WebSocket
 from starlette.websockets import WebSocketDisconnect
 
+from prime_directive.api.schemas import HealthResponse
+from prime_directive.pipeline.context import PipelineContext
 from prime_directive.pipeline.engine import PipelineEngine
 
+app = FastAPI(title="PRIME_DIRECTIVE")
+_engine = PipelineEngine(PipelineContext(run_id="bootstrap"))
 
-app = FastAPI(title="PRIME_DIRECTIVE API")
-engine = PipelineEngine()
 
 
 @app.get("/health")
