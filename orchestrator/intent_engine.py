@@ -79,6 +79,7 @@ class IntentEngine:
         result.architecture_artifacts = arch_artifacts
         last_code_artifact_id: str | None = None
 
+        last_code_artifact_id: str | None = None
         for action in blueprint.actions:
             action.status = "in_progress"
             parent_id = last_code_artifact_id or blueprint.plan_id
@@ -90,7 +91,7 @@ class IntentEngine:
                 f"{action.instruction}"
             )
             artifact = await self.coder.generate_solution(
-                parent_id=parent_id,
+                parent_id=last_code_artifact_id or blueprint.plan_id,
                 feedback=coding_task,
             )
             last_code_artifact_id = artifact.artifact_id
@@ -132,6 +133,7 @@ class IntentEngine:
                 )
 
             result.code_artifacts.append(artifact)
+            last_code_artifact_id = artifact.artifact_id
             action.status = "completed" if healed else "failed"
 
         result.success = all(a.status == "completed" for a in blueprint.actions)
