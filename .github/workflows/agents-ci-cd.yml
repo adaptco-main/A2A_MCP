@@ -12,6 +12,7 @@ on:
       - "requirements.txt"
       - "pyproject.toml"
       - ".github/workflows/agents-ci-cd.yml"
+      - ".github/workflows/agents-unit-tests.yml"
   pull_request:
     branches: [main]
     paths:
@@ -23,6 +24,7 @@ on:
       - "requirements.txt"
       - "pyproject.toml"
       - ".github/workflows/agents-ci-cd.yml"
+      - ".github/workflows/agents-unit-tests.yml"
   workflow_dispatch:
   release:
     types: [published]
