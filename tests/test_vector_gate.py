@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 from agents.pinn_agent import PINNAgent
@@ -9,7 +10,7 @@ from agents.tester import TestReport
 from orchestrator.intent_engine import IntentEngine
 from orchestrator.vector_gate import VectorGate
 from schemas.project_plan import PlanAction, ProjectPlan
-from schemas.world_model import WorldModel
+from schemas.world_model import VectorToken, WorldModel
 
 
 def test_vector_gate_opens_with_matching_tokens():
@@ -34,6 +35,98 @@ def test_vector_gate_opens_with_matching_tokens():
     assert decision.is_open is True
     assert len(decision.matches) >= 1
     assert decision.matches[0].token_id == token.token_id
+
+
+def test_vector_gate_prunes_stale_orphan_threads():
+    world_model = WorldModel()
+    now = datetime.now(timezone.utc)
+
+    stale_orphan = VectorToken(
+        token_id="tok-stale-orphan",
+        source_artifact_id="artifact-orphan",
+        vector=[0.1] * 16,
+        text="deprecated branch context",
+        timestamp=now - timedelta(days=120),
+    )
+    fresh_linked = VectorToken(
+        token_id="tok-fresh",
+        source_artifact_id="artifact-live",
+        vector=[0.2] * 16,
+        text="active architecture context",
+        timestamp=now,
+    )
+    world_model.add_token(stale_orphan)
+    world_model.add_token(fresh_linked)
+    world_model.link("plan-root", "artifact-live")
+
+    gate = VectorGate(
+        min_similarity=-1.0,
+        top_k=2,
+        max_token_age_seconds=60 * 60 * 24,
+        prune_dead_branches=True,
+        orphan_grace_seconds=0,
+    )
+    decision = gate.evaluate(node="execution", query="active architecture", world_model=world_model)
+
+    assert decision.active_tokens == 1
+    assert decision.pruned_tokens == 1
+    assert decision.matches
+    assert decision.matches[0].token_id == "tok-fresh"
+
+
+def test_vector_gate_merkle_root_is_insertion_order_stable():
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    token_a = VectorToken(
+        token_id="tok-a",
+        source_artifact_id="artifact-a",
+        vector=[0.1] * 16,
+        text="alpha token",
+        timestamp=now,
+    )
+    token_b = VectorToken(
+        token_id="tok-b",
+        source_artifact_id="artifact-b",
+        vector=[0.2] * 16,
+        text="beta token",
+        timestamp=now,
+    )
+
+    world_model_1 = WorldModel()
+    world_model_1.add_token(token_a)
+    world_model_1.add_token(token_b)
+
+    world_model_2 = WorldModel()
+    world_model_2.add_token(token_b)
+    world_model_2.add_token(token_a)
+
+    gate = VectorGate(min_similarity=-1.0, max_token_age_seconds=None, prune_dead_branches=False)
+    decision_1 = gate.evaluate(node="n1", query="alpha beta", world_model=world_model_1)
+    decision_2 = gate.evaluate(node="n1", query="alpha beta", world_model=world_model_2)
+
+    assert decision_1.merkle_leaf_count == 2
+    assert decision_1.merkle_root
+    assert decision_1.merkle_root == decision_2.merkle_root
+
+
+def test_vector_gate_prompt_includes_merkle_and_tensor_context():
+    world_model = WorldModel()
+    token = VectorToken(
+        token_id="tok-latex",
+        source_artifact_id="artifact-latex",
+        vector=[0.3] * 16,
+        text="context for retrieval prompt",
+        timestamp=datetime.now(timezone.utc),
+    )
+    world_model.add_token(token)
+
+    gate = VectorGate(min_similarity=-1.0, max_token_age_seconds=None, prune_dead_branches=False)
+    decision = gate.evaluate(node="coder_input", query="retrieval prompt", world_model=world_model)
+    prompt = gate.format_prompt_context(decision, max_chars=1000)
+
+    assert "[VECTOR_GATE node=coder_input" in prompt
+    assert "[MERKLE_ROOT root=" in prompt
+    assert "Tensor Elasticity Proxy:" in prompt
+    assert "token=tok-latex" in prompt
 
 
 def test_intent_engine_injects_vector_gate_context(monkeypatch):
