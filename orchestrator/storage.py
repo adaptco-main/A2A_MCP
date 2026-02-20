@@ -5,13 +5,47 @@ import os
 import json
 from typing import Optional
 
-# Database Configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./a2a_mcp.db")
+SQLITE_DEFAULT_PATH = "./a2a_mcp.db"
+
+
+def resolve_database_url() -> str:
+    """
+    Resolve database URL from explicit URL or profile mode.
+
+    Priority:
+    1) DATABASE_URL
+    2) DATABASE_MODE=postgres with POSTGRES_* vars
+    3) DATABASE_MODE=sqlite with SQLITE_PATH
+    """
+    explicit_url = os.getenv("DATABASE_URL", "").strip()
+    if explicit_url:
+        return explicit_url
+
+    database_mode = os.getenv("DATABASE_MODE", "sqlite").strip().lower()
+    if database_mode == "postgres":
+        user = os.getenv("POSTGRES_USER", "postgres").strip()
+        password = os.getenv("POSTGRES_PASSWORD", "pass").strip()
+        host = os.getenv("POSTGRES_HOST", "localhost").strip()
+        port = os.getenv("POSTGRES_PORT", "5432").strip()
+        database = os.getenv("POSTGRES_DB", "mcp_db").strip()
+        return f"postgresql://{user}:{password}@{host}:{port}/{database}"
+
+    sqlite_path = os.getenv("SQLITE_PATH", SQLITE_DEFAULT_PATH).strip() or SQLITE_DEFAULT_PATH
+    sqlite_path = sqlite_path.replace("\\", "/")
+    return f"sqlite:///{sqlite_path}"
+
+
+DATABASE_URL = resolve_database_url()
+
+
+def _build_connect_args(database_url: str) -> dict:
+    return {"check_same_thread": False} if "sqlite" in database_url else {}
+
 
 class DBManager:
     def __init__(self):
         # check_same_thread is required for SQLite
-        connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+        connect_args = _build_connect_args(DATABASE_URL)
         self.engine = create_engine(DATABASE_URL, connect_args=connect_args)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         Base.metadata.create_all(bind=self.engine)
@@ -80,12 +114,14 @@ def load_plan_state(plan_id: str) -> Optional[dict]:
     finally:
         db.close()
 
+
 # Create engine for SessionLocal
-connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+connect_args = _build_connect_args(DATABASE_URL)
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 # SessionLocal for backward compatibility (used by mcp_server.py)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 def init_db():
     """Initialize database tables."""

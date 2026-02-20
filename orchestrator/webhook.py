@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import APIRouter, Body, FastAPI, HTTPException
 from orchestrator.stateflow import StateMachine
 from orchestrator.utils import extract_plan_id_from_path
 
 app = FastAPI(title="A2A MCP Webhook")
+ingress_router = APIRouter()
 
 # in-memory map (replace with DB-backed persistence or plan state store in prod)
 PLAN_STATE_MACHINES = {}
@@ -41,11 +42,14 @@ async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):
     return {"status": "scheduled", "plan_id": plan_id, "transition": rec.to_dict()}
 
 
-@app.post("/plans/ingress")
+@ingress_router.post("/plans/ingress")
 async def plan_ingress(payload: dict = Body(...)):
     return await _plan_ingress_impl(None, payload)
 
 
-@app.post("/plans/{plan_id}/ingress")
+@ingress_router.post("/plans/{plan_id}/ingress")
 async def plan_ingress_by_id(plan_id: str, payload: dict = Body(default={})):
     return await _plan_ingress_impl(plan_id, payload)
+
+
+app.include_router(ingress_router)

@@ -210,3 +210,33 @@ python -c "from schemas import *; print('✓ All schemas loaded')"
 ## 📄 License
 
 See LICENSE file for details.
+
+---
+
+## Runtime Services
+
+### Run MCP HTTP Gateway
+```bash
+python -m uvicorn app.mcp_gateway:app --host 0.0.0.0 --port 8080
+```
+
+### Run Orchestrator API
+```bash
+python -m uvicorn orchestrator.api:app --host 0.0.0.0 --port 8000
+```
+
+## Deployment API Contract
+
+### MCP Endpoints
+- `POST /tools/call` compatibility endpoint for legacy clients.
+  - Request: `{"tool_name":"<name>","arguments":{...}}`
+  - Response: `{"tool_name":"<name>","ok":<bool>,"result":<tool_output>}`
+- `POST /mcp` native FastMCP streamable HTTP endpoint (mounted under `/mcp` path).
+
+### Orchestrator Endpoints
+- `POST /orchestrate?user_query=<text>` triggers full pipeline execution.
+- `POST /plans/ingress` and `POST /plans/{plan_id}/ingress` schedule plan ingress.
+- `GET /healthz` and `GET /readyz` are exposed on both services.
+
+### Deployment Guide
+- `docs/deployment/GKE_RELEASE_DEPLOYMENT.md` for staged GKE promotion and rollback.

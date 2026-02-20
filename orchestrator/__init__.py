@@ -56,6 +56,11 @@ except ImportError:
     webhook_app = None
 
 try:
+    from orchestrator.api import app as api_app
+except ImportError:
+    api_app = None
+
+try:
     from orchestrator.multimodal_worldline import build_worldline_block
 except ImportError:
     build_worldline_block = None
@@ -85,6 +90,7 @@ __all__ = [
     'ReleasePhase',
     'schedule_job',
     'webhook_app',
+    'api_app',
     'build_worldline_block',
     'EndToEndOrchestrator',
 ]
