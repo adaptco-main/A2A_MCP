@@ -55,9 +55,9 @@ class DBManager:
         try:
             db_artifact = ArtifactModel(
                 id=artifact.artifact_id,
-                parent_artifact_id=getattr(artifact, 'parent_artifact_id', None),
-                agent_name=getattr(artifact, 'agent_name', 'UnknownAgent'),
-                version=getattr(artifact, 'version', '1.0.0'),
+                parent_artifact_id=artifact.metadata.get('parent_artifact_id'),
+                agent_name=artifact.metadata.get('agent_name', 'UnknownAgent'),
+                version=artifact.metadata.get('version', '1.0.0'),
                 type=artifact.type,
                 content=artifact.content
             )
