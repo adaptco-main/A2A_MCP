@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from croniter import croniter
+from jsonschema import Draft202012Validator
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,186 @@ class TrainingSchedule:
     asset_specs: List[UnityAssetSpec]
     rl_config: RLTrainingConfig
     enabled: bool = True
+
+
+@dataclass(slots=True)
+class TransitionDecision:
+    """Decision returned by control-plane transition checks."""
+
+    allowed: bool
+    reason: str
+
+
+class ControlPlaneRuntime:
+    """Minimal control-plane loop for API-surface exploration and guardrails.
+
+    Contract:
+    1) Load YAML bundle and enumerate `api_surface.tools[].actions[].id`
+    2) Generate MCP stub tool list from action ids
+    3) Compile JSON Schemas from `schemas/*` (fail-closed)
+    4) Validate runtime tool inputs for every invocation
+    5) Append immutable JSONL events
+    6) Replay JSONL to compute state/derived facts
+    7) Evaluate transition requirements
+    8) Halt if guardrails/HITL are not satisfied
+    """
+
+    def __init__(
+        self,
+        bundle_path: str,
+        schemas_dir: str,
+        events_path: str,
+    ) -> None:
+        self.bundle_path = Path(bundle_path)
+        self.schemas_dir = Path(schemas_dir)
+        self.events_path = Path(events_path)
+        self._append_lock = asyncio.Lock()
+        self._validators: Dict[str, Draft202012Validator] = {}
+
+    def load_bundle(self) -> Dict[str, Any]:
+        """Load YAML bundle and return structured dict."""
+
+        if not self.bundle_path.exists():
+            raise FileNotFoundError(f"Bundle not found: {self.bundle_path}")
+
+        try:
+            import yaml  # type: ignore[import-untyped]
+        except ImportError as exc:  # pragma: no cover - import depends on environment
+            raise RuntimeError("PyYAML is required to load YAML bundles") from exc
+
+        parsed = yaml.safe_load(self.bundle_path.read_text(encoding="utf-8"))
+        if not isinstance(parsed, dict):
+            raise ValueError("YAML bundle must deserialize into a mapping")
+        return parsed
+
+    def enumerate_action_ids(self, bundle: Dict[str, Any]) -> List[str]:
+        """Enumerate `api_surface.tools[*].actions[*].id` values."""
+
+        action_ids: List[str] = []
+        tools = bundle.get("api_surface", {}).get("tools", [])
+        for tool in tools:
+            for action in tool.get("actions", []):
+                action_id = action.get("id")
+                if isinstance(action_id, str) and action_id:
+                    action_ids.append(action_id)
+        if not action_ids:
+            raise ValueError("No action IDs found in api_surface.tools[*].actions[*].id")
+        return action_ids
+
+    def generate_mcp_stub_tools(self, action_ids: List[str]) -> List[Dict[str, Any]]:
+        """Generate minimal MCP stub descriptors from action IDs."""
+
+        return [
+            {
+                "name": action_id,
+                "description": f"Stub MCP tool for action `{action_id}`",
+                "inputSchema": {"type": "object", "additionalProperties": True},
+            }
+            for action_id in action_ids
+        ]
+
+    def compile_schemas(self) -> Dict[str, Draft202012Validator]:
+        """Compile all JSON schemas in `schemas/*` and fail-closed if absent."""
+
+        schema_files = sorted(self.schemas_dir.glob("*.json"))
+        if not schema_files:
+            raise FileNotFoundError(f"No schema files found in {self.schemas_dir}")
+
+        validators: Dict[str, Draft202012Validator] = {}
+        for schema_file in schema_files:
+            schema = json.loads(schema_file.read_text(encoding="utf-8"))
+            validator = Draft202012Validator(schema)
+            validators[schema_file.stem] = validator
+
+        self._validators = validators
+        return validators
+
+    def validate_tool_input(self, action_id: str, payload: Dict[str, Any]) -> None:
+        """Validate tool payload against compiled schema for action ID."""
+
+        if not self._validators:
+            raise RuntimeError("Schemas are not compiled; call compile_schemas() first")
+
+        validator = self._validators.get(action_id)
+        if validator is None:
+            raise KeyError(f"Missing schema for action ID: {action_id}")
+
+        errors = sorted(validator.iter_errors(payload), key=lambda err: err.path)
+        if errors:
+            details = "; ".join(error.message for error in errors)
+            raise ValueError(f"Input validation failed for {action_id}: {details}")
+
+    async def append_event(self, event: Dict[str, Any]) -> None:
+        """Append an event to JSONL ledger using single-writer lock."""
+
+        enriched_event = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            **event,
+        }
+        self.events_path.parent.mkdir(parents=True, exist_ok=True)
+
+        async with self._append_lock:
+            with self.events_path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(enriched_event, sort_keys=True) + "\n")
+
+    def replay_events(self) -> Dict[str, Any]:
+        """Replay append-only JSONL to derive current control-plane state."""
+
+        state: Dict[str, Any] = {
+            "event_count": 0,
+            "last_event_type": None,
+            "tool_invocations": {},
+            "guardrails_ok": True,
+            "hitl_approved": False,
+        }
+        if not self.events_path.exists():
+            return state
+
+        for raw_line in self.events_path.read_text(encoding="utf-8").splitlines():
+            if not raw_line.strip():
+                continue
+            event = json.loads(raw_line)
+            state["event_count"] += 1
+            state["last_event_type"] = event.get("event_type")
+
+            action_id = event.get("action_id")
+            if action_id:
+                invocations = state["tool_invocations"]
+                invocations[action_id] = invocations.get(action_id, 0) + 1
+
+            if event.get("event_type") == "guardrail_violation":
+                state["guardrails_ok"] = False
+            if event.get("event_type") == "hitl_approval":
+                state["hitl_approved"] = bool(event.get("approved", False))
+
+        return state
+
+    def evaluate_transition_requirements(
+        self,
+        requires: List[str],
+        state: Dict[str, Any],
+    ) -> TransitionDecision:
+        """Evaluate `workflow.transitions[*].requires` against derived state."""
+
+        missing = [requirement for requirement in requires if not bool(state.get(requirement))]
+        if missing:
+            return TransitionDecision(False, f"Missing required facts: {', '.join(missing)}")
+        return TransitionDecision(True, "Requirements satisfied")
+
+    def enforce_guardrails_and_hitl(
+        self,
+        decision: TransitionDecision,
+        state: Dict[str, Any],
+    ) -> TransitionDecision:
+        """Allow transition only when requirements, guardrails, and HITL are satisfied."""
+
+        if not decision.allowed:
+            return decision
+        if not state.get("guardrails_ok", False):
+            return TransitionDecision(False, "Blocked/HALT: guardrail violation detected")
+        if not state.get("hitl_approved", False):
+            return TransitionDecision(False, "Blocked/HALT: missing HITL approval")
+        return TransitionDecision(True, "Allow transition / continue")
 
 
 class UnityMLOpsOrchestrator:

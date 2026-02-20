@@ -109,6 +109,43 @@ async def run_forever():
 asyncio.run(run_forever())
 ```
 
+## Minimal control-plane API surface loop
+
+`ControlPlaneRuntime` in `mlops_unity_pipeline.py` implements a fail-closed control-plane loop:
+
+1. Load YAML bundle and parse `api_surface.tools[].actions[].id`.
+2. Generate MCP stub tool descriptors for those action IDs.
+3. Compile JSON Schemas from `schemas/*.json` (fails closed if missing).
+4. Validate every tool invocation payload.
+5. Persist append-only JSONL events.
+6. Replay JSONL to derive current state facts.
+7. Evaluate transition requirements (`workflow.transitions[*].requires`).
+8. Block/HALT if guardrails fail or HITL approval is absent.
+
+Example sketch:
+
+```python
+runtime = ControlPlaneRuntime(
+    bundle_path="bundle.yaml",
+    schemas_dir="schemas",
+    events_path="runtime/events.jsonl",
+)
+
+bundle = runtime.load_bundle()
+action_ids = runtime.enumerate_action_ids(bundle)
+stubs = runtime.generate_mcp_stub_tools(action_ids)
+_ = stubs
+
+runtime.compile_schemas()
+runtime.validate_tool_input("tool_action", {"example": "payload"})
+
+await runtime.append_event({"event_type": "tool_invocation", "action_id": "tool_action"})
+state = runtime.replay_events()
+decision = runtime.evaluate_transition_requirements(["guardrails_ok"], state)
+decision = runtime.enforce_guardrails_and_hitl(decision, state)
+print(decision)
+```
+
 ## Offline RL workflow
 
 1. Collect demonstration trajectories from human/expert play.
