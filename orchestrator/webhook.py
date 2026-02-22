@@ -5,19 +5,31 @@ from typing import Optional
 
 from fastapi import Body, FastAPI, Header, HTTPException, Request
 
+from orchestrator import storage
 from agents.cicd_monitor_agent import CICDMonitorAgent
 from orchestrator.stateflow import StateMachine
 from orchestrator.utils import extract_plan_id_from_path
-from orchestrator.verify_api import router as verify_router
+
+try:
+    from orchestrator.verify_api import router as verify_router
+except ImportError:
+    verify_router = None
 
 app = FastAPI(title="A2A MCP Webhook")
-app.include_router(verify_router)
+if verify_router:
+    app.include_router(verify_router)
 
 # In-memory stores. These can be backed by DB/Redis in production.
 PLAN_STATE_MACHINES: dict[str, StateMachine] = {}
 CI_CD_MONITOR = CICDMonitorAgent()
 WEBHOOK_SHARED_SECRET = os.getenv("WEBHOOK_SHARED_SECRET", "")
 GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+
+
+def _persistence_callback(plan_id: str | None, snapshot: dict) -> None:
+    if not plan_id:
+        return
+    storage.save_plan_state(plan_id, snapshot)
 
 
 def _resolve_plan_id(path_plan_id: str | None, payload: dict) -> str | None:
@@ -84,7 +96,18 @@ def _get_or_create_state_machine(plan_id: str) -> StateMachine:
     if sm:
         return sm
 
-    sm = StateMachine(max_retries=3)
+    persisted_snapshot = storage.load_plan_state(plan_id)
+    if persisted_snapshot:
+        sm = StateMachine.from_dict(
+            persisted_snapshot,
+            persistence_callback=lambda pid, snap: _persistence_callback(pid, snap),
+        )
+    else:
+        sm = StateMachine(
+            max_retries=3,
+            persistence_callback=lambda pid, snap: _persistence_callback(pid, snap),
+        )
+
     sm.plan_id = plan_id
     PLAN_STATE_MACHINES[plan_id] = sm
     return sm
