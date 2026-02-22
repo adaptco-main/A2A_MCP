@@ -1,0 +1,192 @@
+﻿name: Release GKE Deploy
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Optional image tag override
+        required: false
+        default: ""
+        type: string
+      run_security_scan:
+        description: Enable cosign sign/verify checks
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-gke-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/reusable-release-build.yml
+    with:
+      image_tag_override: ${{ github.event.inputs.image_tag || '' }}
+      run_security_scan: ${{ github.event_name == 'workflow_dispatch' && fromJSON(github.event.inputs.run_security_scan || 'true') || true }}
+
+  deploy-staging:
+    needs: build-release
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/reusable-gke-deploy.yml
+    with:
+      environment_name: staging
+      namespace: a2a-mcp-staging
+      values_file: deploy/helm/a2a-mcp/values-staging.yaml
+      mcp_image_repository: ghcr.io/${{ github.repository_owner }}/a2a-mcp-mcp
+      mcp_image_tag: ${{ needs.build-release.outputs.version_tag }}
+      orchestrator_image_repository: ghcr.io/${{ github.repository_owner }}/a2a-mcp-orchestrator
+      orchestrator_image_tag: ${{ needs.build-release.outputs.version_tag }}
+      smoke_enabled: true
+      rollback_on_smoke_fail: false
+      release_name: a2a-mcp
+    secrets:
+      GCP_WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER_STAGING }}
+      GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT_STAGING }}
+      GKE_CLUSTER: ${{ secrets.GKE_CLUSTER_STAGING }}
+      GKE_LOCATION: ${{ secrets.GKE_LOCATION_STAGING }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_STAGING }}
+      MCP_BASE_URL: ${{ secrets.STAGING_MCP_BASE_URL }}
+      ORCHESTRATOR_BASE_URL: ${{ secrets.STAGING_ORCHESTRATOR_BASE_URL }}
+      MCP_TOKEN: ${{ secrets.STAGING_MCP_TOKEN }}
+
+  assert-staging:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: ${{ always() }}
+    steps:
+      - name: Verify staging deployment status
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOY_STATUS="${{ needs.deploy-staging.outputs.deploy_status }}"
+          SMOKE_STATUS="${{ needs.deploy-staging.outputs.smoke_status }}"
+          if [[ "${DEPLOY_STATUS}" != "success" ]]; then
+            echo "Staging deploy failed: ${DEPLOY_STATUS}"
+            exit 1
+          fi
+          if [[ "${SMOKE_STATUS}" != "success" ]]; then
+            echo "Staging smoke failed: ${SMOKE_STATUS}"
+            exit 1
+          fi
+
+  deploy-prod:
+    needs: [build-release, assert-staging]
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/reusable-gke-deploy.yml
+    with:
+      environment_name: production
+      namespace: a2a-mcp-prod
+      values_file: deploy/helm/a2a-mcp/values-prod.yaml
+      mcp_image_repository: ghcr.io/${{ github.repository_owner }}/a2a-mcp-mcp
+      mcp_image_tag: ${{ needs.build-release.outputs.version_tag }}
+      orchestrator_image_repository: ghcr.io/${{ github.repository_owner }}/a2a-mcp-orchestrator
+      orchestrator_image_tag: ${{ needs.build-release.outputs.version_tag }}
+      smoke_enabled: true
+      rollback_on_smoke_fail: true
+      release_name: a2a-mcp
+    secrets:
+      GCP_WIF_PROVIDER: ${{ secrets.GCP_WIF_PROVIDER_PROD }}
+      GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT_PROD }}
+      GKE_CLUSTER: ${{ secrets.GKE_CLUSTER_PROD }}
+      GKE_LOCATION: ${{ secrets.GKE_LOCATION_PROD }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_PROD }}
+      MCP_BASE_URL: ${{ secrets.PROD_MCP_BASE_URL }}
+      ORCHESTRATOR_BASE_URL: ${{ secrets.PROD_ORCHESTRATOR_BASE_URL }}
+      MCP_TOKEN: ${{ secrets.PROD_MCP_TOKEN }}
+
+  assert-production:
+    runs-on: ubuntu-latest
+    needs: deploy-prod
+    if: ${{ always() }}
+    steps:
+      - name: Verify production deployment status
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOY_STATUS="${{ needs.deploy-prod.outputs.deploy_status }}"
+          SMOKE_STATUS="${{ needs.deploy-prod.outputs.smoke_status }}"
+          ROLLBACK_STATUS="${{ needs.deploy-prod.outputs.rollback_status }}"
+
+          if [[ "${DEPLOY_STATUS}" != "success" ]]; then
+            echo "Production deploy failed: ${DEPLOY_STATUS}"
+            exit 1
+          fi
+
+          if [[ "${SMOKE_STATUS}" != "success" ]]; then
+            echo "Production smoke failed: ${SMOKE_STATUS}"
+            echo "Rollback status: ${ROLLBACK_STATUS}"
+            exit 1
+          fi
+
+  upload-release-artifacts:
+    runs-on: ubuntu-latest
+    needs: [build-release, deploy-staging, deploy-prod, assert-production]
+    if: ${{ always() }}
+    steps:
+      - name: Download chart artifacts
+        if: ${{ needs.build-release.outputs.chart_artifact_name != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-release.outputs.chart_artifact_name }}
+          path: artifacts/chart
+
+      - name: Download SBOM artifacts
+        if: ${{ needs.build-release.outputs.sbom_artifact_name != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.build-release.outputs.sbom_artifact_name }}
+          path: artifacts/sbom
+
+      - name: Build release completion metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cat > artifacts/release-completion.json <<EOF
+          {
+            "workflow": "${{ github.workflow }}",
+            "run_id": "${{ github.run_id }}",
+            "event_name": "${{ github.event_name }}",
+            "version_tag": "${{ needs.build-release.outputs.version_tag }}",
+            "sha_tag": "${{ needs.build-release.outputs.sha_tag }}",
+            "mcp_image_ref": "${{ needs.build-release.outputs.mcp_image_ref }}",
+            "orchestrator_image_ref": "${{ needs.build-release.outputs.orchestrator_image_ref }}",
+            "chart_artifact_name": "${{ needs.build-release.outputs.chart_artifact_name }}",
+            "sbom_artifact_name": "${{ needs.build-release.outputs.sbom_artifact_name }}",
+            "staging": {
+              "deploy_status": "${{ needs.deploy-staging.outputs.deploy_status }}",
+              "smoke_status": "${{ needs.deploy-staging.outputs.smoke_status }}",
+              "helm_revision_before": "${{ needs.deploy-staging.outputs.helm_revision_before }}",
+              "helm_revision_after": "${{ needs.deploy-staging.outputs.helm_revision_after }}"
+            },
+            "production": {
+              "deploy_status": "${{ needs.deploy-prod.outputs.deploy_status }}",
+              "smoke_status": "${{ needs.deploy-prod.outputs.smoke_status }}",
+              "rollback_status": "${{ needs.deploy-prod.outputs.rollback_status }}",
+              "helm_revision_before": "${{ needs.deploy-prod.outputs.helm_revision_before }}",
+              "helm_revision_after": "${{ needs.deploy-prod.outputs.helm_revision_after }}"
+            }
+          }
+          EOF
+
+      - name: Upload release completion artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-completion-${{ needs.build-release.outputs.version_tag || github.run_id }}
+          path: artifacts/
