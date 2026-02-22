@@ -33,6 +33,7 @@ class LLMService:
         response = requests.post(self.endpoint, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
+
     async def call_llm_async(self, prompt: str, system_prompt: str = "You are a helpful coding assistant."):
         if not self.api_key or not self.endpoint:
             raise ValueError("API Key or Endpoint missing from your local .env file!")
