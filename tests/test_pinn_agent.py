@@ -8,10 +8,8 @@ class TestPINNAgent:
     @pytest.fixture
     def pinn_agent(self):
         """Fixture to initialize PINNAgent with mocked LLMService."""
-        with patch("agents.pinn_agent.LLMService") as MockLLM:
-            agent = PINNAgent()
-            agent.llm = MockLLM.return_value
-            return agent
+        with patch("agents.pinn_agent.LLMService"):
+            yield PINNAgent()
 
     def test_initialization(self, pinn_agent):
         """Test that PINNAgent initializes correctly."""
