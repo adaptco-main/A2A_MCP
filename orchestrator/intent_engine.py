@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from dataclasses import dataclass, field
 from typing import Dict, List
 
@@ -103,7 +105,7 @@ class IntentEngine:
                 context_tokens=coder_gate.matches,
             )
             self._attach_gate_metadata(artifact, coder_gate)
-            self.db.save_artifact(artifact)
+            await asyncio.to_thread(self.db.save_artifact, artifact)
 
             healed = False
             for attempt in range(max_healing_retries):
@@ -160,7 +162,7 @@ class IntentEngine:
                     context_tokens=healing_gate.matches,
                 )
                 self._attach_gate_metadata(artifact, healing_gate)
-                self.db.save_artifact(artifact)
+                await asyncio.to_thread(self.db.save_artifact, artifact)
 
             result.code_artifacts.append(artifact)
             action.status = "completed" if healed else "failed"
@@ -224,7 +226,7 @@ class IntentEngine:
             self._attach_gate_metadata(refined, healing_gate)
             # Compatibility path for tests/mocks that return unsaved ad-hoc artifacts.
             if not hasattr(refined, "agent_name"):
-                self.db.save_artifact(refined)
+                await asyncio.to_thread(self.db.save_artifact, refined)
             artifact_ids.append(refined.artifact_id)
 
             action.status = "completed"
