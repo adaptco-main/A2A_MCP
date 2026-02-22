@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimal Artifact Stack Visualization</title>
+    <style>
+        :root {
+            --gold-primary: #d4af37;
+            --gold-light: #f9e27d;
+            --bg-dark: #0a0a0a;
+            --card-bg: #1a1a1a;
+            --text-main: #e0e0e0;
+            --accent-glow: rgba(212, 175, 55, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            color: var(--gold-primary);
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #888;
+        }
+
+        .stack-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            perspective: 1000px;
+        }
+
+        .layer {
+            background: var(--card-bg);
+            border: 1px solid #333;
+            margin: 15px 0;
+            padding: 25px;
+            border-radius: 8px;
+            transition: all 0.4s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .layer:hover {
+            transform: scale(1.02) translateZ(20px);
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .layer::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 5px;
+            background-color: var(--gold-primary);
+        }
+
+        .layer-info {
+            flex: 1;
+        }
+
+        .layer-num {
+            font-size: 0.8rem;
+            color: var(--gold-primary);
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .layer-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .layer-artifacts {
+            font-size: 0.9rem;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        .layer-stats {
+            text-align: right;
+            min-width: 150px;
+        }
+
+        .dim-count {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: var(--gold-light);
+            display: block;
+        }
+
+        .dim-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: #666;
+        }
+
+        .total-box {
+            margin-top: 40px;
+            padding: 20px 40px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+            border: 2px solid var(--gold-primary);
+            border-radius: 50px;
+            text-align: center;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .total-value {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--gold-primary);
+            letter-spacing: 2px;
+        }
+
+        .total-label {
+            display: block;
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            background: #111;
+            width: 100%;
+            border-radius: 0 0 8px 8px;
+            margin-top: -15px;
+            border: 1px solid #333;
+            border-top: none;
+        }
+
+        .layer.active + .details {
+            max-height: 200px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Golden Artifact Stack</h1>
+        <div class="subtitle">Self-Referential AI Agent Architecture Visualization</div>
+    </header>
+
+    <div class="stack-container">
+
+        <div class="layer" onclick="toggleDetails(this)">
+            <div class="layer-info">
+                <div class="layer-num">Layer 5: Integration</div>
+                <div class="layer-title">API Mapping &amp; Contracts</div>
+                <div class="layer-artifacts">Tool Contract Manifold + MCP Tool Contracts</div>
+            </div>
+            <div class="layer-stats">
+                <span class="dim-count">2,048</span>
+                <span class="dim-label">Dimensions</span>
+            </div>
+        </div>
+        <div class="details">
+            <ul>
+                <li>Captures tool relationships and substitutability</li>
+                <li>Maps semantic coordinates to <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener noreferrer">MCP Tool Contracts</a></li>
+                <li>Enables direct tensor signatures for input/output operations</li>
+            </ul>
+        </div>
+
+        <div class="layer" onclick="toggleDetails(this)">
+            <div class="layer-info">
+                <div class="layer-num">Layer 4: Specialization</div>
+                <div class="layer-title">Agent Identity</div>
+                <div class="layer-artifacts">Agent Role Profiles + Attention Signatures</div>
+            </div>
+            <div class="layer-stats">
+                <span class="dim-count">1,536</span>
+                <span class="dim-label">Dimensions</span>
+            </div>
+        </div>
+        <div class="details">
+            <ul>
+                <li>Encodes personality, decision style, and domain expertise</li>
+                <li>Defines behavioral signatures for <a href="https://manus.im/app/WQjT4zA7iqL9T3cOAXY9Pc" target="_blank" rel="noopener noreferrer">Dr. Aria Chen</a> and other specialized agents</li>
+                <li>Maps interaction patterns to attention weights</li>
+            </ul>
+        </div>
+
+        <div class="layer" onclick="toggleDetails(this)">
+            <div class="layer-info">
+                <div class="layer-num">Layer 3: Authority</div>
+                <div class="layer-title">Permission Logic</div>
+                <div class="layer-artifacts">Token Receipt Ledger + Permission Hierarchy Graph</div>
+            </div>
+            <div class="layer-stats">
+                <span class="dim-count">2,048</span>
+                <span class="dim-label">Dimensions</span>
+            </div>
+        </div>
+        <div class="details">
+            <ul>
+                <li>Captures <a href="https://www.cerbos.dev/news/securing-ai-agents-model-context-protocol" target="_blank" rel="noopener noreferrer">RBAC</a> decisions and permission inheritance</li>
+                <li>Enables self-referential token generation (tokens can grant tokens)</li>
+                <li>Maintains a cryptographically verifiable Token Receipt Ledger</li>
+            </ul>
+        </div>
+
+        <div class="layer" onclick="toggleDetails(this)">
+            <div class="layer-info">
+                <div class="layer-num">Layer 2: Behavior</div>
+                <div class="layer-title">Decision Patterns</div>
+                <div class="layer-artifacts">Execution Traces + Attention Allocation History</div>
+            </div>
+            <div class="layer-stats">
+                <span class="dim-count">2,048</span>
+                <span class="dim-label">Dimensions</span>
+            </div>
+        </div>
+        <div class="details">
+            <ul>
+                <li>Logs step-by-step reasoning cycles and Chain of Thought traces</li>
+                <li>Tracks how the system focuses attention across tools and contexts</li>
+                <li>Provides behavioral ground truth for LoRA instructional kernels</li>
+            </ul>
+        </div>
+
+        <div class="layer" onclick="toggleDetails(this)">
+            <div class="layer-info">
+                <div class="layer-num">Layer 1: Foundation</div>
+                <div class="layer-title">Semantic Grounding</div>
+                <div class="layer-artifacts">Hierarchical Knowledge Graph (HKG)</div>
+            </div>
+            <div class="layer-stats">
+                <span class="dim-count">4,096</span>
+                <span class="dim-label">Dimensions</span>
+            </div>
+        </div>
+        <div class="details">
+            <ul>
+                <li>Primary structural representation of all system knowledge</li>
+                <li>Maps nodes (Agents, Tools, Permissions) and edges (Relationships)</li>
+                <li>Enforces physical constants like C5 Symmetry requirements</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <div class="total-box">
+        <span class="total-value">11,776</span>
+        <span class="total-label">Total Unified Embedding Dimensions</span>
+    </div>
+
+    <script>
+        function toggleDetails(element) {
+            const activeLayers = document.querySelectorAll('.layer.active');
+            activeLayers.forEach((layer) => {
+                if (layer !== element) {
+                    layer.classList.remove('active');
+                }
+            });
+
+            element.classList.toggle('active');
+        }
+    </script>
+</body>
+</html>
