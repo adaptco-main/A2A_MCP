@@ -20,54 +20,25 @@ class TestWHAMGameEngine:
         assert engine.frame_time == 1.0 / 60
         assert torch.equal(engine.vector_store, mock_vector_store)
 
+    @pytest.mark.parametrize(
+        "action, initial_pos, expected_pos",
+        [
+            ("D", (0.0, 0.0), (2.0, 0.0)),
+            ("A", (0.0, 0.0), (-2.0, 0.0)),
+            ("W", (0.0, 0.0), (0.0, 2.0)),
+            ("S", (0.0, 0.0), (0.0, -2.0)),
+            ("UNKNOWN", (10.0, 10.0), (10.0, 10.0)),
+        ],
+    )
     @pytest.mark.asyncio
-    async def test_run_frame_movement_d(self, engine):
-        initial_state = {"pos_x": 0.0, "pos_y": 0.0}
-        # Multiplier is 2.0
-        # Action "D" increases pos_x by 1.0 * multiplier = 2.0
-        result = await engine.run_frame("D", initial_state)
+    async def test_run_frame_movement(self, engine, action, initial_pos, expected_pos):
+        initial_state = {"pos_x": initial_pos[0], "pos_y": initial_pos[1]}
+        result = await engine.run_frame(action, initial_state)
 
         assert result["status"] == "success"
         assert "timestamp" in result
-        assert result["frame_state"]["pos_x"] == 2.0
-        assert result["frame_state"]["pos_y"] == 0.0
-
-    @pytest.mark.asyncio
-    async def test_run_frame_movement_a(self, engine):
-        initial_state = {"pos_x": 0.0, "pos_y": 0.0}
-        # Multiplier is 2.0
-        # Action "A" decreases pos_x by 1.0 * multiplier = -2.0
-        result = await engine.run_frame("A", initial_state)
-
-        assert result["frame_state"]["pos_x"] == -2.0
-        assert result["frame_state"]["pos_y"] == 0.0
-
-    @pytest.mark.asyncio
-    async def test_run_frame_movement_w(self, engine):
-        initial_state = {"pos_x": 0.0, "pos_y": 0.0}
-        # Action "W" increases pos_y by 1.0 * multiplier = 2.0
-        result = await engine.run_frame("W", initial_state)
-
-        assert result["frame_state"]["pos_x"] == 0.0
-        assert result["frame_state"]["pos_y"] == 2.0
-
-    @pytest.mark.asyncio
-    async def test_run_frame_movement_s(self, engine):
-        initial_state = {"pos_x": 0.0, "pos_y": 0.0}
-        # Action "S" decreases pos_y by 1.0 * multiplier = -2.0
-        result = await engine.run_frame("S", initial_state)
-
-        assert result["frame_state"]["pos_x"] == 0.0
-        assert result["frame_state"]["pos_y"] == -2.0
-
-    @pytest.mark.asyncio
-    async def test_run_frame_no_movement(self, engine):
-        initial_state = {"pos_x": 10.0, "pos_y": 10.0}
-        # Unknown action, no movement
-        result = await engine.run_frame("UNKNOWN", initial_state)
-
-        assert result["frame_state"]["pos_x"] == 10.0
-        assert result["frame_state"]["pos_y"] == 10.0
+        assert result["frame_state"]["pos_x"] == expected_pos[0]
+        assert result["frame_state"]["pos_y"] == expected_pos[1]
 
     def test_compile_to_wasm(self, engine, mock_vector_store):
         wasm_bytes = engine.compile_to_wasm()
