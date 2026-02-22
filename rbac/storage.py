@@ -81,7 +81,7 @@ class AgentRegistry(ABC):
         ...
 
     @abstractmethod
-    def deactivate(self, agent_id: str) -> None:
+    def deactivate(self, agent_id: str) -> bool:
         """Deactivate an agent."""
         ...
 
