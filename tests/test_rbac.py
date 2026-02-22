@@ -5,7 +5,8 @@ RBAC Unit Tests — Agent onboarding and permission enforcement.
 import pytest
 from fastapi.testclient import TestClient
 
-from rbac.rbac_service import app, _registry
+from rbac.rbac_service import app, registry
+from rbac.storage import InMemoryAgentRegistry
 from rbac.models import (
     AgentRole,
     ROLE_PERMISSIONS,
@@ -16,9 +17,11 @@ from rbac.models import (
 @pytest.fixture(autouse=True)
 def clear_registry():
     """Reset the in-memory registry between tests."""
-    _registry.clear()
+    if isinstance(registry, InMemoryAgentRegistry):
+        registry._store.clear()
     yield
-    _registry.clear()
+    if isinstance(registry, InMemoryAgentRegistry):
+        registry._store.clear()
 
 
 @pytest.fixture
