@@ -6,3 +6,9 @@ asyncio
 python-dotenv
 fastmcp
 requests
+<<<<<<< Updated upstream
+=======
+jsonschema
+torch
+prometheus-client
+>>>>>>> Stashed changes

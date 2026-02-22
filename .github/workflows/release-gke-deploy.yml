@@ -1,1 +1,115 @@
+# GCP GKE Release
+#
+# Release workflow to build and deploy to a GKE cluster.
+# This workflow includes a readiness gate and a post-deploy webhook.
+
+name: Release GKE Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy"
+        required: true
+        default: "latest"
+
+env:
+  GAR_LOCATION: "us-central1"
+  GKE_CLUSTER: "mcp-cluster"
+  GKE_ZONE: "us-central1-c"
+  DEPLOYMENT_NAME: "mcp-deployment"
+  IMAGE_NAME: "mcp-core"
+  WEBHOOK_URL: "https://your-webhook-url.com/post-deploy"
+
+jobs:
+  build-and-push:
+    name: "Build and Push to GAR"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - name: "Checkout"
         uses: actions/checkout@v4
+
+      - name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: "projects/${{ secrets.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
+          service_account: "github-actions@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+
+      - name: "Build and push to GAR"
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mcp-images/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}"
+
+  deploy-to-gke:
+    name: "Deploy to GKE"
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: "read"
+      id-token: "write"
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v2"
+        with:
+          workload_identity_provider: "projects/${{ secrets.GCP_PROJECT_ID }}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider"
+          service_account: "github-actions@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+
+      - name: "Set up GKE credentials"
+        uses: "google-github-actions/get-gke-credentials@v2"
+        with:
+          cluster_name: "${{ env.GKE_CLUSTER }}"
+          location: "${{ env.GKE_ZONE }}"
+
+      - name: "Deploy to GKE"
+        run: |
+          kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} mcp-core=${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/mcp-images/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}
+
+      - name: "Readiness Gate: Wait for deployment rollout"
+        run: |
+          kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} --timeout=5m
+
+      - name: "Post-deploy webhook"
+        if: success()
+        run: |
+          curl -X POST -H "Content-Type: application/json" -d '{"status": "success", "tag": "${{ github.event.inputs.image_tag }}"}' ${{ env.WEBHOOK_URL }}
+
+  test-release-path:
+    name: "Test Release Path"
+    runs-on: ubuntu-latest
+    needs: deploy-to-gke
+
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: "Install dependencies"
+        run: |
+          pip install -r requirements.txt
+          pip install pytest requests
+
+      - name: "Run release path tests"
+        run: |
+          # This is a placeholder for tests that verify the new release path.
+          # These tests could, for example, hit a health endpoint on the newly
+          # deployed service to ensure it's running the correct version.
+          echo "Running release path tests..."
+          pytest tests/test_gke_release.py
