@@ -15,6 +15,7 @@ class LLMService:
             raise ValueError("API Key or Endpoint missing from your local .env file!")
 
         import requests
+        import httpx
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
