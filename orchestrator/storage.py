@@ -3,7 +3,7 @@ from __future__ import annotations
 import atexit
 import json
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -55,6 +55,31 @@ class DBManager:
         finally:
             db.close()
 
+
+    def save_artifacts(self, artifacts: List[MCPArtifact]) -> List[ArtifactModel]:
+        """Save multiple MCPArtifacts to the database in a single transaction."""
+        db = self.SessionLocal()
+        saved_models = []
+        try:
+            for artifact in artifacts:
+                content_val = artifact.content if isinstance(artifact.content, str) else json.dumps(artifact.content)
+                db_artifact = ArtifactModel(
+                    id=artifact.artifact_id,
+                    parent_artifact_id=getattr(artifact, "parent_artifact_id", None),
+                    agent_name=getattr(artifact, "agent_name", "UnknownAgent"),
+                    version=getattr(artifact, "version", "1.0.0"),
+                    type=artifact.type,
+                    content=content_val,
+                )
+                db.add(db_artifact)
+                saved_models.append(db_artifact)
+            db.commit()
+            return saved_models
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
     def get_artifact(self, artifact_id: str) -> Optional[ArtifactModel]:
         """Retrieve an artifact by ID from the database."""
         db = self.SessionLocal()
