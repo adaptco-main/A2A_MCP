@@ -28,3 +28,17 @@ def test_generate_solution_returns_and_persists_artifact(monkeypatch):
     assert artifact.metadata["parent_artifact_id"] == "parent-1"
     assert saved["artifact"].parent_artifact_id == "parent-1"
     assert saved["artifact"].artifact_id == artifact.artifact_id
+
+
+def test_generate_solution_raises_when_llm_returns_none(monkeypatch):
+    agent = CoderAgent()
+
+    monkeypatch.setattr(agent.db, "get_artifact", lambda _id: SimpleNamespace(content="parent context"))
+    monkeypatch.setattr(agent.llm, "call_llm", lambda prompt: None)
+
+    try:
+        asyncio.run(agent.generate_solution("parent-1", "feedback"))
+    except ValueError as exc:
+        assert "cannot create MCPArtifact" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError when LLM returns None")
