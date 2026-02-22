@@ -78,8 +78,6 @@ class IntentEngine:
         arch_artifacts = await self.architect.map_system(blueprint)
         result.architecture_artifacts = arch_artifacts
         last_code_artifact_id: str | None = None
-
-        last_code_artifact_id: str | None = None
         for action in blueprint.actions:
             action.status = "in_progress"
             parent_id = last_code_artifact_id or blueprint.plan_id
@@ -91,7 +89,7 @@ class IntentEngine:
                 f"{action.instruction}"
             )
             artifact = await self.coder.generate_solution(
-                parent_id=last_code_artifact_id or blueprint.plan_id,
+                parent_id=parent_id,
                 feedback=coding_task,
             )
             last_code_artifact_id = artifact.artifact_id
