@@ -2,6 +2,7 @@ from schemas.agent_artifacts import MCPArtifact
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 import uuid
+import asyncio
 
 class CoderAgent:
     def __init__(self):
@@ -16,7 +17,7 @@ class CoderAgent:
         Ingests parent context to produce a persistent, traceable code artifact.
         """
         # Retrieve context from persistence layer
-        parent_context = self.db.get_artifact(parent_id)
+        parent_context = await asyncio.to_thread(self.db.get_artifact, parent_id)
         
         # --- FIX: Handle Empty Database (NoneType) ---
         if parent_context:
@@ -41,5 +42,5 @@ class CoderAgent:
         )
 
         # Persistence & Traceability
-        self.db.save_artifact(artifact)
+        await asyncio.to_thread(self.db.save_artifact, artifact)
         return artifact
