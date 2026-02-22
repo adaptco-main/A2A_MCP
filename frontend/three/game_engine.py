@@ -1,6 +1,7 @@
 """Game engine integrating Three.js rendering with WHAM physics and Judge."""
 
 from typing import Dict, Any, Optional
+from types import MappingProxyType
 from dataclasses import dataclass
 from frontend.three.scene_manager import SceneManager, Vector3
 from frontend.three.world_renderer import WorldRenderer, ZoneRenderer
