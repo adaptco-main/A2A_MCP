@@ -1,5 +1,52 @@
+# Environments
 .env
-dist/
-firebase-debug.log
+.venv
+env/
+venv/
+ENV/
+
+# Docker
+.docker/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Runtime artifacts
+*.db
+*.sqlite
+
+# Agent temp files
+tmpclaude-*
+tmpclaude-*-cwd/
+tmpclaude-*-cwd
+specs/tmpclaude-*-cwd
+
+# Test output dumps
+test_output*.txt
+test_results*.txt
+test_full_output*.txt
+
+# Pytest
+.pytest_cache/
+
+# Node modules
 node_modules/
+
+# Build directory
+dist/
+
+# Logs
+firebase-debug.log
+
+#Binaries
 gh_2.44.1_linux_amd64/
