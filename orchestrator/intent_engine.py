@@ -151,6 +151,8 @@ class IntentEngine:
                 parent_id=parent_id,
                 feedback=action.instruction,
             )
+            # NOTE: CoderAgent.generate_solution() already persists code artifacts.
+            # Do not save code_artifact here or duplicate primary keys will be written.
             artifact_ids.append(code_artifact.artifact_id)
             last_code_artifact_id = code_artifact.artifact_id
 
