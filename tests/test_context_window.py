@@ -149,7 +149,8 @@ class TestContextWindow:
 
         assert json_ctx["turn_count"] == 1
         assert json_ctx["window_size"] == 1
-        assert len(json_ctx["recent_turns"]) == 1
+        assert "compressed_summaries" in json_ctx
+        assert "pinned_artifacts" in json_ctx
         assert json_ctx["recent_turns"][0]["agent"] == "Msg"
 
     def test_clear(self):
