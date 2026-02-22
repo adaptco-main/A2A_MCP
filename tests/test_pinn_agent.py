@@ -41,10 +41,10 @@ class TestPINNAgent:
         result = pinn_agent.rank_prompt(prompt_text)
 
         # Verify LLM call
-        pinn_agent.llm.call_llm.assert_called_once()
-        args, kwargs = pinn_agent.llm.call_llm.call_args
-        assert kwargs['prompt'] == f"Return only an embedding for: {prompt_text}"
-        assert kwargs['system_prompt'] == "You are an embedding helper."
+        pinn_agent.llm.call_llm.assert_called_once_with(
+            prompt=f"Return only an embedding for: {prompt_text}",
+            system_prompt="You are an embedding helper."
+        )
 
         # Verify it falls back/uses deterministic embedding
         expected_embedding = pinn_agent._deterministic_embedding(prompt_text)
