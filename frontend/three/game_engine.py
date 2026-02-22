@@ -3,6 +3,7 @@
 from typing import Dict, Any, Optional
 from types import MappingProxyType
 from dataclasses import dataclass
+from types import MappingProxyType
 from frontend.three.scene_manager import SceneManager, Vector3
 from frontend.three.world_renderer import WorldRenderer, ZoneRenderer
 from frontend.three.avatar_renderer import AvatarRenderer
