@@ -12,26 +12,28 @@ def test_cors_config_is_not_wildcard():
     when allow_credentials is True.
     """
     try:
-        from rbac.rbac_service import app
-        from fastapi.middleware.cors import CORSMiddleware
-
-        # Find the CORSMiddleware in the app's middleware list
-        cors_middleware = None
-        for middleware in app.user_middleware:
-            if middleware.cls == CORSMiddleware:
-                cors_middleware = middleware
-                break
-
-        assert cors_middleware is not None, "CORSMiddleware not found in app."
-
-        allow_origins = cors_middleware.options.get("allow_origins", [])
-        allow_credentials = cors_middleware.options.get("allow_credentials", False)
-
-        if allow_credentials:
-            assert "*" not in allow_origins, "Security Risk: allow_origins=['*'] with allow_credentials=True"
-
+        import fastapi
+        import pydantic
     except ImportError:
         pytest.skip("Skipping test due to missing dependencies (fastapi/pydantic)")
+
+    from rbac.rbac_service import app
+    from fastapi.middleware.cors import CORSMiddleware
+
+    # Find the CORSMiddleware in the app's middleware list
+    cors_middleware = None
+    for middleware in app.user_middleware:
+        if middleware.cls == CORSMiddleware:
+            cors_middleware = middleware
+            break
+
+    assert cors_middleware is not None, "CORSMiddleware not found in app."
+
+    allow_origins = cors_middleware.options.get("allow_origins", [])
+    allow_credentials = cors_middleware.options.get("allow_credentials", False)
+
+    if allow_credentials:
+        assert "*" not in allow_origins, "Security Risk: allow_origins=['*'] with allow_credentials=True"
 
 if __name__ == "__main__":
     # Allow running directly for manual verification
