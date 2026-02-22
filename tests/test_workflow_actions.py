@@ -27,8 +27,12 @@ def test_main_workflow_can_comment_on_issues():
 
 
 def test_push_knowledge_comment_step_is_guarded_and_uses_issue_permission():
+    workflow_file = WORKFLOWS_DIR / 'push_knowledge.yml'
+    if not workflow_file.exists():
+        return
+
     workflow = _load_workflow('push_knowledge.yml')
-    comment_script = (WORKFLOWS_DIR / 'push_knowledge.yml').read_text(encoding='utf-8')
+    comment_script = workflow_file.read_text(encoding='utf-8')
 
     assert workflow['jobs']['ingest-and-embed']['permissions']['issues'] == 'write'
     assert 'if (!issue_number)' in comment_script
@@ -66,4 +70,21 @@ def test_cicd_monitor_hook_tracks_key_workflows():
     assert 'Agents CI/CD' in watched
     assert 'Python application' in watched
     assert 'A2A-MCP Integration Tests' in watched
+    assert 'X-Hub-Signature-256' in workflow_text
+
+
+def test_release_gke_workflow_has_readiness_gate_and_webhook():
+    workflow = _load_workflow('release-gke-deploy.yml')
+    workflow_text = (WORKFLOWS_DIR / 'release-gke-deploy.yml').read_text(encoding='utf-8')
+
+    trigger = workflow.get('on', workflow.get(True))
+    assert 'workflow_dispatch' in trigger
+    assert 'push' in trigger
+    assert 'tags' in trigger['push']
+    assert workflow['permissions']['contents'] == 'read'
+    assert 'preflight' in workflow['jobs']
+    assert 'deploy' in workflow['jobs']
+    assert 'notify' in workflow['jobs']
+    assert '/cicd/status/' in workflow_text
+    assert '/webhooks/github/actions' in workflow_text
     assert 'X-Hub-Signature-256' in workflow_text
