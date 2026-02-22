@@ -18,7 +18,7 @@ async def test_ingestion_with_valid_handshake(mock_snapshot):
     mock_claims = {"repository": "adaptco/A2A_MCP", "actor": "github-actions"}
     
     # Mock the OIDC verification to simulate a successful A2A handshake
-    with patch("knowledge_ingestion.verify_github_oidc_token", return_value=mock_claims):
+    with patch("scripts.knowledge_ingestion.verify_github_oidc_token", return_value=mock_claims):
         async with Client(app_ingest) as client:
             # Call the ingest tool directly via MCP transport
             response = await client.call_tool("ingest_repository_data", {

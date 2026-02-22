@@ -14,11 +14,9 @@ def test_artifact_persistence_lifecycle():
     test_id = str(uuid.uuid4())
     
     # 1. Setup Mock Artifact
+    artifact_content = {"status": "verified"}
     artifact = MCPArtifact(
         artifact_id=test_id,
-        parent_artifact_id="root-node",
-        agent_name="TestAgent",
-        version="1.0.0",
         type="unit_test_artifact",
         content="{\"status\": \"verified\"}"
     )
