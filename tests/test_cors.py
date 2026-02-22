@@ -41,11 +41,7 @@ if __name__ == "__main__":
         from rbac.rbac_service import app
         from fastapi.middleware.cors import CORSMiddleware
 
-        cors_middleware = None
-        for middleware in app.user_middleware:
-            if middleware.cls == CORSMiddleware:
-                cors_middleware = middleware
-                break
+        cors_middleware = next((m for m in app.user_middleware if m.cls == CORSMiddleware), None)
 
         if cors_middleware:
             allow_origins = cors_middleware.options.get("allow_origins", [])
