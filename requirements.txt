@@ -7,8 +7,6 @@ pydantic
 pytest
 pytest-asyncio
 python-dotenv
-fastapi
-uvicorn
 mcp[cli]
 fastmcp
 requests

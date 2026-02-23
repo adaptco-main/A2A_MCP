@@ -4,9 +4,6 @@ metadata:
   year: 2024
   verified: true
   source_database: "Toyota Official + EPA"
-  runtime_source_of_truth: "specs/supra_specs.yaml"
-  reference_artifact: "specs/supra_specs_verified.yaml"
-  schema_policy_version: "2026-02-20"
   audit_status: "CORRECTED - see SPECS_AUDIT.md"
   corrections_applied:
     - "Engine: Single-turbo B58B30M1 (was twin-turbo)"
@@ -85,12 +82,10 @@ steering:
   turning_radius_ft: 37.4
   turning_radius_note: "UNVERIFIED - calculated, needs actual curb-to-curb measurement"
   turning_radius_confidence: "medium"
-  turning_radius_source: "TBD_TEST_DATA"
 
   steering_ratio: 12.0
   steering_ratio_note: "UNVERIFIED - estimated, needs service manual verification"
   steering_ratio_confidence: "low"
-  steering_ratio_source: "TBD_TEST_DATA"
 
 fuel:
   capacity_gal: 13.2
@@ -113,7 +108,6 @@ handling_characteristics:
   braking_distance_60_ft: 122
   braking_distance_60_note: "UNVERIFIED - estimated from brake specs, needs test data"
   braking_distance_confidence: "low"
-  braking_distance_60_source: "TBD_TEST_DATA"
 
   max_deceleration_g: 1.1
   max_deceleration_note: "Street car limit with ABS, realistic for braking"
@@ -121,14 +115,11 @@ handling_characteristics:
   skid_pad_g: 1.08
   skid_pad_note: "UNVERIFIED - estimated, needs actual skid pad test"
   skid_pad_confidence: "low"
-  skid_pad_source: "TBD_TEST_DATA"
 
   balance: "neutral"
 
   ground_clearance_in: 4.8
-  ground_clearance_note: "UNVERIFIED - estimated"
-  ground_clearance_confidence: "low"
-  ground_clearance_source: "TBD_TEST_DATA"
+  ground_clearance_note: "estimated"
 
 safety_systems:
   abs_type: "4-channel ABS system"
