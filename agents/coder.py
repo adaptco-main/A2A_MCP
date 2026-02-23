@@ -2,6 +2,7 @@ from schemas.agent_artifacts import MCPArtifact
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 import uuid
+from typing import List, Optional, Any
 
 class CoderAgent:
     def __init__(self):
@@ -10,7 +11,12 @@ class CoderAgent:
         self.llm = LLMService()
         self.db = DBManager()
 
-    async def generate_solution(self, parent_id: str, feedback: str = None) -> MCPArtifact:
+    async def generate_solution(
+        self,
+        parent_id: str,
+        feedback: Optional[str] = None,
+        context_tokens: Optional[List[str]] = None
+    ) -> MCPArtifact:
         """
         Directives: Phase 1 Reliability & Metadata Traceability.
         Ingests parent context to produce a persistent, traceable code artifact.
@@ -27,6 +33,11 @@ class CoderAgent:
         # Phase 3 Logic: Intelligent generation vs. Heuristic fixes
         prompt = f"Context: {context_content}\nFeedback: {feedback if feedback else 'Initial build'}"
         
+        if context_tokens:
+            # In a real implementation, we might use these tokens to bias the generation
+            # For now, we just acknowledge them in the prompt for debugging/visibility
+            prompt += f"\n\nContext Tokens: {len(context_tokens)} provided"
+
         # Ensure we use the 'call_llm' method defined in your llm_util.py
         code_solution = self.llm.call_llm(prompt)
 
