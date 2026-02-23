@@ -5,8 +5,9 @@ from enum import Enum
 
 class PipelineState(str, Enum):
     IDLE = "idle"
-    RENDERED = "rendered"
-    VALIDATED = "validated"
-    EXPORTED = "exported"
-    COMMITTED = "committed"
+    RENDERING = "rendering"
+    VALIDATING = "validating"
+    EXPORTING = "exporting"
+    COMMITTING = "committing"
+    PASSED = "passed"
     HALTED = "halted"
