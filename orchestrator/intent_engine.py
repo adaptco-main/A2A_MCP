@@ -264,44 +264,23 @@ class IntentEngine:
         context_tokens,
     ):
         """
-        Validate artifacts with vector context when supported.
-
-        Some tests patch TesterAgent.validate with a one-arg coroutine; in that
-        case we gracefully fall back to the legacy call signature.
+        Validate artifacts with vector context.
         """
-        try:
-            return await self.tester.validate(
-                artifact_id,
-                supplemental_context=supplemental_context,
-                context_tokens=context_tokens,
-            )
-        except TypeError:
-            try:
-                return await self.tester.validate(
-                    artifact_id,
-                    supplemental_context=supplemental_context,
-                )
-            except TypeError:
-                return await self.tester.validate(artifact_id)
+        return await self.tester.validate(
+            artifact_id,
+            supplemental_context=supplemental_context,
+            context_tokens=context_tokens,
+        )
 
-    async def _generate_with_gate(self, parent_id: str, feedback: str, context_tokens):
+    async def _generate_with_gate(self, parent_id: str, feedback: str, context_tokens: Optional[List[Any]]):
         """
-        Generate artifacts with token context when supported.
-
-        Some tests patch CoderAgent.generate_solution with a legacy two-arg
-        signature, so this preserves backward compatibility.
+        Generate artifacts with token context.
         """
-        try:
-            return await self.coder.generate_solution(
-                parent_id=parent_id,
-                feedback=feedback,
-                context_tokens=context_tokens,
-            )
-        except TypeError:
-            return await self.coder.generate_solution(
-                parent_id=parent_id,
-                feedback=feedback,
-            )
+        return await self.coder.generate_solution(
+            parent_id=parent_id,
+            feedback=feedback,
+            context_tokens=context_tokens,
+        )
 
     @staticmethod
     def _attach_gate_metadata(artifact: object, decision: VectorGateDecision) -> None:

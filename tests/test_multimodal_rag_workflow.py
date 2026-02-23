@@ -64,4 +64,3 @@ def test_bundle_validation_fails_when_gates_closed():
 
     assert errors
     assert "gate is closed" in errors[0]
-

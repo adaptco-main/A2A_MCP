@@ -69,4 +69,3 @@ jobs:
             --data-binary @worldline_block.json \
             -o mcp_response.json
           cat mcp_response.json
-

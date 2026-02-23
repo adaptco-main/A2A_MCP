@@ -68,4 +68,3 @@ async def test_client_token_pipe_commits_event_payload():
     assert "mcp_result_hash" in event["payload"]
     assert "drift_score" in event["payload"]
     assert "arbitration_top_roles" in event["payload"]
-

@@ -30,4 +30,3 @@ def test_protocol_similarity_returns_cosine_range():
     sim_same = core.compute_protocol_similarity(emb, emb.clone())
     assert -1.0 <= sim_same <= 1.0
     assert sim_same > 0.99
-
