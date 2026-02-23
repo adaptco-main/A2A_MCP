@@ -221,10 +221,13 @@ async def release_webhook(
             RELEASE_JOBS[release_id]["error"] = str(exc)
             RELEASE_JOBS[release_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
 
-    if background is not None:
-        background.add_task(_run_job)
-    else:
+    if background is None:
+        # Log a warning or raise an error if background tasks are expected but not provided
+        # For now, we'll just run it directly, but this might block the request.
+        self.logger.warning("BackgroundTasks not provided, running release job synchronously.")
         await _run_job()
+    else:
+        background.add_task(_run_job)
 
     return {"status": "accepted", "release_id": release_id}
 
