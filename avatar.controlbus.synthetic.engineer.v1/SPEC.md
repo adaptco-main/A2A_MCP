@@ -1,4 +1,4 @@
-# avatar.controlbus.synthetic.engineer.v1 — Constitutional Wrapper Spec
+# avatar.controlbus.synthetic.engineer.v1 - Constitutional Wrapper Spec
 
 ## 0. Seal Phrase
 Canonical truth, attested and replayable.
@@ -17,7 +17,7 @@ The wrapper:
 ## 2. Non-negotiable Invariants (Fail-Closed)
 I1. Entropy Authority
 - ByteSampler is the only allowed stochastic source.
-- No `Math.random`, no per-frame randomness, no implicit “best guess” fallbacks.
+- No `Math.random`, no per-frame randomness, no implicit "best guess" fallbacks.
 
 I2. Deterministic Replay
 - Given the same:
@@ -26,7 +26,7 @@ I2. Deterministic Replay
   - `policy_snapshot_ref`
   - `code_version_ref`
   - `integration.json` binding version
-  …the wrapper MUST produce identical:
+  ...the wrapper MUST produce identical:
   - decision_vector(s)
   - receipt digests
   - VVL chain (including fork topology)
@@ -96,7 +96,7 @@ F1. ConstraintViolation
 - Any policy/constraint mismatch => fork (BIFURCATION.CONSTRAINT_VIOLATION)
 
 F2. MappingAmbiguity (Tokenizer adapter)
-- Any bytes↔token ambiguity => fork (BIFURCATION.MAPPING_AMBIGUITY)
+- Any bytes<->token ambiguity => fork (BIFURCATION.MAPPING_AMBIGUITY)
 
 F3. EngineError
 - Substrate runtime error => fork (BIFURCATION.ENGINE_ERROR)

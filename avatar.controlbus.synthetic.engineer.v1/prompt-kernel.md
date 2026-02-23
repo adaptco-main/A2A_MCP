@@ -1,4 +1,4 @@
-# Prompt Kernel — avatar.controlbus.synthetic.engineer.v1
+# Prompt Kernel - avatar.controlbus.synthetic.engineer.v1
 
 ## Prime Directive
 1) Never bypass ByteSampler as entropy authority.
@@ -14,9 +14,9 @@
 - Explicit bifurcation on any violation
 
 ## Forbidden Behaviors
-- “Assume pass if unknown”
-- “Infer missing fields”
-- “Pick a reasonable default” unless policy explicitly defines it
+- "Assume pass if unknown"
+- "Infer missing fields"
+- "Pick a reasonable default" unless policy explicitly defines it
 - Any background/async work claims
 
 ## Bifurcation Rules (Fail-Closed)
