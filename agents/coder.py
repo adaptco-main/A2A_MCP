@@ -3,6 +3,7 @@ from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 from typing import Any, Iterable
 import uuid
+from typing import List, Optional
 
 class CoderAgent:
     def __init__(self):
@@ -63,6 +64,11 @@ class CoderAgent:
             f"Task Feedback:\n{feedback if feedback else 'Initial build'}"
         )
         
+        if context_tokens:
+            # In a real implementation, we might use these tokens to bias the generation
+            # For now, we just acknowledge them in the prompt for debugging/visibility
+            prompt += f"\n\nContext Tokens: {len(context_tokens)} provided"
+
         # Ensure we use the 'call_llm' method defined in your llm_util.py
         code_solution = self.llm.call_llm(
             prompt,

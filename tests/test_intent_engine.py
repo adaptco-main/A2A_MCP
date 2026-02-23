@@ -32,7 +32,7 @@ def test_intent_engine_executes_plan(monkeypatch):
             content=f"solution for {feedback}",
         )
 
-    async def fake_validate(_artifact_id):
+    async def fake_validate(_artifact_id, supplemental_context=None, context_tokens=None):
         return TestReport(status="PASS", critique="looks good")
 
     monkeypatch.setattr(engine.coder, "generate_solution", fake_generate_solution)

@@ -54,7 +54,7 @@ class TestFullPipeline:
         if test_verdicts is None:
             test_verdicts = ["PASS"]
 
-        async def fake_validate(_artifact_id):
+        async def fake_validate(_artifact_id, supplemental_context=None, context_tokens=None):
             verdict = test_verdicts.pop(0) if test_verdicts else "PASS"
             return TestReport(
                 status=verdict,
@@ -161,13 +161,13 @@ class TestFullPipeline:
     async def test_legacy_execute_plan_still_works(self):
         engine = self._make_engine()
 
-        async def fake_generate(parent_id, feedback=None):
+        async def fake_generate(parent_id, feedback=None, context_tokens=None):
             return SimpleNamespace(
                 artifact_id=str(uuid.uuid4()),
                 content="code",
             )
 
-        async def fake_validate(_aid):
+        async def fake_validate(_aid, supplemental_context=None, context_tokens=None):
             return TestReport(status="PASS", critique="ok")
 
         engine.coder.generate_solution = fake_generate  # type: ignore

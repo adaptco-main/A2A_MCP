@@ -3,6 +3,7 @@ from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 from typing import Any, Iterable
 from pydantic import BaseModel
+from typing import List, Optional
 
 class TestReport(BaseModel):
     __test__ = False
