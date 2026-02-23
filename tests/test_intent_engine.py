@@ -24,7 +24,7 @@ def test_intent_engine_executes_plan(monkeypatch):
 
     generate_calls = []
 
-    async def fake_generate_solution(parent_id, feedback=None):
+    async def fake_generate_solution(parent_id, feedback=None, context_tokens=None):
         artifact = SimpleNamespace(
             artifact_id=str(uuid.uuid4()),
             content=f"solution for {feedback}",
@@ -33,7 +33,7 @@ def test_intent_engine_executes_plan(monkeypatch):
         generate_calls.append((parent_id, artifact.artifact_id))
         return artifact
 
-    async def fake_validate(_artifact_id):
+    async def fake_validate(_artifact_id, supplemental_context=None, context_tokens=None):
         return TestReport(status="PASS", critique="looks good")
 
     monkeypatch.setattr(engine.coder, "generate_solution", fake_generate_solution)
@@ -67,7 +67,7 @@ def test_intent_engine_executes_plan(monkeypatch):
 def test_intent_engine_does_not_double_persist_code_artifact(monkeypatch):
     engine = IntentEngine()
 
-    async def fake_generate_solution(parent_id, feedback=None):
+    async def fake_generate_solution(parent_id, feedback=None, context_tokens=None):
         artifact = SimpleNamespace(
             artifact_id=str(uuid.uuid4()),
             parent_artifact_id=parent_id,
@@ -80,7 +80,7 @@ def test_intent_engine_does_not_double_persist_code_artifact(monkeypatch):
         engine.db.save_artifact(artifact)
         return artifact
 
-    async def fake_validate(_artifact_id):
+    async def fake_validate(_artifact_id, supplemental_context=None, context_tokens=None):
         return TestReport(status="PASS", critique="ok")
 
     saved_ids = set()
@@ -112,13 +112,13 @@ def test_intent_engine_chains_from_previous_code_artifact(monkeypatch):
     parent_ids = []
     generated_ids = []
 
-    async def fake_generate_solution(parent_id, feedback=None):
+    async def fake_generate_solution(parent_id, feedback=None, context_tokens=None):
         parent_ids.append(parent_id)
         artifact_id = str(uuid.uuid4())
         generated_ids.append(artifact_id)
         return SimpleNamespace(artifact_id=artifact_id, content=f"solution for {feedback}")
 
-    async def fake_validate(_artifact_id):
+    async def fake_validate(_artifact_id, supplemental_context=None, context_tokens=None):
         return TestReport(status="PASS", critique="ok")
 
     monkeypatch.setattr(engine.coder, "generate_solution", fake_generate_solution)
