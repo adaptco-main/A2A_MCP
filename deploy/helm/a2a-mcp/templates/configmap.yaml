@@ -1,21 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "a2a-mcp.fullname" . }}-config
+  name: {{ default (printf "%s-config" .Release.Name) .Values.config.nameOverride }}
   labels:
-    {{- include "a2a-mcp.labels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ .Chart.Name | default "a2a-mcp" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
 data:
-  OIDC_ISSUER: {{ .Values.oidc.issuer | quote }}
-  OIDC_AUDIENCE: {{ .Values.oidc.audience | quote }}
-  OIDC_JWKS_URL: {{ .Values.oidc.jwksUrl | quote }}
-  OIDC_ALLOWED_REPOSITORIES: {{ .Values.oidc.allowedRepositories | quote }}
-  OIDC_ALLOWED_ACTORS: {{ .Values.oidc.allowedActors | quote }}
-  OIDC_ENFORCE: {{ .Values.oidc.enforce | quote }}
-  DATABASE_MODE: {{ .Values.database.mode | quote }}
-{{- if eq .Values.database.mode "sqlite" }}
-  SQLITE_PATH: {{ .Values.database.sqlite.path | quote }}
-{{- else }}
-  POSTGRES_HOST: {{ include "a2a-mcp.postgresServiceName" . | quote }}
-  POSTGRES_PORT: {{ .Values.database.postgres.servicePort | quote }}
-  POSTGRES_DB: {{ .Values.database.postgres.credentials.database | quote }}
-{{- end }}
+  # Non-sensitive runtime settings mapped to container env vars.
+  AVATAR_TOKEN_ALGORITHM: {{ .Values.config.avatarTokenAlgorithm | quote }}
+  AVATAR_TOKEN_TTL_SECONDS: {{ .Values.config.avatarTokenTtlSeconds | quote }}
+  OIDC_REQUIRED: {{ .Values.config.oidcRequired | quote }}

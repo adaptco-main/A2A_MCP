@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 from prime_directive.pipeline.context import PipelineContext
-from prime_directive.pipeline.state_machine import PipelineState
 
 
 class PipelineEngine:
     """Placeholder orchestration engine for staged migration."""
 
-<<<<<<< ours
-    def __init__(self, context: PipelineContext | None = None) -> None:
-        self.context = context
-=======
     def __init__(self) -> None:
->>>>>>> theirs
         self.state = PipelineState.IDLE
 
     def get_state(self) -> PipelineState:

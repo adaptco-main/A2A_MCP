@@ -1,21 +1,14 @@
-images:
-  mcp:
-    tag: latest
-  orchestrator:
-    tag: latest
+# Production values for a2a-mcp
+image:
+  repository: ghcr.io/adaptco/a2a-mcp
+  tag: "latest"
 
-database:
-  mode: postgres
-  postgres:
-    credentials:
-      database: mcp_db
-
-oidc:
-  enforce: "true"
-
-ingress:
-  host: a2a-mcp.example.com
-  tls:
-    secretName: prod-a2a-mcp-tls
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
+config:
+  environment: production
+  oidc:
+    enforce: true
+    issuer: "https://token.actions.githubusercontent.com"
+    audience: ""
+    jwksUrl: "https://token.actions.githubusercontent.com/.well-known/jwks"
+    avatarRepositoryAllowlist: "adaptco/A2A_MCP"
+    avatarActorAllowlist: "github-actions[bot]"

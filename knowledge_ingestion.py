@@ -1,15 +1,21 @@
-"""Compatibility shim for tests/imports expecting top-level knowledge_ingestion."""
+"""Knowledge ingestion MCP tool entrypoint."""
 
-from scripts.knowledge_ingestion import (
-    app_ingest,
-    ingest_repository_data,
-    ingest_worldline_block,
-    verify_github_oidc_token,
-)
+from __future__ import annotations
 
-__all__ = [
-    "app_ingest",
-    "ingest_repository_data",
-    "ingest_worldline_block",
-    "verify_github_oidc_token",
-]
+from typing import Any
+
+from fastmcp import FastMCP
+
+from app.mcp_tooling import ingest_repository_data as protected_ingest_repository_data
+from app.mcp_tooling import verify_github_oidc_token
+
+app_ingest = FastMCP("knowledge-ingestion")
+
+
+@app_ingest.tool()
+def ingest_repository_data(snapshot: dict[str, Any], authorization: str) -> dict[str, Any]:
+    return protected_ingest_repository_data(
+        snapshot=snapshot,
+        authorization=authorization,
+        verifier=verify_github_oidc_token,
+    )

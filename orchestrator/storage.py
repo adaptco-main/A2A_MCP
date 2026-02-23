@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from schemas.database import Base, ArtifactModel, PlanStateModel
 import os
 import json
+from datetime import datetime, timezone
 from typing import Optional
 
 SQLITE_DEFAULT_PATH = "./a2a_mcp.db"
@@ -88,8 +89,11 @@ _db_manager = DBManager()
 
 
 def save_plan_state(plan_id: str, snapshot: dict) -> None:
+    from orchestrator.fsm_persistence import persist_state_machine_snapshot
+
     db = _db_manager.SessionLocal()
     try:
+        # Backward-compatible latest snapshot cache
         serialized_snapshot = json.dumps(snapshot)
         existing = db.query(PlanStateModel).filter(PlanStateModel.plan_id == plan_id).first()
         if existing:
@@ -103,8 +107,17 @@ def save_plan_state(plan_id: str, snapshot: dict) -> None:
     finally:
         db.close()
 
+    # Append-only FSM persistence (event + derived snapshot)
+    persist_state_machine_snapshot(plan_id, snapshot)
+
 
 def load_plan_state(plan_id: str) -> Optional[dict]:
+    from orchestrator.fsm_persistence import load_state_machine_snapshot
+
+    snapshot = load_state_machine_snapshot(plan_id)
+    if snapshot is not None:
+        return snapshot
+
     db = _db_manager.SessionLocal()
     try:
         state = db.query(PlanStateModel).filter(PlanStateModel.plan_id == plan_id).first()
