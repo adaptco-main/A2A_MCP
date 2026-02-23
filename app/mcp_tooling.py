@@ -1,119 +1,140 @@
-"""Telemetry and runbook helpers for protected MCP ingestion."""
+"""Protected MCP ingestion tooling with deterministic token shaping."""
 
 from __future__ import annotations
 
-import json
-import logging
-import math
-from bisect import insort
-from collections import defaultdict
-from dataclasses import dataclass
-from time import time
+import os
 from typing import Any
 
-LOGGER = logging.getLogger("a2a.telemetry")
+import jwt
 
-RUNBOOK_INGESTION_TRIAGE = "https://runbooks.a2a.local/oncall/protected-ingestion"
-RUNBOOK_TOKEN_SHAPING = "https://runbooks.a2a.local/oncall/token-shaping"
-
-
-@dataclass(frozen=True)
-class TelemetryTimer:
-    """Small context object used to track protected ingestion latencies."""
-
-    started_at: float
+from app.security.avatar_token_shape import AvatarTokenShapeError, shape_avatar_token_stream
 
 
-class TelemetryRecorder:
-    """In-memory metrics recorder with structured logs for on-call triage."""
+MAX_AVATAR_TOKENS = 4096
 
-    def __init__(self) -> None:
-        self._counters: defaultdict[str, int] = defaultdict(int)
-        self._latency_ms: list[float] = []
 
-    def start_timer(self) -> TelemetryTimer:
-        return TelemetryTimer(started_at=time())
+def verify_github_oidc_token(token: str) -> dict[str, Any]:
+    if not token:
+        raise ValueError("Invalid OIDC token")
 
-    def record_request_outcome(
-        self,
-        *,
-        avatar_id: str,
-        client_id: str,
-        outcome: str,
-        rejection_reason: str | None = None,
-        runbook_url: str = RUNBOOK_INGESTION_TRIAGE,
-    ) -> None:
-        key = f"mcp.ingestion.requests|avatar:{avatar_id}|client:{client_id}|outcome:{outcome}"
-        self._counters[key] += 1
-        if rejection_reason:
-            self._counters[f"mcp.ingestion.rejections|reason:{rejection_reason}"] += 1
+    audience = os.getenv("GITHUB_OIDC_AUDIENCE")
+    if not audience:
+        raise ValueError("OIDC audience is not configured")
 
-        self._log(
-            "ingestion.request.outcome",
-            avatar_id=avatar_id,
-            client_id=client_id,
-            outcome=outcome,
-            rejection_reason=rejection_reason,
-            runbook_url=runbook_url,
+    jwks_client = jwt.PyJWKClient("https://token.actions.githubusercontent.com/.well-known/jwks")
+    signing_key = jwks_client.get_signing_key_from_jwt(token).key
+    claims = jwt.decode(
+        token,
+        signing_key,
+        algorithms=["RS256"],
+        audience=audience,
+        issuer="https://token.actions.githubusercontent.com",
+    )
+
+    repository = str(claims.get("repository", "")).strip()
+    if not repository:
+        raise ValueError("OIDC token missing repository claim")
+
+    return claims
+
+
+def ingest_repository_data(
+    snapshot: dict[str, Any],
+    authorization: str,
+    verifier: Any | None = None,
+) -> dict[str, Any]:
+    """Protected ingestion path for repository snapshots."""
+    auth_error = _extract_bearer_token(authorization)
+    if auth_error["error"]:
+        return auth_error
+
+    verifier_fn = verifier or verify_github_oidc_token
+    claims = verifier_fn(auth_error["token"])
+    repository = str(claims.get("repository", "")).strip()
+    snapshot_repository = str(snapshot.get("repository", "")).strip()
+
+    if snapshot_repository and snapshot_repository != repository:
+        return {
+            "ok": False,
+            "error": {
+                "code": "REPOSITORY_CLAIM_MISMATCH",
+                "message": "Snapshot repository does not match verified token claim",
+                "details": {"snapshot_repository": snapshot_repository, "token_repository": repository},
+            },
+        }
+
+    return {
+        "ok": True,
+        "data": {
+            "repository": repository,
+            "execution_hash": _repository_execution_hash(repository, snapshot),
+        },
+    }
+
+
+def ingest_avatar_token_stream(
+    payload: dict[str, Any],
+    authorization: str,
+    verifier: Any | None = None,
+) -> dict[str, Any]:
+    """Protected ingestion path for avatar token payloads before model execution."""
+    auth_error = _extract_bearer_token(authorization)
+    if auth_error["error"]:
+        return auth_error
+
+    verifier_fn = verifier or verify_github_oidc_token
+    claims = verifier_fn(auth_error["token"])
+    repository = str(claims.get("repository", "")).strip()
+
+    namespace = str(payload.get("namespace") or f"avatar::{repository}").strip()
+    max_tokens = int(payload.get("max_tokens", MAX_AVATAR_TOKENS))
+    raw_tokens = payload.get("tokens", [])
+
+    try:
+        shaped = shape_avatar_token_stream(
+            raw_tokens=raw_tokens,
+            namespace=namespace,
+            max_tokens=max_tokens,
+            fingerprint_seed=repository,
         )
+    except AvatarTokenShapeError as exc:
+        return {"ok": False, "error": exc.to_dict()}
 
-    def observe_protected_ingestion_latency(self, timer: TelemetryTimer, *, client_id: str) -> None:
-        latency_ms = max((time() - timer.started_at) * 1000.0, 0.0)
-        insort(self._latency_ms, latency_ms)
-        self._log(
-            "ingestion.latency",
-            client_id=client_id,
-            latency_ms=round(latency_ms, 3),
-            p50_ms=round(self.latency_percentile(50), 3),
-            p95_ms=round(self.latency_percentile(95), 3),
-            p99_ms=round(self.latency_percentile(99), 3),
-            runbook_url=RUNBOOK_INGESTION_TRIAGE,
-        )
-
-    def record_token_shaping_stage(
-        self,
-        *,
-        stage: str,
-        tenant_id: str,
-        token_count: int,
-        embedding_hash: str,
-    ) -> None:
-        self._counters[f"mcp.token_shaping.stage|tenant:{tenant_id}|stage:{stage}"] += 1
-        self._log(
-            "token_shaping.stage",
-            stage=stage,
-            tenant_id=tenant_id,
-            token_count=token_count,
-            embedding_hash=embedding_hash,
-            runbook_url=RUNBOOK_TOKEN_SHAPING,
-        )
-
-    def record_hash_anomaly(
-        self,
-        *,
-        tenant_id: str,
-        stage: str,
-        embedding_hash: str,
-        anomaly: str,
-    ) -> None:
-        self._counters[f"mcp.token_shaping.hash_anomaly|tenant:{tenant_id}|stage:{stage}|anomaly:{anomaly}"] += 1
-        self._log(
-            "token_shaping.hash.anomaly",
-            tenant_id=tenant_id,
-            stage=stage,
-            embedding_hash=embedding_hash,
-            anomaly=anomaly,
-            runbook_url=RUNBOOK_TOKEN_SHAPING,
-        )
-
-    def latency_percentile(self, percentile: int) -> float:
-        if not self._latency_ms:
-            return 0.0
-        idx = max(min(math.ceil((percentile / 100.0) * len(self._latency_ms)) - 1, len(self._latency_ms) - 1), 0)
-        return float(self._latency_ms[idx])
-
-    def _log(self, event: str, **fields: Any) -> None:
-        LOGGER.info(json.dumps({"event": event, **fields}, sort_keys=True))
+    return {"ok": True, "data": shaped.to_dict()}
 
 
-TELEMETRY = TelemetryRecorder()
+def _extract_bearer_token(authorization: str) -> dict[str, Any]:
+    if not authorization or not authorization.startswith("Bearer "):
+        return {
+            "ok": False,
+            "error": {
+                "code": "AUTH_BEARER_MISSING",
+                "message": "Missing or malformed bearer token",
+                "details": {},
+            },
+            "token": None,
+        }
+
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        return {
+            "ok": False,
+            "error": {
+                "code": "AUTH_BEARER_EMPTY",
+                "message": "Bearer token is empty",
+                "details": {},
+            },
+            "token": None,
+        }
+
+    return {"ok": True, "error": None, "token": token}
+
+
+def _repository_execution_hash(repository: str, snapshot: dict[str, Any]) -> str:
+    import hashlib
+    import json
+
+    digest = hashlib.sha256()
+    digest.update(repository.encode("utf-8"))
+    digest.update(json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+    return digest.hexdigest()

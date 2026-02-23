@@ -1,1 +1,2 @@
-"""Security boundary helpers for A2A MCP."""
+"""Security helpers for authentication and authorization."""
+"""Security helpers for MCP ingestion."""
