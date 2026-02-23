@@ -36,6 +36,10 @@ class TesterAgent:
         if supplemental_context:
             prompt += f"\n\nAdditional Context:\n{supplemental_context}"
 
+        if context_tokens:
+            # Acknowledge the provided context tokens for debugging/visibility.
+            prompt += f"\n\nContext Tokens: {len(context_tokens)} provided"
+
         analysis = self.llm.call_llm(prompt)
 
         # Determine status (Heuristic for demo, LLM-guided for Production)
