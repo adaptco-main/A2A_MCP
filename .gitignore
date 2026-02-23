@@ -28,3 +28,10 @@ specs/tmpclaude-*-cwd
 
 # Local runtime artifacts
 *.sqlite
+
+# PRIME_DIRECTIVE runtime outputs
+exports/
+staging/
+*.db
+*.sqlite3
+.env.*
