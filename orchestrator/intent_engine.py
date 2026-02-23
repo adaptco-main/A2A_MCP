@@ -195,6 +195,7 @@ class IntentEngine:
                 context_tokens=coder_gate.matches,
             )
             self._attach_gate_metadata(artifact, coder_gate)
+            self.db.save_artifact(artifact)
             artifact_ids.append(artifact.artifact_id)
 
             tester_gate = self.vector_gate.evaluate(
@@ -222,9 +223,7 @@ class IntentEngine:
                 context_tokens=healing_gate.matches,
             )
             self._attach_gate_metadata(refined, healing_gate)
-            # Compatibility path for tests/mocks that return unsaved ad-hoc artifacts.
-            if not hasattr(refined, "agent_name"):
-                self.db.save_artifact(refined)
+            self.db.save_artifact(refined)
             artifact_ids.append(refined.artifact_id)
 
             action.status = "completed"
