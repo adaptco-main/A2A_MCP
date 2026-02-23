@@ -1,126 +1,139 @@
-"""GitHub OIDC validation helpers used by MCP and orchestrator APIs."""
-
 from __future__ import annotations
 
+import logging
 import os
+import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping
 
 import jwt
-import requests
-from jwt import PyJWKClient
+
+LOGGER = logging.getLogger(__name__)
 
 
-TRUE_VALUES = {"1", "true", "yes", "on"}
+class OIDCAuthError(Exception):
+    """Authentication failure that is safe to return to clients."""
+
+
+class OIDCClaimError(Exception):
+    """Claim validation failure that is safe to return to clients."""
 
 
 @dataclass(frozen=True)
-class OIDCSettings:
-    """Runtime OIDC policy controls loaded from environment variables."""
-
+class OIDCConfig:
+    enforce: bool
     issuer: str
     audience: str
     jwks_url: str
-    allowed_repositories: set[str]
-    allowed_actors: set[str]
-    enforce: bool
-
-    @classmethod
-    def from_env(cls) -> "OIDCSettings":
-        issuer = os.getenv("OIDC_ISSUER", "https://token.actions.githubusercontent.com").strip()
-        audience = os.getenv("OIDC_AUDIENCE", "").strip()
-        jwks_url = os.getenv(
-            "OIDC_JWKS_URL",
-            "https://token.actions.githubusercontent.com/.well-known/jwks",
-        ).strip()
-        allowed_repositories = _parse_csv_env("OIDC_ALLOWED_REPOSITORIES")
-        allowed_actors = _parse_csv_env("OIDC_ALLOWED_ACTORS")
-        enforce = os.getenv("OIDC_ENFORCE", "0").strip().lower() in TRUE_VALUES
-        return cls(
-            issuer=issuer,
-            audience=audience,
-            jwks_url=jwks_url,
-            allowed_repositories=allowed_repositories,
-            allowed_actors=allowed_actors,
-            enforce=enforce,
-        )
+    avatar_repo_allowlist: set[str]
+    avatar_actor_allowlist: set[str]
 
 
-_JWKS_CLIENTS: dict[str, PyJWKClient] = {}
+def _is_truthy(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _parse_csv_env(name: str) -> set[str]:
-    raw = os.getenv(name, "")
-    return {value.strip() for value in raw.split(",") if value.strip()}
+def _split_csv(value: str | None) -> set[str]:
+    if not value:
+        return set()
+    return {item.strip() for item in value.split(",") if item.strip()}
 
 
-def _get_jwks_client(url: str) -> PyJWKClient:
-    client = _JWKS_CLIENTS.get(url)
-    if client is None:
-        # requests session keeps network behavior deterministic for repeat calls.
-        session = requests.Session()
-        client = PyJWKClient(url, session=session)
-        _JWKS_CLIENTS[url] = client
-    return client
+def get_request_correlation_id(headers: Mapping[str, str] | None = None) -> str:
+    headers = headers or {}
+    for key in ("x-request-id", "x-correlation-id", "X-Request-ID", "X-Correlation-ID"):
+        value = headers.get(key)
+        if value and str(value).strip():
+            return str(value).strip()
+    return str(uuid.uuid4())
 
 
-def parse_bearer_token(authorization: str) -> str:
-    """Extract and validate bearer token from Authorization header value."""
+def load_oidc_config() -> OIDCConfig:
+    return OIDCConfig(
+        enforce=_is_truthy(os.getenv("OIDC_ENFORCE")),
+        issuer=str(os.getenv("OIDC_ISSUER", "")).strip(),
+        audience=str(os.getenv("OIDC_AUDIENCE", "")).strip(),
+        jwks_url=str(os.getenv("OIDC_JWKS_URL", "")).strip(),
+        avatar_repo_allowlist=_split_csv(os.getenv("OIDC_AVATAR_REPOSITORY_ALLOWLIST")),
+        avatar_actor_allowlist=_split_csv(os.getenv("OIDC_AVATAR_ACTOR_ALLOWLIST")),
+    )
+
+
+def validate_startup_oidc_requirements(environment: str | None = None) -> None:
+    env_name = str(environment or os.getenv("ENVIRONMENT") or os.getenv("APP_ENV") or "").strip().lower()
+    is_production = env_name in {"prod", "production"}
+    if not is_production:
+        return
+
+    config = load_oidc_config()
+    missing: list[str] = []
+    if not config.enforce:
+        missing.append("OIDC_ENFORCE=true")
+    if not config.issuer:
+        missing.append("OIDC_ISSUER")
+    if not config.audience:
+        missing.append("OIDC_AUDIENCE")
+    if not config.jwks_url:
+        missing.append("OIDC_JWKS_URL")
+
+    if missing:
+        raise RuntimeError(f"Missing required production OIDC configuration: {', '.join(missing)}")
+
+
+def extract_bearer_token(authorization: str | None) -> str:
     if not authorization:
-        raise ValueError("Missing authorization header")
-
-    if not authorization.startswith("Bearer "):
-        raise ValueError("Authorization must use Bearer token")
-
-    token = authorization.split(" ", 1)[1].strip()
-    if not token:
-        raise ValueError("Missing bearer token")
-    return token
+        raise OIDCAuthError("unauthorized")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise OIDCAuthError("unauthorized")
+    return token.strip()
 
 
-def _verify_claim_constraints(claims: dict[str, Any], settings: OIDCSettings) -> None:
+def verify_bearer_token(token: str, request_id: str) -> dict[str, Any]:
+    config = load_oidc_config()
+    if not config.issuer or not config.audience or not config.jwks_url:
+        LOGGER.error("OIDC misconfiguration; request_id=%s", request_id)
+        raise OIDCAuthError("unauthorized")
+
+    try:
+        jwks_client = jwt.PyJWKClient(config.jwks_url)
+        signing_key = jwks_client.get_signing_key_from_jwt(token).key
+        claims = jwt.decode(
+            token,
+            signing_key,
+            algorithms=["RS256"],
+            audience=config.audience,
+            issuer=config.issuer,
+        )
+    except Exception:
+        LOGGER.warning("OIDC token verification failed; request_id=%s", request_id)
+        raise OIDCAuthError("unauthorized")
+
     repository = str(claims.get("repository", "")).strip()
     actor = str(claims.get("actor", "")).strip()
-
-    if settings.allowed_repositories and repository not in settings.allowed_repositories:
-        raise ValueError("OIDC repository claim is not allowed")
-
-    if settings.allowed_actors and actor not in settings.allowed_actors:
-        raise ValueError("OIDC actor claim is not allowed")
-
-
-def _decode_strict(token: str, settings: OIDCSettings) -> dict[str, Any]:
-    if not settings.audience:
-        raise ValueError("OIDC_AUDIENCE must be set when OIDC_ENFORCE=true")
-
-    signing_key = _get_jwks_client(settings.jwks_url).get_signing_key_from_jwt(token).key
-    claims = jwt.decode(
-        token,
-        signing_key,
-        algorithms=["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"],
-        issuer=settings.issuer,
-        audience=settings.audience,
-        options={"require": ["iss", "sub", "aud"]},
-    )
-    _verify_claim_constraints(claims, settings)
+    if not repository or not actor:
+        LOGGER.warning("OIDC claims missing required repository/actor; request_id=%s", request_id)
+        raise OIDCClaimError("forbidden")
     return claims
 
 
-def verify_github_oidc_token(token: str) -> dict[str, Any]:
-    """
-    Validate GitHub OIDC token and return decoded claims.
+def enforce_avatar_ingest_allowlists(claims: Mapping[str, Any], request_id: str) -> None:
+    config = load_oidc_config()
+    repository = str(claims.get("repository", "")).strip()
+    actor = str(claims.get("actor", "")).strip()
 
-    Behavior:
-    - strict mode (`OIDC_ENFORCE=true`): full issuer/audience/signature checks.
-    - relaxed mode (`OIDC_ENFORCE=false`): lightweight guard for local/dev compatibility.
-    """
-    settings = OIDCSettings.from_env()
+    if config.avatar_repo_allowlist and repository not in config.avatar_repo_allowlist:
+        LOGGER.warning(
+            "OIDC avatar-ingest repository rejected; request_id=%s repository=%s",
+            request_id,
+            repository,
+        )
+        raise OIDCClaimError("forbidden")
 
-    if not token or token.strip() == "invalid":
-        raise ValueError("Invalid OIDC token")
-
-    if settings.enforce:
-        return _decode_strict(token, settings)
-
-    # Relaxed mode keeps local tests/tooling functional without network/JWT setup.
-    return {"repository": "", "actor": "unknown"}
+    if config.avatar_actor_allowlist and actor not in config.avatar_actor_allowlist:
+        LOGGER.warning(
+            "OIDC avatar-ingest actor rejected; request_id=%s actor=%s",
+            request_id,
+            actor,
+        )
+        raise OIDCClaimError("forbidden")
