@@ -5,27 +5,26 @@ from middleware import AgenticRuntime, WhatsAppEventObserver, TetrisScoreAggrega
 from middleware.genie_adapter import GenieAdapter
 from agency_hub.genie_bridge import GenieBridge
 from schemas.model_artifact import AgentLifecycleState
-from agents.coder import CoderAgent
-from agents.tester import TesterAgent
-from agents.gemini_agent import GeminiAgent
+from agents.hub import AgentHub
 
 from agency_hub.spokes.ghost_void_spoke import GhostVoidSpoke
 from agency_hub.architect.locomotion import LocomotionController
-from typing import Tuple, List, Any
+from typing import Tuple, List, Any, Dict
 
 class MCPHub:
     def __init__(self):
         self.db = DBManager()
-        self.coder = CoderAgent()
-        self.tester = TesterAgent()
         
         # Initialize Agentic Runtime Middleware with observers
         wa_observer = WhatsAppEventObserver()
         tetris_aggregator = TetrisScoreAggregator(wa_observer)
         self.runtime = AgenticRuntime(observers=[wa_observer, tetris_aggregator])
         
-        # Gemini Cluster Layer
-        self.gemini_agent = GeminiAgent(runtime=self.runtime)
+        # Centralized Agent Management
+        self.agent_hub = AgentHub(runtime=self.runtime)
+        self.coder = self.agent_hub.coder
+        self.tester = self.agent_hub.tester
+        self.gemini_agent = self.agent_hub.gemini
         
         # Locomotion Model Layer
         self.spoke = GhostVoidSpoke()

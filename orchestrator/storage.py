@@ -49,9 +49,7 @@ class DBManager:
 _db_manager = DBManager()
 
 
-
 # PostgresEventStore has been migrated to middleware.events.py
-
 
 def save_plan_state(plan_id: str, snapshot: dict) -> None:
     db = _db_manager.SessionLocal()
