@@ -1,8 +1,9 @@
 from schemas.agent_artifacts import MCPArtifact
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
+from typing import Any, Iterable
 import uuid
-from typing import List, Optional, Any
+from typing import List, Optional
 
 class CoderAgent:
     def __init__(self):
@@ -11,11 +12,36 @@ class CoderAgent:
         self.llm = LLMService()
         self.db = DBManager()
 
+    @staticmethod
+    def _format_context_tokens(context_tokens: Iterable[Any] | None) -> str:
+        """Render structured vector-context tokens for runtime LLM grounding."""
+        if not context_tokens:
+            return "No runtime context tokens provided."
+
+        lines = []
+        for idx, token in enumerate(context_tokens, start=1):
+            text = str(getattr(token, "text", "")).strip()
+            token_id = str(getattr(token, "token_id", "unknown"))
+            score = getattr(token, "score", None)
+            source = str(getattr(token, "source_artifact_id", "unknown"))
+            snippet = " ".join(text.split())
+            if len(snippet) > 220:
+                snippet = snippet[:217] + "..."
+            if score is None:
+                lines.append(
+                    f"{idx}. token={token_id} source={source} text={snippet}"
+                )
+            else:
+                lines.append(
+                    f"{idx}. score={float(score):.3f} token={token_id} source={source} text={snippet}"
+                )
+        return "\n".join(lines)
+
     async def generate_solution(
         self,
         parent_id: str,
-        feedback: Optional[str] = None,
-        context_tokens: Optional[List[str]] = None
+        feedback: str = None,
+        context_tokens: Iterable[Any] | None = None,
     ) -> MCPArtifact:
         """
         Directives: Phase 1 Reliability & Metadata Traceability.
@@ -30,8 +56,13 @@ class CoderAgent:
         else:
             context_content = "No previous context found. Proceeding with initial architectural build."
 
-        # Phase 3 Logic: Intelligent generation vs. Heuristic fixes
-        prompt = f"Context: {context_content}\nFeedback: {feedback if feedback else 'Initial build'}"
+        runtime_token_context = self._format_context_tokens(context_tokens)
+        prompt = (
+            f"Persistent Context:\n{context_content}\n\n"
+            "Runtime Context Tokens:\n"
+            f"{runtime_token_context}\n\n"
+            f"Task Feedback:\n{feedback if feedback else 'Initial build'}"
+        )
         
         if context_tokens:
             # In a real implementation, we might use these tokens to bias the generation
@@ -39,7 +70,13 @@ class CoderAgent:
             prompt += f"\n\nContext Tokens: {len(context_tokens)} provided"
 
         # Ensure we use the 'call_llm' method defined in your llm_util.py
-        code_solution = self.llm.call_llm(prompt)
+        code_solution = self.llm.call_llm(
+            prompt,
+            system_prompt=(
+                "You are CoderAgent-Alpha. Use runtime context tokens as grounding "
+                "for implementation decisions, and keep outputs production-safe."
+            ),
+        )
 
         # Create Contract-First Artifact
         artifact = MCPArtifact(
