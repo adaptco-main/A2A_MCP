@@ -30,14 +30,14 @@ class TestStateSpace:
         init_artifact = artifact.transition(AgentLifecycleState.INIT)
         assert init_artifact.state == AgentLifecycleState.INIT
         assert init_artifact.parent_artifact_id == artifact.artifact_id
-        assert init_artifact.artifact_id == artifact.artifact_id  # ID stays same, but new instance
+        assert init_artifact.artifact_id == artifact.artifact_id
         assert init_artifact is not artifact
 
         # INIT -> EMBEDDING
         next_artifact = init_artifact.transition(AgentLifecycleState.EMBEDDING)
         assert next_artifact.state == AgentLifecycleState.EMBEDDING
         assert next_artifact.parent_artifact_id == init_artifact.artifact_id
-
+        
         # EMBEDDING -> RAG_QUERY
         rag_artifact = next_artifact.transition(AgentLifecycleState.RAG_QUERY)
         assert rag_artifact.state == AgentLifecycleState.RAG_QUERY

@@ -56,6 +56,7 @@ class ModelArtifact(MCPArtifact):
     # Default overrides
     type: str = Field(default="model_artifact")
     content: str = Field(default="", description="Serialized model config or description")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     
     def can_transition_to(self, target: AgentLifecycleState) -> bool:
         return target in STATE_TRANSITIONS.get(self.state, [])
