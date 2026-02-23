@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import os
+import importlib
+from typing import Any, AsyncIterator
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+=======
+import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+codex/implement-get-/verify-endpoint
 
 from orchestrator.settlement import PostgresEventStore, verify_execution
 
@@ -19,6 +26,22 @@ async def get_tenant_id(x_tenant_id: str | None = Header(default=None)) -> str:
     return tenant_id
 
 
+async def get_db_connection(request: Request) -> AsyncIterator[Any]:
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise HTTPException(status_code=503, detail="DATABASE_URL is not configured")
+
+    try:
+        asyncpg = importlib.import_module("asyncpg")
+    except ModuleNotFoundError as exc:
+        raise HTTPException(status_code=503, detail="asyncpg is not installed") from exc
+
+    if not hasattr(request.app.state, "verify_db_pool"):
+        request.app.state.verify_db_pool = await asyncpg.create_pool(database_url)
+
+    async with request.app.state.verify_db_pool.acquire() as conn:
+        yield conn
+=======
 @asynccontextmanager
 async def get_db_connection() -> AsyncIterator[Any]:
     raise HTTPException(
@@ -26,6 +49,7 @@ async def get_db_connection() -> AsyncIterator[Any]:
         detail="Database connection dependency is not configured",
     )
     yield
+codex/implement-get-/verify-endpoint
 
 
 def get_event_store() -> PostgresEventStore:
@@ -39,8 +63,7 @@ async def verify(
     db: Any = Depends(get_db_connection),
     store: PostgresEventStore = Depends(get_event_store),
 ):
-    async with db as conn:
-        events = await store.get_execution(conn, tenant_id, execution_id)
+    events = await store.get_execution(db, tenant_id, execution_id)
 
     result = verify_execution(events)
     if not result.valid:

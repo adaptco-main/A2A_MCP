@@ -15,17 +15,6 @@ class FakeConn:
         return self.rows
 
 
-class FakeDB:
-    def __init__(self, conn):
-        self.conn = conn
-
-    async def __aenter__(self):
-        return self.conn
-
-    async def __aexit__(self, exc_type, exc, tb):
-        return False
-
-
 class FakeStore:
     def __init__(self, events):
         self.events = events
@@ -38,7 +27,7 @@ def _app_with(events):
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[get_tenant_id] = lambda: "tenant-a"
-    app.dependency_overrides[get_db_connection] = lambda: FakeDB(FakeConn([]))
+    app.dependency_overrides[get_db_connection] = lambda: FakeConn([])
     app.dependency_overrides[get_event_store] = lambda: FakeStore(events)
     return app
 
@@ -101,6 +90,11 @@ def test_verify_endpoint_returns_200_when_valid():
     assert payload["hash_head"] == second.hash_current
 
 
+def test_verify_endpoint_returns_503_when_database_url_not_configured(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+
+
 def test_verify_endpoint_returns_503_when_db_dependency_not_configured():
     app = FastAPI()
     app.include_router(router)
@@ -109,4 +103,9 @@ def test_verify_endpoint_returns_503_when_db_dependency_not_configured():
     response = client.get("/v1/executions/exec-1/verify", headers={"x-tenant-id": "tenant-a"})
 
     assert response.status_code == 503
+main
+    assert response.json()["detail"] == "DATABASE_URL is not configured"
+theirs
+=======
     assert response.json()["detail"] == "Database connection dependency is not configured"
+codex/implement-get-/verify-endpoint
