@@ -1,14 +1,45 @@
-name: A2A Pipeline CI
+name: A2A-MCP Integration Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - "orchestrator/**"
+      - "schemas/**"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/main.yml"
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    paths:
+      - "orchestrator/**"
+      - "schemas/**"
+      - "tests/**"
+      - "requirements.txt"
+      - ".github/workflows/main.yml"
+  workflow_dispatch:
 
 jobs:
-  test-pipeline:
+  test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: pass
+          POSTGRES_DB: mcp_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:pass@localhost:5432/mcp_db
+      PYTHONPATH: .
 
     steps:
     - name: Checkout code
