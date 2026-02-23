@@ -1,13 +1,13 @@
+"""Knowledge ingestion MCP tool entrypoint."""
+
 from __future__ import annotations
 
 from typing import Any
 
 from fastmcp import FastMCP
 
-from app.mcp_tooling import (
-    ingest_repository_data as protected_ingest_repository_data,
-    verify_github_oidc_token,
-)
+from app.mcp_tooling import ingest_repository_data as protected_ingest_repository_data
+from app.mcp_tooling import verify_github_oidc_token
 
 app_ingest = FastMCP("knowledge-ingestion")
 
