@@ -7,6 +7,7 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 import numpy as np
+from app.mcp_tooling import TELEMETRY
 
 from drift_suite.drift_metrics import ks_statistic
 
@@ -75,17 +76,26 @@ class ClientTokenPipe:
         self.ctx = ctx
         self.drift_threshold = drift_threshold
         self._tokens_processed = 0
+        self._seen_hash_fingerprints: dict[str, tuple[int, float]] = {}
 
     async def ingress(self, raw_tokens: np.ndarray) -> np.ndarray:
         raw_tokens = np.asarray(raw_tokens, dtype=float)
         self._enforce_quota(raw_tokens.size)
         namespaced = self._namespace_embedding(raw_tokens)
+        embedding_hash = _array_hash(namespaced)
+        TELEMETRY.record_token_shaping_stage(
+            stage="namespace_projection",
+            tenant_id=self.ctx.tenant_id,
+            token_count=int(raw_tokens.size),
+            embedding_hash=embedding_hash,
+        )
+        self._check_hash_anomaly(stage="namespace_projection", embedding=namespaced, embedding_hash=embedding_hash)
 
         await self.store.append_event(
             tenant_id=self.ctx.tenant_id,
             execution_id=f"ingress-{uuid4()}",
             state="TOKEN_INGRESS",
-            payload={"embedding_hash": _array_hash(namespaced), "token_count": int(raw_tokens.size)},
+            payload={"embedding_hash": embedding_hash, "token_count": int(raw_tokens.size)},
         )
         return namespaced
 
@@ -97,6 +107,13 @@ class ClientTokenPipe:
             raise ContaminationError(
                 f"Drift {drift:.3f} > threshold {self.drift_threshold:.3f} for tenant {self.ctx.tenant_id}"
             )
+
+        TELEMETRY.record_token_shaping_stage(
+            stage="drift_gate",
+            tenant_id=self.ctx.tenant_id,
+            token_count=int(mcp_result.size),
+            embedding_hash=_array_hash(mcp_result),
+        )
 
         witness_hash = await self._witness_result(mcp_result)
         return {
@@ -141,6 +158,12 @@ class ClientTokenPipe:
         message = result.astype(float).tobytes()
         key = self.ctx.api_key_hash.encode("utf-8")
         digest = hmac.new(key=key, msg=message, digestmod=hashlib.sha256).hexdigest()
+        TELEMETRY.record_token_shaping_stage(
+            stage="witness_signing",
+            tenant_id=self.ctx.tenant_id,
+            token_count=int(result.size),
+            embedding_hash=digest[:16],
+        )
         await self.store.append_event(
             tenant_id=self.ctx.tenant_id,
             execution_id="witness",
@@ -148,6 +171,28 @@ class ClientTokenPipe:
             payload={"witness_hash": digest},
         )
         return digest
+
+    def _check_hash_anomaly(self, *, stage: str, embedding: np.ndarray, embedding_hash: str) -> None:
+        if not np.all(np.isfinite(embedding)):
+            TELEMETRY.record_hash_anomaly(
+                tenant_id=self.ctx.tenant_id,
+                stage=stage,
+                embedding_hash=embedding_hash,
+                anomaly="non_finite_output",
+            )
+            return
+
+        fingerprint = (int(embedding.size), float(np.sum(embedding)))
+        existing = self._seen_hash_fingerprints.get(embedding_hash)
+        if existing is not None and existing != fingerprint:
+            TELEMETRY.record_hash_anomaly(
+                tenant_id=self.ctx.tenant_id,
+                stage=stage,
+                embedding_hash=embedding_hash,
+                anomaly="hash_collision_suspected",
+            )
+        else:
+            self._seen_hash_fingerprints[embedding_hash] = fingerprint
 
 
 class MultiClientMCPRouter:
