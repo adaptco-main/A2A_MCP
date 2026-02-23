@@ -1,51 +1,140 @@
+"""Protected MCP ingestion tooling with deterministic token shaping."""
+
 from __future__ import annotations
 
-import inspect
-from typing import Any, Callable, Mapping
+import os
+from typing import Any
 
-from app.security.oidc import (
-    OIDCAuthError,
-    OIDCClaimError,
-    enforce_avatar_ingest_allowlists,
-    extract_bearer_token,
-    get_request_correlation_id,
-    load_oidc_config,
-    verify_bearer_token,
-)
+import jwt
+
+from app.security.avatar_token_shape import AvatarTokenShapeError, shape_avatar_token_stream
 
 
-async def call_tool_by_name(
-    tools: Mapping[str, Callable[..., Any]],
-    tool_name: str,
-    payload: dict[str, Any],
-    headers: Mapping[str, str] | None = None,
+MAX_AVATAR_TOKENS = 4096
+
+
+def verify_github_oidc_token(token: str) -> dict[str, Any]:
+    if not token:
+        raise ValueError("Invalid OIDC token")
+
+    audience = os.getenv("GITHUB_OIDC_AUDIENCE")
+    if not audience:
+        raise ValueError("OIDC audience is not configured")
+
+    jwks_client = jwt.PyJWKClient("https://token.actions.githubusercontent.com/.well-known/jwks")
+    signing_key = jwks_client.get_signing_key_from_jwt(token).key
+    claims = jwt.decode(
+        token,
+        signing_key,
+        algorithms=["RS256"],
+        audience=audience,
+        issuer="https://token.actions.githubusercontent.com",
+    )
+
+    repository = str(claims.get("repository", "")).strip()
+    if not repository:
+        raise ValueError("OIDC token missing repository claim")
+
+    return claims
+
+
+def ingest_repository_data(
+    snapshot: dict[str, Any],
+    authorization: str,
+    verifier: Any | None = None,
 ) -> dict[str, Any]:
-    request_id = get_request_correlation_id(headers)
-    tool = tools.get(tool_name)
-    if tool is None:
-        return {"error": "tool_not_found", "request_id": request_id}
+    """Protected ingestion path for repository snapshots."""
+    auth_error = _extract_bearer_token(authorization)
+    if auth_error["error"]:
+        return auth_error
 
-    config = load_oidc_config()
-    claims: dict[str, Any] | None = None
+    verifier_fn = verifier or verify_github_oidc_token
+    claims = verifier_fn(auth_error["token"])
+    repository = str(claims.get("repository", "")).strip()
+    snapshot_repository = str(snapshot.get("repository", "")).strip()
 
-    if config.enforce:
-        try:
-            token = extract_bearer_token((headers or {}).get("Authorization") or (headers or {}).get("authorization"))
-            claims = verify_bearer_token(token, request_id=request_id)
-            if "avatar-ingest" in tool_name or "avatar_ingest" in tool_name:
-                enforce_avatar_ingest_allowlists(claims, request_id=request_id)
-        except OIDCAuthError:
-            return {"error": "unauthorized", "request_id": request_id}
-        except OIDCClaimError:
-            return {"error": "forbidden", "request_id": request_id}
+    if snapshot_repository and snapshot_repository != repository:
+        return {
+            "ok": False,
+            "error": {
+                "code": "REPOSITORY_CLAIM_MISMATCH",
+                "message": "Snapshot repository does not match verified token claim",
+                "details": {"snapshot_repository": snapshot_repository, "token_repository": repository},
+            },
+        }
 
-    kwargs = dict(payload)
-    if claims is not None:
-        if "oidc_claims" in inspect.signature(tool).parameters and "oidc_claims" not in kwargs:
-            kwargs["oidc_claims"] = claims
+    return {
+        "ok": True,
+        "data": {
+            "repository": repository,
+            "execution_hash": _repository_execution_hash(repository, snapshot),
+        },
+    }
 
-    result = tool(**kwargs)
-    if inspect.isawaitable(result):
-        result = await result
 
-    return {"data": result, "request_id": request_id}
+def ingest_avatar_token_stream(
+    payload: dict[str, Any],
+    authorization: str,
+    verifier: Any | None = None,
+) -> dict[str, Any]:
+    """Protected ingestion path for avatar token payloads before model execution."""
+    auth_error = _extract_bearer_token(authorization)
+    if auth_error["error"]:
+        return auth_error
+
+    verifier_fn = verifier or verify_github_oidc_token
+    claims = verifier_fn(auth_error["token"])
+    repository = str(claims.get("repository", "")).strip()
+
+    namespace = str(payload.get("namespace") or f"avatar::{repository}").strip()
+    max_tokens = int(payload.get("max_tokens", MAX_AVATAR_TOKENS))
+    raw_tokens = payload.get("tokens", [])
+
+    try:
+        shaped = shape_avatar_token_stream(
+            raw_tokens=raw_tokens,
+            namespace=namespace,
+            max_tokens=max_tokens,
+            fingerprint_seed=repository,
+        )
+    except AvatarTokenShapeError as exc:
+        return {"ok": False, "error": exc.to_dict()}
+
+    return {"ok": True, "data": shaped.to_dict()}
+
+
+def _extract_bearer_token(authorization: str) -> dict[str, Any]:
+    if not authorization or not authorization.startswith("Bearer "):
+        return {
+            "ok": False,
+            "error": {
+                "code": "AUTH_BEARER_MISSING",
+                "message": "Missing or malformed bearer token",
+                "details": {},
+            },
+            "token": None,
+        }
+
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        return {
+            "ok": False,
+            "error": {
+                "code": "AUTH_BEARER_EMPTY",
+                "message": "Bearer token is empty",
+                "details": {},
+            },
+            "token": None,
+        }
+
+    return {"ok": True, "error": None, "token": token}
+
+
+def _repository_execution_hash(repository: str, snapshot: dict[str, Any]) -> str:
+    import hashlib
+    import json
+
+    digest = hashlib.sha256()
+    digest.update(repository.encode("utf-8"))
+    digest.update(json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+    return digest.hexdigest()

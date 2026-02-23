@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 from typing import Any
 
 from app.security.oidc import (
@@ -12,6 +13,11 @@ from app.security.oidc import (
     verify_bearer_token,
 )
 from fastmcp import FastMCP
+
+from app.mcp_tooling import (
+    ingest_repository_data as protected_ingest_repository_data,
+    verify_github_oidc_token,
+)
 
 app_ingest = FastMCP("knowledge-ingestion")
 validate_startup_oidc_requirements()
