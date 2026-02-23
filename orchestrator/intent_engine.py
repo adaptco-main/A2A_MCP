@@ -273,7 +273,7 @@ class IntentEngine:
             context_tokens=context_tokens,
         )
 
-    async def _generate_with_gate(self, parent_id: str, feedback: str, context_tokens):
+    async def _generate_with_gate(self, parent_id: str, feedback: str, context_tokens: Optional[List[Any]]):
         """
         Generate artifacts with token context.
         """
