@@ -18,7 +18,7 @@ class TesterAgent:
         self,
         artifact_id: str,
         supplemental_context: Optional[str] = None,
-        context_tokens: Optional[List[str]] = None
+        context_tokens: Optional[List[Any]] = None
     ) -> TestReport:
         """
         Phase 2 Logic: Analyzes code artifacts and generates 
