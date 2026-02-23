@@ -2,6 +2,15 @@
 
 Complete agent-avatar binding system with Judge-based action evaluation integrated into orchestrator.
 
+
+## Canonical Embedded-Avatar Token Contract
+
+Embedded-avatar ingestion must follow the versioned contract at:
+- [Avatar Token Contract v1](api/avatar_token_contract_v1.md)
+
+Deployment guidance for enforcing this contract in release pipelines:
+- [GKE Release Deployment](deployment/GKE_RELEASE_DEPLOYMENT.md)
+
 ## Architecture
 
 ### Avatar System (avatars/)
