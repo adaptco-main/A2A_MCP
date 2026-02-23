@@ -1,0 +1,24 @@
+# Production values for a2a-mcp.
+# Do not commit plaintext secrets here.
+
+secrets:
+  # In production prefer pre-created secret managed out-of-band.
+  create: false
+
+  # Must match the Secret name that contains token configuration in a2a-mcp-prod.
+  nameOverride: "a2a-mcp-prod-secrets"
+
+  # Keep blank in git; inject via kubectl or an external secret manager.
+  oidcAudience: ""
+  oidcIssuer: ""
+  oidcJwksUri: ""
+  avatarTokenSigningKey: ""
+  avatarTokenValidationKey: ""
+
+config:
+  nameOverride: "a2a-mcp-prod-config"
+
+  # Non-sensitive runtime config only.
+  avatarTokenAlgorithm: "RS256"
+  avatarTokenTtlSeconds: "900"
+  oidcRequired: "true"
