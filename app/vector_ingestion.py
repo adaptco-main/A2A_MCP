@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
+
+from app.mcp_tooling import TELEMETRY
 
 
 def _deterministic_embedding(text: str, dimensions: int = 1536) -> list[float]:
@@ -49,6 +51,7 @@ class VectorIngestionEngine:
         commit_sha = str(snapshot_data.get("commit_sha", "")).strip()
         actor = str(oidc_claims.get("actor", "unknown")).strip()
 
+        telemetry_timer = TELEMETRY.start_timer()
         nodes: list[VectorNode] = []
         snippets = snapshot_data.get("code_snippets", [])
         for index, snippet in enumerate(snippets):
@@ -89,6 +92,12 @@ class VectorIngestionEngine:
                 )
             )
 
+        TELEMETRY.record_request_outcome(
+            avatar_id=actor or "unknown",
+            client_id=repository or "unknown",
+            outcome="accepted",
+        )
+        TELEMETRY.observe_protected_ingestion_latency(telemetry_timer, client_id=repository or "unknown")
         return [node.to_dict() for node in nodes]
 
 

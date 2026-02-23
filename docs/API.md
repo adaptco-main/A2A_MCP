@@ -42,6 +42,47 @@ curl -X 'POST' \
 
 ---
 
+### 2. MCP Compatibility Tool Call
+
+`POST /tools/call`
+
+Invokes an MCP tool through the HTTP compatibility surface.
+
+**Request Body:**
+```json
+{
+  "tool_name": "ingest_worldline_block",
+  "arguments": {
+    "worldline_block": {},
+    "authorization": "Bearer <token>"
+  }
+}
+```
+
+**Response Body:**
+```json
+{
+  "tool_name": "ingest_worldline_block",
+  "ok": true,
+  "result": "success: ingested worldline block ..."
+}
+```
+
+### 3. Native MCP Streamable HTTP
+
+`POST /mcp`
+
+Native FastMCP endpoint for streamable HTTP clients.
+
+### 4. Plan Ingress Endpoints
+
+- `POST /plans/ingress`
+- `POST /plans/{plan_id}/ingress`
+
+Schedules plan ingress for stateflow execution.
+
+---
+
 ## Artifact Schemas
 
 All data exchanged between agents follows the `MCPArtifact` Pydantic model:
