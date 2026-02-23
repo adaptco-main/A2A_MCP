@@ -32,6 +32,11 @@ class CoderAgent:
 
         prompt = f"Context: {context_content}\nFeedback: {feedback if feedback else 'Initial build'}"
         code_solution = self.llm.call_llm(prompt)
+        if code_solution is None:
+            raise ValueError("LLM returned no content; cannot create MCPArtifact")
+
+        if code_solution is None:
+            code_solution = ""
 
         artifact = MCPArtifact(
             artifact_id=str(uuid.uuid4()),
