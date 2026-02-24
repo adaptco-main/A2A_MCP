@@ -175,7 +175,7 @@ class IntentEngine:
                 content=code_artifact.content,
                 parent_id=code_artifact.artifact_id,
             )
-            pinn_artifact = SimpleNamespace(
+            pinn_artifact = MCPArtifact(
                 artifact_id=pinn_artifact_id,
                 parent_artifact_id=code_artifact.artifact_id,
                 agent_name=self.pinn.agent_name,
