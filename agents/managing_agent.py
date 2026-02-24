@@ -10,10 +10,12 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional
 
+from orchestrator.llm_adapters.base import InternalLLMRequest
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 from schemas.agent_artifacts import MCPArtifact
 from schemas.project_plan import PlanAction, ProjectPlan
+from schemas.prompt_inputs import PromptIntent
 
 
 class ManagingAgent:
@@ -35,15 +37,17 @@ class ManagingAgent:
         Use the LLM as an intent engine to decompose *description* into a
         series of PlanAction items, then wrap them in a ProjectPlan.
         """
-        prompt = (
-            "You are a project-management AI. "
-            "Break the following project description into a numbered list of "
-            "discrete tasks. For each task provide a short title and a one-line "
-            "instruction.\n\n"
-            f"Project description:\n{description}"
+        prompt_intent = PromptIntent(
+            task_context=description,
+            user_input="Decompose the project into numbered tasks with a short title and one-line instruction per task.",
+            workflow_constraints=[
+                "Act as a project-management planner.",
+                "Return output as a numbered task list that is easy to parse line-by-line.",
+            ],
+            metadata={"agent": self.AGENT_NAME, "requester": requester},
         )
 
-        raw_response = self.llm.call_llm(prompt)
+        raw_response = self.llm.call_llm(prompt_intent=prompt_intent)
         actions = self._parse_actions(raw_response)
 
         plan = ProjectPlan(

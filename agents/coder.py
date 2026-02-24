@@ -5,6 +5,7 @@ import uuid
 from types import SimpleNamespace
 
 from schemas.agent_artifacts import MCPArtifact
+from schemas.prompt_inputs import PromptIntent
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 
