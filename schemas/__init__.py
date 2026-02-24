@@ -12,6 +12,7 @@ from schemas.game_model import (
     ZoneSpec,
 )
 from schemas.model_artifact import AgentLifecycleState, LoRAConfig, ModelArtifact
+from schemas.prompt_inputs import PromptIntent
 from schemas.runtime_scenario import (
     ProjectionMetadata,
     RetrievalChunk,
@@ -32,6 +33,7 @@ __all__ = [
     "MCPArtifact",
     "ModelArtifact",
     "OwnerSystem",
+    "PromptIntent",
     "OwnershipBoundary",
     "ProjectionMetadata",
     "RetrievalChunk",
