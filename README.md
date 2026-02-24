@@ -146,6 +146,15 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### Optional gated dataset submodule
+The `PhysicalAI-Autonomous-Vehicles` submodule is configured as optional for recursive clone flows.
+If you have access and need it locally (for onboarding or CI experiments), initialize it manually:
+
+```bash
+git submodule update --init --recursive PhysicalAI-Autonomous-Vehicles
+```
+
+
 ### Run MCP Server
 ```bash
 python mcp_server.py
