@@ -61,7 +61,8 @@ class GameEngine:
                 obj = self.world_renderer.scene.get_object(obj_dict["id"])
                 if obj:
                     self.scene.add_object(obj)
-            except:
+            except Exception as e:
+                # TODO: Add proper logging here instead of passing silently.
                 pass
 
         # Add avatar representations
