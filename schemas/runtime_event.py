@@ -1,52 +1,45 @@
-"""Internal runtime event DTOs for orchestration and adapter boundaries."""
+"""Canonical runtime contracts for orchestrator-mediated events and intents."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from enum import Enum
+from typing import Any, Dict, Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
 
-class ToolRequest(BaseModel):
-    """Canonical tool invocation request parsed from agent/provider output."""
+class ContractVersion(str, Enum):
+    """Supported runtime contract versions."""
 
-    tool_name: str = Field(..., min_length=1)
-    arguments: Dict[str, Any] = Field(default_factory=dict)
+    V1 = "v1"
+    V2 = "v2"
 
 
-class EventPayload(BaseModel):
-    """Canonical envelope payload consumed by the orchestrator."""
+class RuntimeIntent(BaseModel):
+    """Canonical command submitted to the orchestrator control-plane."""
 
-    content: Any
-    tool_request: ToolRequest | None = None
-    status: str | None = None
-    provider: str | None = None
-    raw: Dict[str, Any] = Field(default_factory=dict)
+    intent_id: str = Field(default_factory=lambda: f"intent_{uuid4().hex}")
+    actor: str = Field(..., min_length=1)
+    intent: str = Field(..., min_length=1)
+    artifact_id: str | None = None
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    schema_version: ContractVersion = ContractVersion.V1
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class RuntimeEvent(BaseModel):
-    """Canonical runtime event preserving causal lineage across hops."""
+    """Append-only event emitted for every meaningful state transition."""
 
+    event_id: str = Field(default_factory=lambda: f"evt_{uuid4().hex}")
     trace_id: str = Field(..., min_length=1)
     span_id: str = Field(default_factory=lambda: uuid4().hex)
-    parent_span_id: str | None = None
+    actor: str = Field(..., min_length=1)
+    intent: str = Field(..., min_length=1)
+    artifact_id: str | None = None
     event_type: str = Field(..., min_length=1)
-    content: EventPayload
+    schema_version: ContractVersion = ContractVersion.V1
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-    def next_hop(
-        self,
-        *,
-        event_type: str,
-        content: EventPayload,
-    ) -> "RuntimeEvent":
-        """Emit a child event hop with the same trace and a fresh span."""
-        return RuntimeEvent(
-            trace_id=self.trace_id,
-            span_id=uuid4().hex,
-            parent_span_id=self.span_id,
-            event_type=event_type,
-            content=content,
-        )
+    phase: Literal["control_plane", "data_plane", "gate"]
+    attributes: Dict[str, Any] = Field(default_factory=dict)
