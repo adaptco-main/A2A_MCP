@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional
 
+from orchestrator.llm_adapters.base import InternalLLMRequest
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 from schemas.agent_artifacts import MCPArtifact
