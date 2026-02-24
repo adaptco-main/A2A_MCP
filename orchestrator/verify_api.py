@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import os
 import importlib
 import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+import os
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator
+
+from fastapi import APIRouter, Depends, Header, HTTPException
+codex/implement-get-/verify-endpoint
 
 from orchestrator.settlement import PostgresEventStore, verify_execution
 
@@ -12,12 +19,14 @@ router = APIRouter()
 
 
 async def get_tenant_id(x_tenant_id: str | None = Header(default=None)) -> str:
-    if not x_tenant_id:
-        raise HTTPException(status_code=400, detail="Missing x-tenant-id header")
-    return x_tenant_id
+    tenant_id = x_tenant_id or os.getenv("DEFAULT_TENANT_ID", "default")
+    tenant_id = tenant_id.strip()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Missing tenant id")
+    return tenant_id
 
 
-async def get_db_connection(request: Request) -> Any:
+async def get_db_connection(request: Request) -> AsyncIterator[Any]:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise HTTPException(status_code=503, detail="DATABASE_URL is not configured")
@@ -32,6 +41,14 @@ async def get_db_connection(request: Request) -> Any:
 
     async with request.app.state.verify_db_pool.acquire() as conn:
         yield conn
+@asynccontextmanager
+async def get_db_connection() -> AsyncIterator[Any]:
+    raise HTTPException(
+        status_code=503,
+        detail="Database connection dependency is not configured",
+    )
+    yield
+codex/implement-get-/verify-endpoint
 
 
 def get_event_store() -> PostgresEventStore:

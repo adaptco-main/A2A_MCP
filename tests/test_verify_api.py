@@ -40,7 +40,7 @@ def test_verify_endpoint_returns_409_on_integrity_conflict():
         state=State.RUNNING.value,
         payload={"x": 1},
         hash_prev=None,
-        hash_current=compute_lineage(None, {"x": 1}),
+        hash_current=compute_lineage(None, State.RUNNING.value, {"x": 1}),
     )
     tampered = Event(
         id=2,
@@ -49,7 +49,7 @@ def test_verify_endpoint_returns_409_on_integrity_conflict():
         state=State.FINALIZED.value,
         payload={"x": 3},
         hash_prev=first.hash_current,
-        hash_current=compute_lineage(first.hash_current, {"x": 2}),
+        hash_current=compute_lineage(first.hash_current, State.FINALIZED.value, {"x": 2}),
     )
 
     client = TestClient(_app_with([first, tampered]))
@@ -69,7 +69,7 @@ def test_verify_endpoint_returns_200_when_valid():
         state=State.RUNNING.value,
         payload={"x": 1},
         hash_prev=None,
-        hash_current=compute_lineage(None, {"x": 1}),
+        hash_current=compute_lineage(None, State.RUNNING.value, {"x": 1}),
     )
     second = Event(
         id=2,
@@ -78,7 +78,7 @@ def test_verify_endpoint_returns_200_when_valid():
         state=State.FINALIZED.value,
         payload={"x": 2},
         hash_prev=first.hash_current,
-        hash_current=compute_lineage(first.hash_current, {"x": 2}),
+        hash_current=compute_lineage(first.hash_current, State.FINALIZED.value, {"x": 2}),
     )
 
     client = TestClient(_app_with([first, second]))
@@ -93,6 +93,9 @@ def test_verify_endpoint_returns_200_when_valid():
 def test_verify_endpoint_returns_503_when_database_url_not_configured(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
+
+
+def test_verify_endpoint_returns_503_when_db_dependency_not_configured():
     app = FastAPI()
     app.include_router(router)
 
@@ -100,4 +103,8 @@ def test_verify_endpoint_returns_503_when_database_url_not_configured(monkeypatc
     response = client.get("/v1/executions/exec-1/verify", headers={"x-tenant-id": "tenant-a"})
 
     assert response.status_code == 503
+main
     assert response.json()["detail"] == "DATABASE_URL is not configured"
+theirs
+    assert response.json()["detail"] == "Database connection dependency is not configured"
+codex/implement-get-/verify-endpoint
