@@ -207,6 +207,23 @@ python -c "from schemas import *; print('✓ All schemas loaded')"
 - **Knowledge Store Protection**: Cryptographic binding of training data
 - **Artifact Provenance**: Complete audit trail with OIDC claims
 
+### Accessing gated HF submodules in CI
+
+If CI needs to clone gated Hugging Face submodules, use a read-only token and inject it at runtime.
+
+1. Store `HF_TOKEN` as a CI secret with read-only scope.
+2. Configure Git URL rewriting before submodule checkout:
+   ```bash
+   git config --global url."https://oauth2:${HF_TOKEN}@huggingface.co/".insteadOf "https://huggingface.co/"
+   ```
+3. Sync and update submodules:
+   ```bash
+   git submodule sync --recursive
+   git submodule update --init --recursive
+   ```
+
+⚠️ Never put tokens in `.gitmodules`, committed remotes, or scripts checked into this repository.
+
 ---
 
 ## 📄 License
