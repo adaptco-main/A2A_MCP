@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 import importlib
-from typing import Any, AsyncIterator
+import os
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-=======
 import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator
@@ -41,7 +41,6 @@ async def get_db_connection(request: Request) -> AsyncIterator[Any]:
 
     async with request.app.state.verify_db_pool.acquire() as conn:
         yield conn
-=======
 @asynccontextmanager
 async def get_db_connection() -> AsyncIterator[Any]:
     raise HTTPException(

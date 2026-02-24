@@ -14,14 +14,15 @@ class PipelineEngine:
 
     def run(self, ctx: PipelineContext) -> PipelineState:
         self.context = ctx
-        self.state = PipelineState.RENDERED
-        self.state = PipelineState.VALIDATED
+        self.state = PipelineState.RENDERING
+        self.state = PipelineState.VALIDATING
 
         gate_results = getattr(ctx, "gate_results", None)
         if not gate_results or not all(gate_results.values()):
             self.state = PipelineState.HALTED
             return self.state
 
-        self.state = PipelineState.EXPORTED
-        self.state = PipelineState.COMMITTED
+        self.state = PipelineState.EXPORTING
+        self.state = PipelineState.COMMITTING
+        self.state = PipelineState.PASSED
         return self.state

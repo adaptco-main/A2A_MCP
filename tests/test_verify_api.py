@@ -106,6 +106,5 @@ def test_verify_endpoint_returns_503_when_db_dependency_not_configured():
 main
     assert response.json()["detail"] == "DATABASE_URL is not configured"
 theirs
-=======
     assert response.json()["detail"] == "Database connection dependency is not configured"
 codex/implement-get-/verify-endpoint
