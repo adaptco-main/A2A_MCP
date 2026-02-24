@@ -5,6 +5,7 @@ import uuid
 from types import SimpleNamespace
 
 from schemas.agent_artifacts import MCPArtifact
+from schemas.prompt_inputs import PromptIntent
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 
@@ -30,8 +31,15 @@ class CoderAgent:
         else:
             context_content = "No previous context found. Proceeding with initial architectural build."
 
-        prompt = f"Context: {context_content}\nFeedback: {feedback if feedback else 'Initial build'}"
-        code_solution = self.llm.call_llm(prompt)
+        prompt_intent = PromptIntent(
+            task_context=context_content,
+            user_input=feedback if feedback else "Initial build",
+            workflow_constraints=[
+                "Produce a practical code solution grounded in the provided task context."
+            ],
+            metadata={"agent": self.agent_name, "parent_artifact_id": parent_id},
+        )
+        code_solution = self.llm.call_llm(prompt_intent=prompt_intent)
         if code_solution is None:
             raise ValueError("LLM returned no content; cannot create MCPArtifact")
 
