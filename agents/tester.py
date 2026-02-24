@@ -1,4 +1,5 @@
 from schemas.agent_artifacts import MCPArtifact
+from orchestrator.llm_adapters.base import InternalLLMRequest
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 from pydantic import BaseModel
@@ -27,7 +28,7 @@ class TesterAgent:
         
         # Phase 3 Logic: Using LLM to verify code logic vs. requirements
         prompt = f"Analyze this code for bugs or anti-patterns:\n{artifact.content}"
-        analysis = self.llm.call_llm(prompt)
+        analysis = self.llm.generate_text(InternalLLMRequest(prompt=prompt))
 
         # Determine status (Heuristic for demo, LLM-guided for Production)
         status = "FAIL" if "error" in analysis.lower() or "bug" in analysis.lower() else "PASS"

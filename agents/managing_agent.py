@@ -10,6 +10,7 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional
 
+from orchestrator.llm_adapters.base import InternalLLMRequest
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 from schemas.agent_artifacts import MCPArtifact
@@ -43,7 +44,7 @@ class ManagingAgent:
             f"Project description:\n{description}"
         )
 
-        raw_response = self.llm.call_llm(prompt)
+        raw_response = self.llm.generate_text(InternalLLMRequest(prompt=prompt))
         actions = self._parse_actions(raw_response)
 
         plan = ProjectPlan(

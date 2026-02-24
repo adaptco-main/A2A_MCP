@@ -1,34 +1,30 @@
-import os
+"""Orchestration-facing LLM service built on internal adapter abstractions."""
+from __future__ import annotations
+
 from dotenv import load_dotenv
 
-# This tells Python to look for your local .env file
+from orchestrator.llm_adapters.base import InternalLLMRequest, InternalLLMResponse
+from orchestrator.llm_adapters.registry import LLMAdapterRegistry
+
 load_dotenv()
 
+
 class LLMService:
-    def __init__(self):
-        # These variables pull from your local .env
-        self.api_key = os.getenv("LLM_API_KEY")
-        self.endpoint = os.getenv("LLM_ENDPOINT")
+    """High-level service for LLM generation through provider adapters."""
 
-    def call_llm(self, prompt: str, system_prompt: str = "You are a helpful coding assistant."):
-        if not self.api_key or not self.endpoint:
-            raise ValueError("API Key or Endpoint missing from your local .env file!")
+    def __init__(self, registry: LLMAdapterRegistry | None = None):
+        self.registry = registry or LLMAdapterRegistry()
 
-        import requests
+    def generate(self, request: InternalLLMRequest) -> InternalLLMResponse:
+        """Execute generation via provider resolved from routing policy."""
+        adapter = self.registry.resolve(request)
+        return adapter.generate(request)
 
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+    def generate_text(self, request: InternalLLMRequest) -> str:
+        """Convenience wrapper that returns only generated content."""
+        return self.generate(request).content
 
-        payload = {
-            "model": "codestral-latest",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-        }
-
-        response = requests.post(self.endpoint, headers=headers, json=payload)
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+    # Backwards compatibility while call sites are migrated.
+    def call_llm(self, prompt: str, system_prompt: str = "You are a helpful coding assistant.") -> str:
+        request = InternalLLMRequest(prompt=prompt, system_prompt=system_prompt)
+        return self.generate_text(request)

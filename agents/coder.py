@@ -5,6 +5,7 @@ import uuid
 from types import SimpleNamespace
 
 from schemas.agent_artifacts import MCPArtifact
+from orchestrator.llm_adapters.base import InternalLLMRequest
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 
@@ -31,7 +32,7 @@ class CoderAgent:
             context_content = "No previous context found. Proceeding with initial architectural build."
 
         prompt = f"Context: {context_content}\nFeedback: {feedback if feedback else 'Initial build'}"
-        code_solution = self.llm.call_llm(prompt)
+        code_solution = self.llm.generate_text(InternalLLMRequest(prompt=prompt))
         if code_solution is None:
             raise ValueError("LLM returned no content; cannot create MCPArtifact")
 
