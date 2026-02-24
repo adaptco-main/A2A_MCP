@@ -3,10 +3,6 @@ from __future__ import annotations
 from fastapi import FastAPI, WebSocket
 from starlette.websockets import WebSocketDisconnect
 
-<<<<<<< ours
-from prime_directive.pipeline.context import PipelineContext
-=======
->>>>>>> theirs
 from prime_directive.pipeline.engine import PipelineEngine
 
 app = FastAPI(title="PRIME_DIRECTIVE")

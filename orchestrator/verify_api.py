@@ -1,31 +1,23 @@
 from __future__ import annotations
 
-<<<<<<< ours
+import importlib
+import os
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
-=======
-import os
-import importlib
-from typing import Any, AsyncIterator
-
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
->>>>>>> theirs
 
 from orchestrator.settlement import PostgresEventStore, verify_execution
 
 router = APIRouter()
 
 
-async def get_tenant_id() -> str:
-    raise NotImplementedError
+async def get_tenant_id(x_tenant_id: str | None = Header(default=None)) -> str:
+    if not x_tenant_id:
+        raise HTTPException(status_code=400, detail="Missing x-tenant-id header")
+    return x_tenant_id
 
 
-<<<<<<< ours
-async def get_db_connection() -> Any:
-    raise NotImplementedError
-=======
-async def get_db_connection(request: Request) -> AsyncIterator[Any]:
+async def get_db_connection(request: Request) -> Any:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise HTTPException(status_code=503, detail="DATABASE_URL is not configured")
@@ -40,7 +32,6 @@ async def get_db_connection(request: Request) -> AsyncIterator[Any]:
 
     async with request.app.state.verify_db_pool.acquire() as conn:
         yield conn
->>>>>>> theirs
 
 
 def get_event_store() -> PostgresEventStore:

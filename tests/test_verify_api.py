@@ -88,8 +88,6 @@ def test_verify_endpoint_returns_200_when_valid():
     payload = response.json()
     assert payload["valid"] is True
     assert payload["hash_head"] == second.hash_current
-<<<<<<< ours
-=======
 
 
 def test_verify_endpoint_returns_503_when_database_url_not_configured(monkeypatch):
@@ -103,4 +101,3 @@ def test_verify_endpoint_returns_503_when_database_url_not_configured(monkeypatc
 
     assert response.status_code == 503
     assert response.json()["detail"] == "DATABASE_URL is not configured"
->>>>>>> theirs
