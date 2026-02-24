@@ -157,7 +157,7 @@ class IntentEngine:
 
             # 3. Save Test Report
             test_artifact_id = str(uuid.uuid4())
-            report_artifact = SimpleNamespace(
+            report_artifact = MCPArtifact(
                 artifact_id=test_artifact_id,
                 parent_artifact_id=code_artifact.artifact_id,
                 agent_name=self.tester.agent_name,
