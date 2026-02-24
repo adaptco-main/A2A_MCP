@@ -2,6 +2,14 @@
 
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
+from frontend.three.constants import (
+    MPH_TO_MPS,
+    GRAVITY_MPS2,
+    DEFAULT_FUEL_CAPACITY_GAL,
+    MAX_SPEED_MPH,
+    OBSTACLE_MIN_DISTANCE_M,
+    OBSTACLE_MAX_DISTANCE_M,
+)
 from frontend.three.scene_manager import SceneManager, Vector3
 from frontend.three.world_renderer import WorldRenderer
 from frontend.three.avatar_renderer import AvatarRenderer
