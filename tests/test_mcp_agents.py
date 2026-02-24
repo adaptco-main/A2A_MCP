@@ -12,6 +12,9 @@ from app.security.oidc import OIDCAuthError
 
 
 
+from app.security.oidc import OIDCAuthError
+
+
 @pytest.fixture
 def mock_snapshot():
     return {

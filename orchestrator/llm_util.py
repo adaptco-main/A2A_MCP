@@ -11,9 +11,23 @@ load_dotenv()
 
 class LLMService:
     def __init__(self):
-        # These variables pull from your local .env
         self.api_key = os.getenv("LLM_API_KEY")
         self.endpoint = os.getenv("LLM_ENDPOINT")
+        self.model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+        fallback = os.getenv("LLM_FALLBACK_MODELS", "")
+        self.fallback_models = [m.strip() for m in fallback.split(",") if m.strip()]
+        self.timeout_s = float(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
+
+    @staticmethod
+    def _is_unsupported_model_error(response) -> bool:
+        if getattr(response, "status_code", None) != 400:
+            return False
+        try:
+            payload = response.json()
+            message = str(payload.get("error", {}).get("message", "")).lower()
+        except Exception:
+            message = str(getattr(response, "text", "")).lower()
+        return "model is not supported" in message or "requested model is not supported" in message
 
     @staticmethod
     def _legacy_to_intent(prompt: str, system_prompt: str | None) -> PromptIntent:
@@ -37,6 +51,7 @@ class LLMService:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        errors = []
 
         intent = prompt_intent or self._legacy_to_intent(prompt or "", system_prompt)
         system_message = PolicyComposer.compose_system_prompt(intent)
