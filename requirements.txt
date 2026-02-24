@@ -1,9 +1,15 @@
+fastapi
+numpy
+scipy
 sqlalchemy
 psycopg2-binary
 pydantic
 pytest
 pytest-asyncio
 python-dotenv
+fastapi
+uvicorn
 mcp[cli]
 fastmcp
 requests
+PyJWT

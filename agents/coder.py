@@ -5,6 +5,7 @@ import uuid
 from types import SimpleNamespace
 
 from schemas.agent_artifacts import MCPArtifact
+from schemas.prompt_inputs import PromptIntent
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 
@@ -32,6 +33,11 @@ class CoderAgent:
 
         prompt = f"Context: {context_content}\nFeedback: {feedback if feedback else 'Initial build'}"
         code_solution = self.llm.call_llm(prompt)
+        if code_solution is None:
+            raise ValueError("LLM returned no content; cannot create MCPArtifact")
+
+        if code_solution is None:
+            code_solution = ""
 
         artifact = MCPArtifact(
             artifact_id=str(uuid.uuid4()),
