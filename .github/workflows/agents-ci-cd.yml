@@ -11,13 +11,9 @@ on:
       - "tests/**"
       - "requirements.txt"
       - "pyproject.toml"
-<<<<<<< ours
-      - ".github/actions/agents-unit-tests/action.yml"
-=======
       - ".github/workflows/agents-ci-cd.yml"
       - ".github/actions/agents-unit-tests/action.yml"
       - ".github/workflows/agents-unit-tests.yml"
->>>>>>> theirs
   pull_request:
     branches: [main]
     paths:
@@ -28,13 +24,9 @@ on:
       - "tests/**"
       - "requirements.txt"
       - "pyproject.toml"
-<<<<<<< ours
-      - ".github/actions/agents-unit-tests/action.yml"
-=======
       - ".github/workflows/agents-ci-cd.yml"
       - ".github/actions/agents-unit-tests/action.yml"
       - ".github/workflows/agents-unit-tests.yml"
->>>>>>> theirs
   workflow_dispatch:
   release:
     types: [published]
@@ -44,10 +36,7 @@ permissions:
 
 jobs:
   unit-tests:
-<<<<<<< ours
-=======
     name: Unit tests
->>>>>>> theirs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
