@@ -2,10 +2,6 @@ import os
 
 from dotenv import load_dotenv
 
-from orchestrator.policy_composer import PolicyComposer
-from schemas.prompt_inputs import PromptIntent
-
-# This tells Python to look for your local .env file
 load_dotenv()
 
 
@@ -29,18 +25,14 @@ class LLMService:
             message = str(getattr(response, "text", "")).lower()
         return "model is not supported" in message or "requested model is not supported" in message
 
-    @staticmethod
-    def _legacy_to_intent(prompt: str, system_prompt: str | None) -> PromptIntent:
-        return PromptIntent(
-            user_input=prompt,
-            workflow_constraints=[system_prompt] if system_prompt else [],
-        )
+    def _candidate_models(self):
+        models = [self.model] + self.fallback_models
+        return list(dict.fromkeys([m for m in models if m]))
 
     def call_llm(
         self,
-        prompt: str | None = None,
+        prompt: str,
         system_prompt: str = "You are a helpful coding assistant.",
-        prompt_intent: PromptIntent | None = None,
     ):
         if not self.api_key or not self.endpoint:
             raise ValueError("API Key or Endpoint missing from your local .env file!")
@@ -53,18 +45,41 @@ class LLMService:
         }
         errors = []
 
-        intent = prompt_intent or self._legacy_to_intent(prompt or "", system_prompt)
-        system_message = PolicyComposer.compose_system_prompt(intent)
-        user_message = PolicyComposer.compose_user_payload(intent)
+        for model in self._candidate_models():
+            payload = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+            }
 
-        payload = {
-            "model": "codestral-latest",
-            "messages": [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": user_message},
-            ],
-        }
+            response = requests.post(
+                self.endpoint,
+                headers=headers,
+                json=payload,
+                timeout=self.timeout_s,
+            )
 
-        response = requests.post(self.endpoint, headers=headers, json=payload)
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+            if response.ok:
+                body = response.json()
+                return body["choices"][0]["message"]["content"]
+
+            if self._is_unsupported_model_error(response):
+                errors.append(f"{model}: unsupported")
+                continue
+
+            try:
+                response.raise_for_status()
+            except Exception as exc:
+                errors.append(f"{model}: {exc}")
+                raise RuntimeError(
+                    f"LLM request failed using model '{model}': {exc}"
+                ) from exc
+
+        tried = ", ".join(self._candidate_models())
+        detail = "; ".join(errors) if errors else "no additional error details"
+        raise RuntimeError(
+            f"No supported model found for endpoint '{self.endpoint}'. "
+            f"Tried: {tried}. Details: {detail}"
+        )

@@ -31,15 +31,8 @@ class CoderAgent:
         else:
             context_content = "No previous context found. Proceeding with initial architectural build."
 
-        prompt_intent = PromptIntent(
-            task_context=context_content,
-            user_input=feedback if feedback else "Initial build",
-            workflow_constraints=[
-                "Produce a practical code solution grounded in the provided task context."
-            ],
-            metadata={"agent": self.agent_name, "parent_artifact_id": parent_id},
-        )
-        code_solution = self.llm.call_llm(prompt_intent=prompt_intent)
+        prompt = f"Context: {context_content}\nFeedback: {feedback if feedback else 'Initial build'}"
+        code_solution = self.llm.call_llm(prompt)
         if code_solution is None:
             raise ValueError("LLM returned no content; cannot create MCPArtifact")
 

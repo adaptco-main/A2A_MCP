@@ -34,7 +34,7 @@ def test_generate_solution_raises_when_llm_returns_none(monkeypatch):
     agent = CoderAgent()
 
     monkeypatch.setattr(agent.db, "get_artifact", lambda _id: SimpleNamespace(content="parent context"))
-    monkeypatch.setattr(agent.llm, "call_llm", lambda **kwargs: None)
+    monkeypatch.setattr(agent.llm, "call_llm", lambda prompt: None)
 
     try:
         asyncio.run(agent.generate_solution("parent-1", "feedback"))
