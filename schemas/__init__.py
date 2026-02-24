@@ -33,6 +33,7 @@ __all__ = [
     "MCPArtifact",
     "ModelArtifact",
     "OwnerSystem",
+    "PromptIntent",
     "OwnershipBoundary",
     "ContractVersion",
     "ProjectionMetadata",
