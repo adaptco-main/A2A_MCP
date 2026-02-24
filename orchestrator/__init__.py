@@ -51,7 +51,7 @@ except ImportError:
 
 try:
     from orchestrator.webhook import app as webhook_app
-except ImportError:
+except (ImportError, SyntaxError):
     # webhook depends on FastAPI which may not be installed
     webhook_app = None
 
