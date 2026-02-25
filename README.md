@@ -67,7 +67,7 @@ orchestrator/              [Core kernel]
 ├── telemetry_*.py        [Diagnostic & telemetry subsystem]
 ├── llm_util.py           [LLM service wrapper]
 ├── scheduler.py          [Task scheduling]
-├── utils.py              [Helper functions]
+├── utils.py              [Helper years functions]
 └── __init__.py           [Public module API]
 ```
 

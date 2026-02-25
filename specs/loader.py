@@ -31,7 +31,7 @@ class SpecsLoader:
             )
 
         try:
-            with open(spec_file, "r") as f:
+            with open(spec_file, "r", encoding="utf-8") as f:
                 specs = yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in supra_specs.yaml: {e}")
@@ -53,7 +53,7 @@ class SpecsLoader:
             )
 
         try:
-            with open(criteria_file, "r") as f:
+            with open(criteria_file, "r", encoding="utf-8") as f:
                 criteria = yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in judge_criteria.yaml: {e}")
@@ -75,7 +75,7 @@ class SpecsLoader:
             )
 
         try:
-            with open(map_file, "r") as f:
+            with open(map_file, "r", encoding="utf-8") as f:
                 world_map = yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in base44_map.yaml: {e}")

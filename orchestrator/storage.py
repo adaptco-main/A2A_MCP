@@ -112,6 +112,8 @@ SessionLocal = _db_manager.SessionLocal
 
 def save_plan_state(plan_id: str, snapshot: Dict[str, Any]) -> None:
     """Save FSM plan state snapshot to the database."""
+    from orchestrator.fsm_persistence import persist_state_machine_snapshot
+
     db = _db_manager.SessionLocal()
     try:
         # Backward-compatible latest snapshot cache
@@ -128,9 +130,26 @@ def save_plan_state(plan_id: str, snapshot: Dict[str, Any]) -> None:
     finally:
         db.close()
 
+    # Append-only FSM persistence
+    try:
+        persist_state_machine_snapshot(plan_id, snapshot)
+    except Exception:
+        # Don't fail the primary save if FSM persistence fails
+        pass
+
 
 def load_plan_state(plan_id: str) -> Optional[Dict[str, Any]]:
     """Load FSM plan state snapshot from the database."""
+    from orchestrator.fsm_persistence import load_state_machine_snapshot
+
+    # Try newer FSM persistence first
+    try:
+        snapshot = load_state_machine_snapshot(plan_id)
+        if snapshot is not None:
+            return snapshot
+    except Exception:
+        pass
+
     db = _db_manager.SessionLocal()
     try:
         state = db.query(PlanStateModel).filter(PlanStateModel.plan_id == plan_id).first()

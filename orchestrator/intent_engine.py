@@ -13,7 +13,6 @@ from agents.architecture_agent import ArchitectureAgent
 from agents.coder import CoderAgent
 from agents.managing_agent import ManagingAgent
 from agents.orchestration_agent import OrchestrationAgent
-from agents.pinn_agent import PINNAgent
 from agents.tester import TesterAgent
 from orchestrator.judge_orchestrator import get_judge_orchestrator
 from orchestrator.notifier import (
@@ -49,7 +48,6 @@ class IntentEngine:
         self.architect = ArchitectureAgent()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
-        self.pinn = PINNAgent()
         self.judge = get_judge_orchestrator()
         self.whatsapp_notifier = WhatsAppNotifier.from_env()
         self.vector_gate = VectorGate()

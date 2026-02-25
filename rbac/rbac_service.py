@@ -10,8 +10,9 @@ from __future__ import annotations
 import os
 from typing import Dict
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from rbac.models import (
     ACTION_PERMISSIONS,
@@ -44,6 +45,17 @@ app.add_middleware(
 _registry: Dict[str, AgentRecord] = {}
 
 RBAC_SECRET = os.getenv("RBAC_SECRET", "dev-secret-change-me")
+security = HTTPBearer()
+
+
+async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Enforce token-based authentication."""
+    if credentials.credentials != RBAC_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 # ── Health ───────────────────────────────────────────────────────────────
@@ -59,7 +71,7 @@ async def health():
 
 # ── Agent Onboarding ────────────────────────────────────────────────────
 
-@app.post("/agents/onboard", response_model=OnboardingResult, status_code=201)
+@app.post("/agents/onboard", response_model=OnboardingResult, status_code=201, dependencies=[Depends(verify_token)])
 async def onboard_agent(registration: AgentRegistration):
     """
     Register a new agent with a role and optional embedding config.
@@ -97,7 +109,7 @@ async def onboard_agent(registration: AgentRegistration):
 
 # ── Permission Queries ──────────────────────────────────────────────────
 
-@app.get("/agents/{agent_id}/permissions")
+@app.get("/agents/{agent_id}/permissions", dependencies=[Depends(verify_token)])
 async def get_agent_permissions(agent_id: str):
     """Return the full permission scope for a registered agent."""
     record = _registry.get(agent_id)
@@ -117,7 +129,7 @@ async def get_agent_permissions(agent_id: str):
     }
 
 
-@app.post("/agents/{agent_id}/verify", response_model=PermissionCheckResponse)
+@app.post("/agents/{agent_id}/verify", response_model=PermissionCheckResponse, dependencies=[Depends(verify_token)])
 async def verify_permission(agent_id: str, check: PermissionCheckRequest):
     """
     Check whether an agent is permitted to perform a specific action or
@@ -182,7 +194,7 @@ async def verify_permission(agent_id: str, check: PermissionCheckRequest):
 
 # ── Agent Management ────────────────────────────────────────────────────
 
-@app.get("/agents")
+@app.get("/agents", dependencies=[Depends(verify_token)])
 async def list_agents():
     """List all registered agents."""
     return {
@@ -198,7 +210,7 @@ async def list_agents():
     }
 
 
-@app.delete("/agents/{agent_id}", status_code=204)
+@app.delete("/agents/{agent_id}", status_code=204, dependencies=[Depends(verify_token)])
 async def deactivate_agent(agent_id: str):
     """Soft-deactivate an agent (preserves record for audit)."""
     record = _registry.get(agent_id)

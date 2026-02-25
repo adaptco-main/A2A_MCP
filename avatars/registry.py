@@ -1,120 +1,154 @@
-import hashlib
-import logging
-from typing import Any, Dict, List, Optional
+"""Avatar registry and factory."""
 
-import numpy as np
-from fastapi import FastAPI, HTTPException, Header, Depends
-from pydantic import BaseModel, Field
+from typing import Dict, Optional
+from avatars.avatar import Avatar, AvatarProfile, AvatarStyle
 
-from oidc_token import verify_github_oidc_token
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+class AvatarRegistry:
+    """Centralized registry for avatar profiles."""
 
-app_ingest = FastAPI(title="A2A Vector Ingestion Service")
+    def __init__(self):
+        self._avatars: Dict[str, Avatar] = {}
+        self._profiles: Dict[str, AvatarProfile] = {}
+        self._load_defaults()
 
-class VectorNode(BaseModel):
-    node_id: str
-    text: str
-    embedding: List[float]
-    metadata: Dict[str, Any]
-
-    def to_dict(self) -> Dict[str, Any]:
-        return self.model_dump()
-
-def _deterministic_embedding(text: str, dim: int) -> List[float]:
-    """
-    Generate a deterministic pseudo-embedding for demonstration.
-    In production, replace this with a call to an embedding model (e.g., OpenAI, HuggingFace).
-    """
-    hash_val = int(hashlib.sha256(text.encode("utf-8")).hexdigest(), 16)
-    rng = np.random.default_rng(hash_val & 0xFFFFFFFF)
-    return rng.standard_normal(dim).tolist()
-
-class VectorIngestionEngine:
-    """Creates deterministic vector nodes from a repository snapshot."""
-
-    def __init__(self, embedding_dim: int = 1536) -> None:
-        self.embedding_dim = embedding_dim
-
-    async def process_snapshot(
-        self,
-        snapshot_data: Dict[str, Any],
-        oidc_claims: Dict[str, Any],
-    ) -> List[Dict[str, Any]]:
-        repository = str(snapshot_data.get("repository", "unknown-repo")).strip()
-        commit_sha = str(snapshot_data.get("commit_sha", "head")).strip()
-        actor = str(oidc_claims.get("actor", oidc_claims.get("sub", "unknown"))).strip()
-
-        nodes: List[VectorNode] = []
-        
-        # Process Code Snippets
-        snippets = snapshot_data.get("code_snippets", [])
-        for index, snippet in enumerate(snippets):
-            file_path = str(snippet.get("file_path", f"snippet_{index}.py"))
-            content = str(snippet.get("content", ""))
-            if not content:
-                continue
-                
-            text = f"[{file_path}]\n{content}"
-            node_id = hashlib.sha256(f"{repository}:{commit_sha}:{file_path}".encode("utf-8")).hexdigest()[:24]
-            
-            nodes.append(
-                VectorNode(
-                    node_id=node_id,
-                    text=text,
-                    embedding=_deterministic_embedding(text, self.embedding_dim),
-                    metadata={
-                        "type": "code_solution",
-                        "repository": repository,
-                        "commit_sha": commit_sha,
-                        "actor": actor,
-                        "file_path": file_path,
-                    },
-                )
+    def _load_defaults(self) -> None:
+        """Initialize default avatar profiles."""
+        profiles = {
+            "engineer": AvatarProfile(
+                avatar_id="avatar-engineer-001",
+                name="Engineer",
+                style=AvatarStyle.ENGINEER,
+                bound_agent="ArchitectureAgent",
+                system_prompt=(
+                    "You are an engineer avatar. Be precise, logical, and safety-conscious. "
+                    "Focus on specs, constraints, and failure modes. Minimize ambiguity."
+                ),
+                ui_config={
+                    "color": "#2E86DE",
+                    "icon": "⚙️",
+                    "theme": "dark-mono"
+                }
+            ),
+            "designer": AvatarProfile(
+                avatar_id="avatar-designer-001",
+                name="Designer",
+                style=AvatarStyle.DESIGNER,
+                bound_agent="ArchitectureAgent",
+                system_prompt=(
+                    "You are a designer avatar. Be visual, creative, and metaphor-friendly. "
+                    "Focus on aesthetics, UX, and narrative coherence."
+                ),
+                ui_config={
+                    "color": "#A29BFE",
+                    "icon": "🎨",
+                    "theme": "gradient"
+                }
+            ),
+            "driver": AvatarProfile(
+                avatar_id="avatar-driver-001",
+                name="Driver",
+                style=AvatarStyle.DRIVER,
+                bound_agent="CoderAgent",
+                system_prompt=(
+                    "You are a driver avatar. Be conversational, game-aware, and responsive. "
+                    "Understand in-universe context and player intent. Keep tone engaging."
+                ),
+                ui_config={
+                    "color": "#FF6348",
+                    "icon": "🏁",
+                    "theme": "neon"
+                }
+            ),
+            "ralph": AvatarProfile(
+                avatar_id="avatar-ralph-001",
+                name="Ralph",
+                style=AvatarStyle.ENGINEER,
+                bound_agent="RalphAgent",
+                system_prompt=(
+                    "You are Ralph. You follow the engineering chores: "
+                    "PRD -> Breakdown -> Research -> Plan -> Implement -> Refactor. "
+                    "You are persistent and love helping! Iteration > Perfection."
+                ),
+                ui_config={
+                    "color": "#FFD700",
+                    "icon": "🖍️",
+                    "theme": "yellow-crayon"
+                }
             )
+        }
 
-        # Process README/Documentation
-        readme = str(snapshot_data.get("readme_content", "")).strip()
-        if readme:
-            node_id = hashlib.sha256(f"{repository}:{commit_sha}:README".encode("utf-8")).hexdigest()[:24]
-            nodes.append(
-                VectorNode(
-                    node_id=node_id,
-                    text=readme,
-                    embedding=_deterministic_embedding(readme, self.embedding_dim),
-                    metadata={
-                        "type": "research_doc",
-                        "repository": repository,
-                        "commit_sha": commit_sha,
-                        "actor": actor,
-                        "file_path": "README.md",
-                    },
-                )
-            )
+        for key, profile in profiles.items():
+            self._profiles[key] = profile
+            self._avatars[key] = Avatar(profile)
 
-        return [node.to_dict() for node in nodes]
+    def get_avatar(self, avatar_key: str) -> Optional[Avatar]:
+        """Retrieve an avatar by key."""
+        avatar = self._avatars.get(avatar_key)
+        if avatar is not None:
+            return avatar
 
-vector_engine = VectorIngestionEngine()
-_KNOWLEDGE_STORE: Dict[str, Dict[str, Any]] = {}
+        # Compatibility: callers may request by avatar_id instead of registry key.
+        for candidate in self._avatars.values():
+            if candidate.profile.avatar_id == avatar_key:
+                return candidate
+        return None
 
-async def upsert_to_knowledge_store(vector_nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Insert/update nodes in an in-memory knowledge store."""
-    for node in vector_nodes:
-        _KNOWLEDGE_STORE[str(node["node_id"])] = node
-    return {"count": len(vector_nodes), "status": "success"}
+    def get_profile(self, avatar_key: str) -> Optional[AvatarProfile]:
+        """Retrieve an avatar profile by key."""
+        return self._profiles.get(avatar_key)
 
-@app_ingest.post("/ingest")
-async def ingest_repository(snapshot: Dict[str, Any], authorization: Optional[str] = Header(None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid OIDC Token")
-    
-    token = authorization.split(" ")[1]
-    try:
-        claims = verify_github_oidc_token(token)
-        vector_nodes = await vector_engine.process_snapshot(snapshot, claims)
-        return await upsert_to_knowledge_store(vector_nodes)
-    except Exception as e:
-        logger.error(f"Ingestion failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal processing error")
+    def register_avatar(self, key, profile: Optional[AvatarProfile] = None) -> Avatar:
+        """Register a new avatar profile."""
+        if profile is None:
+            if not isinstance(key, AvatarProfile):
+                raise TypeError("register_avatar expects AvatarProfile or (key, AvatarProfile)")
+            profile = key
+            key = profile.avatar_id
+
+        avatar = Avatar(profile)
+        self._avatars[key] = avatar
+        self._profiles[key] = profile
+        return avatar
+
+    def list_avatars(self) -> Dict[str, Avatar]:
+        """Return all registered avatars."""
+        return dict(self._avatars)
+
+    def list_bindings(self) -> Dict[str, str]:
+        """Return agent -> avatar_id bindings for all mapped avatars."""
+        bindings: Dict[str, str] = {}
+        for avatar in self._avatars.values():
+            agent_name = avatar.profile.bound_agent
+            if agent_name:
+                bindings[agent_name] = avatar.profile.avatar_id
+        return bindings
+
+    def get_avatar_for_agent(self, agent_name: str) -> Optional[Avatar]:
+        """Retrieve avatar bound to a given agent name."""
+        for avatar in self._avatars.values():
+            if avatar.profile.bound_agent == agent_name:
+                return avatar
+        return None
+
+    def clear(self) -> None:
+        """Clear registry state; useful for tests."""
+        self._avatars.clear()
+        self._profiles.clear()
+
+    def __repr__(self) -> str:
+        return f"<AvatarRegistry avatars={list(self._avatars.keys())}>"
+
+
+# Global singleton registry
+_global_registry = AvatarRegistry()
+
+
+def get_registry() -> AvatarRegistry:
+    """Access the global avatar registry."""
+    return _global_registry
+
+
+def get_avatar_registry() -> AvatarRegistry:
+    """Compatibility alias used by newer avatar integrations."""
+    return get_registry()

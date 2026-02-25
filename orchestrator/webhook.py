@@ -1,13 +1,18 @@
+import logging
+import time
 from fastapi import FastAPI, HTTPException, Body, Response, APIRouter, Depends
+from prometheus_client import generate_latest, REGISTRY
 from orchestrator.stateflow import StateMachine
 from orchestrator.utils import extract_plan_id_from_path
 from orchestrator.storage import save_plan_state
 from orchestrator.intent_engine import IntentEngine
-from orchestrator.metrics import record_request, record_plan_ingress
+from orchestrator.metrics import (
+    record_request, record_plan_ingress
+)
 from orchestrator.verify_api import router as verify_router
 from orchestrator.auth import authenticate_user
-import time
-from prometheus_client import generate_latest, REGISTRY
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="A2A MCP Webhook")
 app.include_router(verify_router)
@@ -23,7 +28,7 @@ def persistence_callback(plan_id: str, state_dict: dict) -> None:
     try:
         save_plan_state(plan_id, state_dict)
     except Exception as e:
-        print(f"Warning: Failed to persist plan state for {plan_id}: {e}")
+        logger.warning(f"Failed to persist plan state for {plan_id}: {e}")
 
 
 def _resolve_plan_id(path_plan_id: str | None, payload: dict) -> str | None:
@@ -68,10 +73,11 @@ async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):
         return {"status": "scheduled", "plan_id": plan_id, "transition": rec.to_dict()}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("plan ingress failure")
         duration_ms = (time.time() - start) * 1000
         record_request(result='error', duration_ms=duration_ms, halt_reason='exception')
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="an internal error occurred during plan ingress") from None
 
 
 @ingress_router.post("/plans/ingress")
@@ -115,16 +121,20 @@ async def orchestrate(user_query: str, auth: dict = Depends(authenticate_user)):
         duration_ms = (time.time() - start) * 1000
         record_request(result='success', duration_ms=duration_ms)
         return summary
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("orchestration failure")
         duration_ms = (time.time() - start) * 1000
         record_request(result='error', duration_ms=duration_ms, halt_reason='exception')
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="an internal error occurred during orchestration") from None
 
 
 @app.get("/health")
 async def health():
     """
     Health check endpoint. Returns application status.
+    Preserves existing JSON contract (unchanged for MCP/tools compatibility).
     """
     return {"status": "healthy", "service": "A2A_MCP_Orchestrator"}
 
@@ -133,6 +143,7 @@ async def health():
 async def metrics():
     """
     Prometheus metrics endpoint.
+    Exposes request counters, latency histograms, and verification results.
     """
     metrics_data = generate_latest(REGISTRY)
     return Response(content=metrics_data, media_type="text/plain; version=0.0.4")

@@ -1,26 +1,48 @@
+"""Deterministic repository snapshot ingestion utilities."""
+
+from __future__ import annotations
+
 import hashlib
+from dataclasses import dataclass
 from typing import Any
-from pydantic import BaseModel, Field
 import numpy as np
-from fastapi import FastAPI, HTTPException, Header, Depends
-from oidc_token import verify_github_oidc_token
 
-app_ingest = FastAPI()
+# Note: TELEMETRY should be imported from orchestrator.metrics or handled via a placeholder if app.mcp_tooling is not yet fixed
+try:
+    from app.mcp_tooling import TELEMETRY
+except ImportError:
+    # Fallback for during merge/refactor
+    class MockTelemetry:
+        def start_timer(self): return 0
+        def record_request_outcome(self, **kwargs): pass
+        def observe_protected_ingestion_latency(self, *args, **kwargs): pass
+    TELEMETRY = MockTelemetry()
 
-class VectorNode(BaseModel):
+
+def _deterministic_embedding(text: str, dimensions: int = 1536) -> list[float]:
+    """Generate a deterministic pseudo-embedding for demonstration."""
+    hash_val = int(hashlib.sha256(text.encode("utf-8")).hexdigest(), 16)
+    rng = np.random.default_rng(hash_val & 0xFFFFFFFF)
+    return rng.standard_normal(dimensions).tolist()
+
+
+@dataclass
+class VectorNode:
+    """Ingested node destined for vector storage."""
+
     node_id: str
     text: str
     embedding: list[float]
     metadata: dict[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
-        return self.model_dump()
+        return {
+            "node_id": self.node_id,
+            "text": self.text,
+            "embedding": self.embedding,
+            "metadata": self.metadata,
+        }
 
-def _deterministic_embedding(text: str, dim: int) -> list[float]:
-    """Generate a deterministic pseudo-embedding for demonstration."""
-    hash_val = int(hashlib.sha256(text.encode("utf-8")).hexdigest(), 16)
-    rng = np.random.default_rng(hash_val & 0xFFFFFFFF)
-    return rng.standard_normal(dim).tolist()
 
 class VectorIngestionEngine:
     """Creates deterministic vector nodes from a repository snapshot."""
@@ -37,6 +59,7 @@ class VectorIngestionEngine:
         commit_sha = str(snapshot_data.get("commit_sha", "")).strip()
         actor = str(oidc_claims.get("actor", "unknown")).strip()
 
+        telemetry_timer = TELEMETRY.start_timer()
         nodes: list[VectorNode] = []
         snippets = snapshot_data.get("code_snippets", [])
         for index, snippet in enumerate(snippets):
@@ -77,28 +100,14 @@ class VectorIngestionEngine:
                 )
             )
 
+        TELEMETRY.record_request_outcome(
+            avatar_id=actor or "unknown",
+            client_id=repository or "unknown",
+            outcome="accepted",
+        )
+        TELEMETRY.observe_protected_ingestion_latency(telemetry_timer, client_id=repository or "unknown")
         return [node.to_dict() for node in nodes]
 
-vector_engine = VectorIngestionEngine()
-
-@app_ingest.post("/ingest")
-async def ingest_repository(snapshot: dict, authorization: str = Header(None)):
-    """Authenticated endpoint that indexes repository snapshots into Vector DB."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing OIDC Token")
-    
-    token = authorization.split(" ")[1]
-    try:
-        # 1. Validate A2A Proof (Handshake)
-        claims = verify_github_oidc_token(token)
-        
-        # 2. Process & Embed (Phase 3 Integration)
-        vector_nodes = await vector_engine.process_snapshot(snapshot, claims)
-        
-        # 3. Persistence
-        result = await upsert_to_knowledge_store(vector_nodes)
-        
-        return result
 
 _KNOWLEDGE_STORE: dict[str, dict[str, Any]] = {}
 
