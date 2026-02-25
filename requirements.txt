@@ -4,6 +4,7 @@ scipy
 sqlalchemy
 psycopg2-binary
 pydantic
+<<<<<<< HEAD
 pytest
 pytest-asyncio
 python-dotenv
@@ -11,3 +12,14 @@ mcp[cli]
 fastmcp
 requests
 PyJWT
+=======
+python-dotenv
+mcp[cli]
+fastapi
+uvicorn
+httpx
+requests
+pytest
+pytest-asyncio
+jsonschema
+>>>>>>> cab089d00b5c462740bfdfd0ce6a85c924076597

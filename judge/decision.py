@@ -1,5 +1,7 @@
 """Multi-criteria decision model for agent judgment."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
@@ -68,7 +70,7 @@ class JudgmentModel:
                 key = crit_type.value
                 if key in weights:
                     self._criteria[crit_type].weight = weights[key]
-        except Exception as e:
+        except Exception:
             # Fallback to defaults if specs loading fails
             if not self._criteria:
                 self._load_default_criteria()
@@ -80,31 +82,34 @@ class JudgmentModel:
                 criteria_type=CriteriaType.SAFETY,
                 weight=1.0,
                 description="Vehicle and environment safety constraints",
-                scorer=lambda ctx: 1.0 if ctx.get("nearest_obstacle_distance_m", 0) > 5 else 0.6
-                    if ctx.get("nearest_obstacle_distance_m", 0) > 2 else 0.0,
+                scorer=self._scorer_safety,
             ),
             DecisionCriteria(
                 criteria_type=CriteriaType.SPEC_ALIGNMENT,
                 weight=0.8,
                 description="Adherence to Supra physics and performance specs",
-                scorer=lambda ctx: 1.0,  # Placeholder
+                scorer=self._scorer_spec,
             ),
             DecisionCriteria(
                 criteria_type=CriteriaType.PLAYER_INTENT,
                 weight=0.7,
                 description="Alignment with user/player goal",
-                scorer=lambda ctx: 0.85,  # Placeholder
+                scorer=self._scorer_intent,
             ),
             DecisionCriteria(
                 criteria_type=CriteriaType.LATENCY,
                 weight=0.5,
                 description="Execution within time budget",
-                scorer=lambda ctx: 1.0,  # Placeholder
+                scorer=self._scorer_latency,
             ),
         ]
 
         for criterion in defaults:
             self._criteria[criterion.criteria_type] = criterion
+
+    def register_criterion(self, criterion: DecisionCriteria) -> None:
+        """Register a custom decision criterion."""
+        self._criteria[criterion.criteria_type] = criterion
 
     def judge_actions(
         self,
@@ -136,7 +141,7 @@ class JudgmentModel:
                 action=action,
                 overall_score=overall_score,
                 criterion_scores=criterion_scores,
-                metadata={"preset": self._preset},
+                metadata={"preset": self._preset, "context_keys": list(context.keys())},
             )
             scores.append(score)
 
@@ -152,6 +157,33 @@ class JudgmentModel:
         """Get highest-scoring action."""
         scores = self.judge_actions(actions, context)
         return scores[0] if scores else None
+
+    # Default criterion scorers
+
+    @staticmethod
+    def _scorer_safety(context: Dict[str, Any]) -> float:
+        """Safety criterion: check bounds, collisions, distance."""
+        if "nearest_obstacle_distance_m" in context:
+            dist = context["nearest_obstacle_distance_m"]
+            return 1.0 if dist > 5 else 0.6 if dist > 2 else 0.0
+        return 1.0 if context.get("safe", True) else 0.0
+
+    @staticmethod
+    def _scorer_spec(context: Dict[str, Any]) -> float:
+        """Spec alignment: adherence to vehicle/game specs."""
+        return 1.0 if context.get("spec_compliant", True) else 0.0
+
+    @staticmethod
+    def _scorer_intent(context: Dict[str, Any]) -> float:
+        """Player intent: alignment with user goal."""
+        return max(0.0, min(1.0, context.get("intent_match", 0.85)))
+
+    @staticmethod
+    def _scorer_latency(context: Dict[str, Any]) -> float:
+        """Latency: execution within time budget."""
+        elapsed = context.get("elapsed_ms", 0)
+        budget = context.get("budget_ms", 100)
+        return max(0.0, 1.0 - (elapsed / budget)) if budget > 0 else 1.0
 
     def __repr__(self) -> str:
         criteria_info = ", ".join(
