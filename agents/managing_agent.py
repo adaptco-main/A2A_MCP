@@ -58,7 +58,7 @@ class ManagingAgent:
         prompt_str = (
             f"Context: {prompt_intent.task_context}\n"
             f"Task: {prompt_intent.user_input}\n"
-            f"Constraints: {", ".join(prompt_intent.workflow_constraints)}"
+            f"Constraints: {', '.join(prompt_intent.workflow_constraints)}"
         )
         # Optimize: Move blocking LLM call to a thread
         raw_response = await asyncio.to_thread(self.llm.call_llm, prompt=prompt_str)

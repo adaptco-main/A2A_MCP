@@ -15,9 +15,9 @@ dependencies = [
     "jsonschema",
     "mcp[cli]",
     "fastmcp",
-    "PyJWT",
     "numpy",
     "scipy",
+    "PyJWT",
     "torch",
     "prometheus-client",
 ]
