@@ -60,7 +60,7 @@ zones:
       N: 4      # Downtown North
       S: 12     # Parking District
       E: 1      # Main Street
-      W: 8      # Civic Center
+      W: null   # Boundary
     zone_speed_limit_mph: 35
     hazards:
       - pedestrian_crossing
@@ -515,7 +515,7 @@ zones:
       E: null
       W: false
     connections:
-      N: null
+      N: 23
       S: null
       E: null
       W: 18
@@ -610,7 +610,7 @@ zones:
       E: null
       W: false
     connections:
-      N: null
+      N: 27
       S: 19
       E: null
       W: 22
@@ -681,7 +681,7 @@ zones:
       E: false
       W: false
     connections:
-      N: null
+      N: 30
       S: 22
       E: 27
       W: 25
@@ -705,7 +705,7 @@ zones:
       E: null
       W: false
     connections:
-      N: null
+      N: 31
       S: 23
       E: null
       W: 26
