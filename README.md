@@ -154,6 +154,12 @@ If you have access and need it locally (for onboarding or CI experiments), initi
 git submodule update --init --recursive PhysicalAI-Autonomous-Vehicles
 ```
 
+If your automation globally enables recursive submodule checkout, preserve the optional behavior with:
+
+```bash
+git config --global submodule.PhysicalAI-Autonomous-Vehicles.update none
+```
+
 
 ### Run MCP Server
 ```bash
