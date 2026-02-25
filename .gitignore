@@ -5,6 +5,7 @@ __pycache__/
 
 # Environments
 .env
+.env.*
 .venv
 env/
 venv/
@@ -20,4 +21,17 @@ ENV/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Dependencies
 openJdk-25/lib/modules
+
+# Local transient orchestration sandboxes
+tmpclaude-*-cwd/
+tmpclaude-*-cwd
+specs/tmpclaude-*-cwd
+
+# Local runtime artifacts
+*.sqlite
+*.db
+exports/
+staging/

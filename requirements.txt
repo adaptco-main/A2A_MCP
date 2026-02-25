@@ -1,14 +1,17 @@
+fastapi
+uvicorn
+numpy
+scipy
 sqlalchemy
 psycopg2-binary
 pydantic
 pytest
-asyncio
+pytest-asyncio
 python-dotenv
+mcp[cli]
 fastmcp
 requests
-<<<<<<< Updated upstream
-=======
+PyJWT
 jsonschema
 torch
 prometheus-client
->>>>>>> Stashed changes

@@ -15,11 +15,9 @@ def test_artifact_persistence_lifecycle():
     # 1. Setup Mock Artifact
     artifact = MCPArtifact(
         artifact_id=test_id,
-        parent_artifact_id="root-node",
         agent_name="TestAgent",
-        version="1.0.0",
         type="unit_test_artifact",
-        content='{"status": "verified"}'
+        content=json.dumps({"status": "verified"})
     )
     # 2. Test Save (Persistence Directive)
     db.save_artifact(artifact)
