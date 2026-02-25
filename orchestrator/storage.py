@@ -62,7 +62,8 @@ class DBManager:
                 autoflush=False,
                 bind=DBManager._shared_engine,
             )
-            Base.metadata.create_all(bind=DBManager._shared_engine)
+            if os.getenv("ENV") != "production":
+                Base.metadata.create_all(bind=DBManager._shared_engine)
 
         self.engine = DBManager._shared_engine
         self.SessionLocal = DBManager._shared_session_local

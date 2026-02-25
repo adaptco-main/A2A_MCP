@@ -1,11 +1,11 @@
-# RBAC Gateway Dockerfile
+# Orchestrator API Dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
+RUN apt-get update && apt-get install -y 
+    curl 
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
@@ -22,7 +22,7 @@ ENV PYTHONPATH=/app
 RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
-EXPOSE 8001
+EXPOSE 8000
 
-# Run the RBAC Gateway
-CMD ["python", "-m", "uvicorn", "rbac_service:app", "--host", "0.0.0.0", "--port", "8001"]
+# Run the Orchestrator API
+CMD ["python", "-m", "uvicorn", "orchestrator.api:app", "--host", "0.0.0.0", "--port", "8000"]

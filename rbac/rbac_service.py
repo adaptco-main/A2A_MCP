@@ -7,11 +7,16 @@ pipeline and executing lifecycle transitions.
 
 from __future__ import annotations
 
+import hmac
+import hashlib
 import os
-from typing import Dict
+from typing import Dict, List
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from orchestrator.logging import setup_logging
+
+setup_logging()
 
 from rbac.models import (
     ACTION_PERMISSIONS,
@@ -32,18 +37,57 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Production-ready CORS
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins if os.getenv("ENV") == "production" else ["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
 # In-memory agent registry (MVP — swap for DB-backed store in production)
 _registry: Dict[str, AgentRecord] = {}
 
-RBAC_SECRET = os.getenv("RBAC_SECRET", "dev-secret-change-me")
+RBAC_SECRET = os.getenv("RBAC_SECRET", "dev-secret-change-me").encode("utf-8")
+
+
+# ── Security Helpers ─────────────────────────────────────────────────────
+
+def validate_rbac_config():
+    """Validate environment variables on startup."""
+    if os.getenv("ENV") == "production":
+        if os.getenv("RBAC_SECRET") in [None, "dev-secret-change-me", ""]:
+            raise RuntimeError("RBAC_SECRET must be set to a secure value in production.")
+
+validate_rbac_config()
+
+def verify_rbac_signature(
+    x_rbac_signature: str | None = Header(default=None),
+    x_rbac_timestamp: str | None = Header(default=None),
+):
+    """
+    Verify that the request is signed with the RBAC_SECRET.
+    Expected header: X-RBAC-Signature: hmac_sha256(timestamp + request_path)
+    """
+    if os.getenv("RBAC_AUTH_DISABLED") == "true" and os.getenv("ENV") != "production":
+        return
+
+    if not x_rbac_signature or not x_rbac_timestamp:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing RBAC authentication headers.",
+        )
+
+    # Simplified signature check for core scope: sign the timestamp
+    expected_mac = hmac.new(RBAC_SECRET, x_rbac_timestamp.encode("utf-8"), hashlib.sha256).hexdigest()
+    
+    if not hmac.compare_digest(expected_mac, x_rbac_signature):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid RBAC signature.",
+        )
 
 
 # ── Health ───────────────────────────────────────────────────────────────
@@ -57,15 +101,17 @@ async def health():
     }
 
 
-# ── Agent Onboarding ────────────────────────────────────────────────────
+# ── Agent Onboarding ─────────────────────────────────────────────────────    
 
-@app.post("/agents/onboard", response_model=OnboardingResult, status_code=201)
+@app.post(
+    "/agents/onboard", 
+    response_model=OnboardingResult, 
+    status_code=201,
+    dependencies=[Depends(verify_rbac_signature)]
+)
 async def onboard_agent(registration: AgentRegistration):
     """
     Register a new agent with a role and optional embedding config.
-
-    The agent's role determines which lifecycle transitions and actions it
-    may perform within the pipeline.
     """
     if registration.agent_id in _registry:
         raise HTTPException(
@@ -95,9 +141,9 @@ async def onboard_agent(registration: AgentRegistration):
     )
 
 
-# ── Permission Queries ──────────────────────────────────────────────────
+# ── Permission Queries ───────────────────────────────────────────────────        
 
-@app.get("/agents/{agent_id}/permissions")
+@app.get("/agents/{agent_id}/permissions", dependencies=[Depends(verify_rbac_signature)])
 async def get_agent_permissions(agent_id: str):
     """Return the full permission scope for a registered agent."""
     record = _registry.get(agent_id)
@@ -121,7 +167,7 @@ async def get_agent_permissions(agent_id: str):
 async def verify_permission(agent_id: str, check: PermissionCheckRequest):
     """
     Check whether an agent is permitted to perform a specific action or
-    lifecycle transition.
+    lifecycle transition. (Public endpoint, no signature required for verification query)
     """
     record = _registry.get(agent_id)
     if not record:
@@ -180,9 +226,9 @@ async def verify_permission(agent_id: str, check: PermissionCheckRequest):
     )
 
 
-# ── Agent Management ────────────────────────────────────────────────────
+# ── Agent Management ─────────────────────────────────────────────────────    
 
-@app.get("/agents")
+@app.get("/agents", dependencies=[Depends(verify_rbac_signature)])
 async def list_agents():
     """List all registered agents."""
     return {
@@ -198,7 +244,7 @@ async def list_agents():
     }
 
 
-@app.delete("/agents/{agent_id}", status_code=204)
+@app.delete("/agents/{agent_id}", status_code=204, dependencies=[Depends(verify_rbac_signature)])
 async def deactivate_agent(agent_id: str):
     """Soft-deactivate an agent (preserves record for audit)."""
     record = _registry.get(agent_id)
@@ -210,7 +256,7 @@ async def deactivate_agent(agent_id: str):
     record.active = False
 
 
-# ── Entry point ─────────────────────────────────────────────────────────
+# ── Entry point ──────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     import uvicorn

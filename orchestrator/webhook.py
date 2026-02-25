@@ -1,5 +1,5 @@
 import time
-from fastapi import FastAPI, HTTPException, Body, Response, APIRouter
+from fastapi import FastAPI, HTTPException, Body, Response, APIRouter, Depends
 from prometheus_client import generate_latest, REGISTRY
 from orchestrator.stateflow import StateMachine
 from orchestrator.utils import extract_plan_id_from_path
@@ -9,6 +9,8 @@ from orchestrator.metrics import (
     record_request, record_plan_ingress
 )
 from orchestrator.verify_api import router as verify_router
+
+from orchestrator.auth import authenticate_user
 
 app = FastAPI(title="A2A MCP Webhook")
 app.include_router(verify_router)
@@ -73,12 +75,12 @@ async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):
 
 
 @ingress_router.post("/plans/ingress")
-async def plan_ingress(payload: dict = Body(...)):
+async def plan_ingress(payload: dict = Body(...), auth: dict = Depends(authenticate_user)):
     return await _plan_ingress_impl(None, payload)
 
 
 @ingress_router.post("/plans/{plan_id}/ingress")
-async def plan_ingress_by_id(plan_id: str, payload: dict = Body(default={})):
+async def plan_ingress_by_id(plan_id: str, payload: dict = Body(default={}), auth: dict = Depends(authenticate_user)):
     return await _plan_ingress_impl(plan_id, payload)
 
 app.include_router(ingress_router)
