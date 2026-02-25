@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Any
 
@@ -9,6 +10,8 @@ from fastapi import FastAPI, HTTPException, Query
 
 from orchestrator.intent_engine import IntentEngine
 from orchestrator.webhook import ingress_router
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="A2A Orchestrator API", version="1.0.0")
 app.include_router(ingress_router)
@@ -59,8 +62,13 @@ async def orchestrate(
             max_healing_retries=max_healing_retries,
         )
         return _build_pipeline_response(result)
-    except Exception as exc:  # noqa: BLE001 - API should surface orchestration failure details.
-        raise HTTPException(status_code=500, detail=f"orchestration failure: {exc}") from exc
+    except HTTPException:
+        raise
+    except Exception:  # noqa: BLE001 - Catch all to mask internal errors.
+        logger.exception("orchestration failure")
+        raise HTTPException(
+            status_code=500, detail="orchestration failure: an internal error occurred"
+        ) from None
 
 
 if __name__ == "__main__":
