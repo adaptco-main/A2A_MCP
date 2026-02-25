@@ -77,7 +77,7 @@ async def plan_ingress(payload: dict = Body(...)):
     return await _plan_ingress_impl(None, payload)
 
 
-@ingress_router.post("/plans/{plan_id}/ingress")
+@app.post("/plans/{plan_id}/ingress")
 async def plan_ingress_by_id(plan_id: str, payload: dict = Body(default={})):
     return await _plan_ingress_impl(plan_id, payload)
 

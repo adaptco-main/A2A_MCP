@@ -45,7 +45,6 @@ def _extract_payload(response) -> dict:
         return {"ok": True, "data": {"message": text}}
     return {"ok": False, "error": {"message": text}}
 
-
 @pytest.mark.asyncio
 async def test_ingestion_with_valid_handshake(mock_snapshot):
     mock_claims = {"repository": "adaptco/A2A_MCP", "actor": "github-actions"}
