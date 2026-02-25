@@ -51,20 +51,8 @@ def canonical_payload(payload: dict[str, Any]) -> str:
 
 
 def compute_lineage(prev_hash: Optional[str], state: str, payload: dict[str, Any]) -> str:
-    material = json.dumps(
-        {
-            "prev_hash": prev_hash or "",
-            "state": state,
-            "payload": json.loads(canonical_payload(payload)),
-        },
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-    ).encode("utf-8")
-def compute_lineage(prev_hash: Optional[str], state: str, payload: dict[str, Any]) -> str:
     prev = prev_hash or ""
     material = f"{prev}:{state}:{canonical_payload(payload)}".encode("utf-8")
-codex/implement-get-/verify-endpoint
     return hashlib.sha256(material).hexdigest()
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from prime_directive.pipeline.context import PipelineContext
+from prime_directive.pipeline.state_machine import PipelineState
 
 
 class PipelineEngine:

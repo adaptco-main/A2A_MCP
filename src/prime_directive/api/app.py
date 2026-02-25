@@ -7,7 +7,7 @@ from prime_directive.pipeline.engine import PipelineEngine
 
 app = FastAPI(title="PRIME_DIRECTIVE")
 _engine = PipelineEngine()
-codex/review-and-update-helm-secret/config-templates
+
 
 
 @app.get("/health")
