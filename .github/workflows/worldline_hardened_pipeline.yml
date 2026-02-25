@@ -38,7 +38,7 @@ jobs:
 
           source_ok=false
           target_ok=false
-          [[ "$SOURCE_REF" == "worldline" ]] && source_ok=true
+          [[ "$SOURCE_REF" =~ ^(worldline|fix/.*|feat/.*|codex/.*) ]] && source_ok=true
           [[ "$TARGET_REF" == "main" ]] && target_ok=true
 
           echo "source_ok=$source_ok" >> "$GITHUB_OUTPUT"

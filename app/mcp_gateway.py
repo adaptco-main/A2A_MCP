@@ -33,11 +33,14 @@ class ToolCallRequest(BaseModel):
 mcp = FastMCP("A2A_Orchestrator_HTTP")
 register_tools(mcp)
 
-mcp_http_app = mcp.http_app(transport="streamable-http", path="/")
+# mcp_http_app = mcp.http_app(transport="streamable-http", path="/")
+# MCP 1.26.0 / FastMCP 3.0.2 compatibility
+mcp_http_app = mcp.streamable_http_app()
+
 app = FastAPI(
     title="A2A MCP Gateway",
     version="1.0.0",
-    lifespan=mcp_http_app.lifespan,
+    # lifespan=mcp_http_app.lifespan,
 )
 
 # Path `/mcp` is preserved externally while FastMCP handles root path internally.
