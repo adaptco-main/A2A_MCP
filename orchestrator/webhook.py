@@ -6,12 +6,14 @@ from orchestrator.utils import extract_plan_id_from_path
 from orchestrator.storage import save_plan_state
 from orchestrator.intent_engine import IntentEngine
 from orchestrator.metrics import (
-    record_request, record_plan_ingress, record_verification
+    record_request, record_plan_ingress
 )
 from orchestrator.verify_api import router as verify_router
 
 app = FastAPI(title="A2A MCP Webhook")
 app.include_router(verify_router)
+
+ingress_router = APIRouter()
 
 # in-memory map (replace with DB-backed persistence or plan state store in prod)
 PLAN_STATE_MACHINES = {}
@@ -70,7 +72,7 @@ async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/plans/ingress")
+@ingress_router.post("/plans/ingress")
 async def plan_ingress(payload: dict = Body(...)):
     return await _plan_ingress_impl(None, payload)
 
@@ -78,6 +80,8 @@ async def plan_ingress(payload: dict = Body(...)):
 @app.post("/plans/{plan_id}/ingress")
 async def plan_ingress_by_id(plan_id: str, payload: dict = Body(default={})):
     return await _plan_ingress_impl(plan_id, payload)
+
+app.include_router(ingress_router)
 
 
 @app.post("/orchestrate")

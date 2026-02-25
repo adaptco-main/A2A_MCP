@@ -8,10 +8,12 @@ from typing import Any
 import jwt
 
 from app.security.avatar_token_shape import AvatarTokenShapeError, shape_avatar_token_stream
+from orchestrator.telemetry_service import TelemetryService
 
 
 MAX_AVATAR_TOKENS = 4096
 
+TELEMETRY = TelemetryService()
 
 def verify_github_oidc_token(token: str) -> dict[str, Any]:
     if not token:

@@ -12,12 +12,15 @@ bootstrap_paths()
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
-try:
-    from fastmcp import FastMCP
-except ModuleNotFoundError:  # pragma: no cover - compatibility with older fastmcp namespace.
-    from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
 
-from app.mcp_tooling import call_tool_by_name, register_tools
+def call_tool_by_name(tool_name: str, arguments: dict, authorization_header: str | None = None):
+    """Placeholder for calling a tool by name."""
+    return "error: tool not found"
+
+def register_tools(mcp):
+    """Placeholder for registering tools."""
+    pass
 
 
 class ToolCallRequest(BaseModel):

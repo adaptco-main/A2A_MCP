@@ -1,26 +1,16 @@
-"""Avatar registry for managing agent-avatar bindings."""
+"""Avatar registry and factory."""
 
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 from avatars.avatar import Avatar, AvatarProfile, AvatarStyle
 
 
 class AvatarRegistry:
-    """
-    Centralized registry for avatar profiles and agent-avatar bindings.
-    Singleton pattern provides global access.
-    """
+    """Centralized registry for avatar profiles."""
 
-    _instance: Optional["AvatarRegistry"] = None
-    _avatars: Dict[str, Avatar] = {}
-    _profiles: Dict[str, AvatarProfile] = {}
-    _agent_bindings: Dict[str, str] = {}  # agent_name -> avatar_id
-
-    def __new__(cls) -> "AvatarRegistry":
-        """Ensure singleton pattern."""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._load_defaults()
-        return cls._instance
+    def __init__(self):
+        self._avatars: Dict[str, Avatar] = {}
+        self._profiles: Dict[str, AvatarProfile] = {}
+        self._load_defaults()
 
     def _load_defaults(self) -> None:
         """Initialize default avatar profiles."""
@@ -70,83 +60,99 @@ class AvatarRegistry:
                     "theme": "neon"
                 }
             ),
-            "gemini": AvatarProfile(
-                avatar_id="avatar-gemini-001",
-                name="Gemini",
+            "ralph": AvatarProfile(
+                avatar_id="avatar-ralph-001",
+                name="Ralph",
                 style=AvatarStyle.ENGINEER,
-                bound_agent="GeminiAgent",
+                bound_agent="RalphAgent",
                 system_prompt=(
-                    "You are a Gemini avatar. You are a helpful assistant that can answer questions and complete tasks."
+                    "You are Ralph. You follow the engineering chores: "
+                    "PRD -> Breakdown -> Research -> Plan -> Implement -> Refactor. "
+                    "You are persistent and love helping! Iteration > Perfection."
                 ),
                 ui_config={
-                    "color": "#4285F4",
-                    "icon": "✨",
-                    "theme": "light"
+                    "color": "#FFD700",
+                    "icon": "🖍️",
+                    "theme": "yellow-crayon"
                 }
             )
         }
 
-        for profile in profiles.values():
-            self.register_avatar(profile)
+        for key, profile in profiles.items():
+            self._profiles[key] = profile
+            self._avatars[key] = Avatar(profile)
 
-    def register_avatar(self, profile: AvatarProfile) -> Avatar:
-        """Register a new avatar and optionally bind to an agent."""
+    def get_avatar(self, avatar_key: str) -> Optional[Avatar]:
+        """Retrieve an avatar by key."""
+        avatar = self._avatars.get(avatar_key)
+        if avatar is not None:
+            return avatar
+
+        # Compatibility: callers may request by avatar_id instead of registry key.
+        for candidate in self._avatars.values():
+            if candidate.profile.avatar_id == avatar_key:
+                return candidate
+        return None
+
+    def get_profile(self, avatar_key: str) -> Optional[AvatarProfile]:
+        """Retrieve an avatar profile by key."""
+        return self._profiles.get(avatar_key)
+
+    def register_avatar(self, key, profile: Optional[AvatarProfile] = None) -> Avatar:
+        """Register a new avatar profile."""
+        if profile is None:
+            if not isinstance(key, AvatarProfile):
+                raise TypeError("register_avatar expects AvatarProfile or (key, AvatarProfile)")
+            profile = key
+            key = profile.avatar_id
+
         avatar = Avatar(profile)
-        self._avatars[profile.avatar_id] = avatar
-        self._profiles[profile.avatar_id] = profile
-
-        if profile.bound_agent:
-            self._agent_bindings[profile.bound_agent] = profile.avatar_id
-
+        self._avatars[key] = avatar
+        self._profiles[key] = profile
         return avatar
 
-    def get_avatar(self, avatar_id: str) -> Optional[Avatar]:
-        """Get avatar by ID."""
-        return self._avatars.get(avatar_id)
+    def list_avatars(self) -> Dict[str, Avatar]:
+        """Return all registered avatars."""
+        return dict(self._avatars)
+
+    def list_bindings(self) -> Dict[str, str]:
+        """Return agent -> avatar_id bindings for all mapped avatars."""
+        bindings: Dict[str, str] = {}
+        for avatar in self._avatars.values():
+            agent_name = avatar.profile.bound_agent
+            if agent_name:
+                bindings[agent_name] = avatar.profile.avatar_id
+        return bindings
 
     def get_profile(self, avatar_id: str) -> Optional[AvatarProfile]:
         """Retrieve an avatar profile by ID."""
         return self._profiles.get(avatar_id)
 
     def get_avatar_for_agent(self, agent_name: str) -> Optional[Avatar]:
-        """Get avatar bound to a specific agent."""
-        avatar_id = self._agent_bindings.get(agent_name)
-        if avatar_id:
-            return self._avatars.get(avatar_id)
+        """Retrieve avatar bound to a given agent name."""
+        for avatar in self._avatars.values():
+            if avatar.profile.bound_agent == agent_name:
+                return avatar
         return None
 
-    def bind_agent_to_avatar(self, agent_name: str, avatar_id: str) -> None:
-        """Bind an agent to an avatar."""
-        if avatar_id not in self._avatars:
-            raise ValueError(f"Avatar {avatar_id} not found")
-        self._agent_bindings[agent_name] = avatar_id
-
-    def list_avatars(self) -> List[Avatar]:
-        """Get all registered avatars."""
-        return list(self._avatars.values())
-
-    def list_bindings(self) -> Dict[str, str]:
-        """Get all agent-avatar bindings."""
-        return self._agent_bindings.copy()
-
     def clear(self) -> None:
-        """Clear all avatars and bindings (for testing)."""
+        """Clear registry state; useful for tests."""
         self._avatars.clear()
         self._profiles.clear()
-        self._agent_bindings.clear()
 
     def __repr__(self) -> str:
-        return (
-            f"<AvatarRegistry avatars={len(self._avatars)} "
-            f"bindings={len(self._agent_bindings)}>"
-        )
+        return f"<AvatarRegistry avatars={list(self._avatars.keys())}>"
 
 
-def get_avatar_registry() -> AvatarRegistry:
-    """Access the global avatar registry singleton."""
-    return AvatarRegistry()
+# Global singleton registry
+_global_registry = AvatarRegistry()
 
 
 def get_registry() -> AvatarRegistry:
-    """Compatibility alias."""
-    return get_avatar_registry()
+    """Access the global avatar registry."""
+    return _global_registry
+
+
+def get_avatar_registry() -> AvatarRegistry:
+    """Compatibility alias used by newer avatar integrations."""
+    return get_registry()

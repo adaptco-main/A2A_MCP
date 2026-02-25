@@ -9,9 +9,10 @@ pytest
 pytest-asyncio
 python-dotenv
 mcp[cli]
+httpx
 fastmcp
 requests
-PyJWT
 jsonschema
 torch
+PyJWT
 prometheus-client

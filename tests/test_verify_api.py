@@ -93,9 +93,6 @@ def test_verify_endpoint_returns_200_when_valid():
 def test_verify_endpoint_returns_503_when_database_url_not_configured(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
-
-
-def test_verify_endpoint_returns_503_when_db_dependency_not_configured():
     app = FastAPI()
     app.include_router(router)
 
@@ -103,9 +100,4 @@ def test_verify_endpoint_returns_503_when_db_dependency_not_configured():
     response = client.get("/v1/executions/exec-1/verify", headers={"x-tenant-id": "tenant-a"})
 
     assert response.status_code == 503
-main
-    assert response.json()["detail"] == "DATABASE_URL is not configured"
-theirs
-=======
     assert response.json()["detail"] == "Database connection dependency is not configured"
-codex/implement-get-/verify-endpoint
