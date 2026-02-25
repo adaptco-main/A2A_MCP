@@ -1,6 +1,6 @@
-[![Pylint](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml)
-
 # A2A MCP - Autonomous Agent Architecture with Model Context Protocol
+
+[![Pylint](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml)
 
 ## Overview
 
@@ -68,73 +68,6 @@ schemas/                   [Data model definitions]
 └── __init__.py            [Schema exports]
 ```
 
-### Supporting Modules
-```
-judge/                     [Decision engine - 2 files]
-avatars/                   [Agent personality system - 4 files]
-frontend/three/            [WebGL rendering - 6 files]
-pipeline/                  [Document processing]
-app/                       [Application services]
-```
-
-### Utilities & Scripts
-```
-scripts/                   [Utility scripts]
-├── automate_healing.py    [Healing loop demo]
-├── knowledge_ingestion.py [Repository ingestion]
-├── inspect_db.py          [Database inspection]
-└── tune_avatar_style.py   [Avatar customization]
-
-tests/                     [Comprehensive test suite - 17+ tests]
-conftest.py                [Pytest configuration]
-```
-
-### Root Entry Points
-```
-bootstrap.py               [sys.path initialization]
-mcp_server.py              [MCP server startup]
-```
-
----
-
-## 🔗 Module Hierarchy & Dependencies
-
-```
-┌─────────────────────────────────────┐
-│   Root Entry Points (bootstrap)     │
-│   bootstrap.py, mcp_server.py       │
-└──────────────┬──────────────────────┘
-               │
-        ┌──────▼──────────────────────┐
-        │   ORCHESTRATOR (Kernel)     │  ← Head of tree
-        │   main.py (MCPHub)          │
-        │   intent_engine.py          │
-        │   state management, storage │
-        └──────┬──────────────────────┘
-               │
-        ┌──────┴──────────┬───────────┐
-        │                 │           │
-        ▼                 ▼           ▼
-     agents/          schemas/     judge/
-   (8 agents)      (data models)  (decisions)
-        │                             │
-        └──────────────┬──────────────┘
-                       │
-                       ▼
-                   avatars/
-              (personality system)
-```
-
-### Import Flow
-
-- **Orchestrator** is the kernel that imports and coordinates everything
-- **Agents** depend on orchestrator utilities (storage, llm_util) but NOT on orchestrator.main
-- **Schemas** are independent data contracts used by all modules
-- **Judge** provides decision logic to orchestrator
-- **Avatars** provide personality context to agents
-
-This clean, unidirectional dependency tree prevents circular imports and enables modular testing.
-
 ---
 
 ## 🚀 Quick Start
@@ -151,21 +84,9 @@ pip install -r requirements.txt
 python mcp_server.py
 ```
 
-### Run Healing Loop
-```bash
-python scripts/automate_healing.py
-```
-
 ### Run Tests
 ```bash
 pytest tests/ -v
-```
-
-### Verify Installation
-```bash
-python -c "from orchestrator import MCPHub; print('✓ Orchestrator loaded')"
-python -c "from agents import *; print('✓ All agents loaded')"
-python -c "from schemas import *; print('✓ All schemas loaded')"
 ```
 
 ---
@@ -186,19 +107,6 @@ python -c "from schemas import *; print('✓ All schemas loaded')"
 - **Tester Agent**: Quality assurance
 - **Researcher**: Data analysis & research
 
-### Decision System
-- **Judge**: Multi-criteria decision analysis (MCDA)
-- **DMN Engine**: Decision model notation support
-- **Avatar System**: Agent personality & context
-
----
-
-## 📚 Documentation
-
-- `docs/REFACTORING_LOG.md` - Recent refactoring changes & migration guide
-- `TELEMETRY_SYSTEM.md` - Diagnostic telemetry system details
-- `MIGRATION_PLAN.md` - Architecture migration path
-
 ---
 
 ## 🔐 Security & Integrity
@@ -209,13 +117,7 @@ python -c "from schemas import *; print('✓ All schemas loaded')"
 
 ---
 
-## 📄 License
-
-See LICENSE file for details.
-
----
-
-## Runtime Services
+## 🛠️ Runtime Services
 
 ### Run MCP HTTP Gateway
 ```bash
@@ -240,5 +142,8 @@ python -m uvicorn orchestrator.api:app --host 0.0.0.0 --port 8000
 - `POST /plans/ingress` and `POST /plans/{plan_id}/ingress` schedule plan ingress.
 - `GET /healthz` and `GET /readyz` are exposed on both services.
 
-### Deployment Guide
-- `docs/deployment/GKE_RELEASE_DEPLOYMENT.md` for staged GKE promotion and rollback.
+---
+
+## 📄 License
+
+See LICENSE file for details.

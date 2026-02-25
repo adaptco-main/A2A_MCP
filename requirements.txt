@@ -1,4 +1,5 @@
 fastapi
+uvicorn
 numpy
 scipy
 sqlalchemy
@@ -7,9 +8,11 @@ pydantic
 pytest
 pytest-asyncio
 python-dotenv
-fastapi
-uvicorn
 mcp[cli]
+httpx
 fastmcp
 requests
+jsonschema
+torch
 PyJWT
+prometheus-client
