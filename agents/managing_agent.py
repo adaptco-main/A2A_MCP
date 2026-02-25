@@ -46,7 +46,12 @@ class ManagingAgent:
                 "Act as a project-management planner.",
                 "Return output as a numbered task list that is easy to parse line-by-line.",
             ],
-            metadata={"agent": self.AGENT_NAME, "requester": requester},
+            metadata={
+                "agent": self.AGENT_NAME,
+                "requester": requester,
+                "summary": f"Categorizing project: {description[:50]}...",
+                "constraints_count": len(["Act as a project-management planner.", "Return output as a numbered task list that is easy to parse line-by-line."])
+            },
         )
 
         # Convert PromptIntent to string for LLMService compatibility
