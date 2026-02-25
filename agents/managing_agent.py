@@ -47,6 +47,8 @@ class ManagingAgent:
             ],
             metadata={"agent": self.AGENT_NAME, "requester": requester},
         )
+        # Fix: Change inner double quotes to single quotes to fix f-string syntax
+        print(f"Constraints: {', '.join(prompt_intent.workflow_constraints)}")
 
         raw_response = self.llm.call_llm(prompt_intent=prompt_intent)
         actions = self._parse_actions(raw_response)
