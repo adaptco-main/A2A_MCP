@@ -11,6 +11,7 @@ from orchestrator.intent_engine import IntentEngine
 from orchestrator.webhook import ingress_router
 from orchestrator.auth import authenticate_user
 from orchestrator.logging import setup_logging
+from orchestrator.actions_gateway import router as actions_router
 
 setup_logging()
 
@@ -26,6 +27,7 @@ validate_orchestrator_config()
 
 app = FastAPI(title="A2A Orchestrator API", version="1.0.0")
 app.include_router(ingress_router)
+app.include_router(actions_router)
 
 
 @app.get("/healthz")
