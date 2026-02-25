@@ -10,9 +10,7 @@ from bytesampler_adapter import sample_covering_tree, build_vvl_record, digest_j
 
 def assert_eq(a: any, b: any, msg: str):
     if a != b:
-        raise AssertionError(f"{msg}
-- Expected: {b}
-- Got: {a}")
+        raise AssertionError(f"{msg}\n- Expected: {b}\n- Got: {a}")
 
 def test_replay():
     print("Running test: test_replay")
