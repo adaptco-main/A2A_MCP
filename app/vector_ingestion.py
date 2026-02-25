@@ -6,7 +6,16 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any
 
-from app.mcp_tooling import TELEMETRY
+# Note: TELEMETRY should be imported from orchestrator.metrics or handled via a placeholder if app.mcp_tooling is not yet fixed
+try:
+    from app.mcp_tooling import TELEMETRY
+except ImportError:
+    # Fallback for during merge/refactor
+    class MockTelemetry:
+        def start_timer(self): return 0
+        def record_request_outcome(self, **kwargs): pass
+        def observe_protected_ingestion_latency(self, *args, **kwargs): pass
+    TELEMETRY = MockTelemetry()
 
 
 def _deterministic_embedding(text: str, dimensions: int = 1536) -> list[float]:

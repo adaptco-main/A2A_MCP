@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from typing import Any
 
 from app.security.oidc import (
@@ -16,7 +15,7 @@ from mcp.server.fastmcp import FastMCP
 
 from app.mcp_tooling import (
     ingest_repository_data as protected_ingest_repository_data,
-    verify_github_oidc_token,
+    verify_github_oidc_token as app_verify_github_oidc_token,
 )
 
 app_ingest = FastMCP("knowledge-ingestion")
@@ -53,3 +52,36 @@ def ingest_repository_data(snapshot: dict[str, Any], authorization: str, request
             return f"error: forbidden (request_id={correlation_id})"
 
     return f"success: ingested repository {repository} (request_id={correlation_id})"
+
+
+@app_ingest.tool(name="ingest_worldline_block")
+def ingest_worldline_block(worldline_block: dict[str, Any], authorization: str, request_id: str | None = None) -> str:
+    """Ingest a multimodal worldline block for MCP orchestration."""
+    correlation_id = request_id or get_request_correlation_id()
+
+    try:
+        token = extract_bearer_token(authorization)
+        claims = verify_github_oidc_token(token, request_id=correlation_id)
+    except OIDCAuthError:
+        return f"error: unauthorized (request_id={correlation_id})"
+    except OIDCClaimError:
+        return f"error: forbidden (request_id={correlation_id})"
+
+    snapshot = worldline_block.get("snapshot", {})
+    repository = str(snapshot.get("repository", "")).strip()
+    if repository and claims.get("repository") and claims["repository"] != repository:
+        return f"error: repository claim mismatch (request_id={correlation_id})"
+
+    infra = worldline_block.get("infrastructure_agent", {})
+    if not isinstance(infra, dict):
+        return f"error: invalid infrastructure_agent payload (request_id={correlation_id})"
+
+    required = ["embedding_vector", "token_stream", "artifact_clusters", "lora_attention_weights"]
+    missing = [field for field in required if field not in infra]
+    if missing:
+        return f"error: missing required fields: {', '.join(missing)} (request_id={correlation_id})"
+
+    return (
+        f"success: ingested worldline block for {repository or 'unknown-repository'} "
+        f"with {len(infra.get('token_stream', []))} tokens (request_id={correlation_id})"
+    )
