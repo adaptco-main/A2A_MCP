@@ -5,14 +5,6 @@ import importlib
 from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-=======
-import os
-from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
-
-from fastapi import APIRouter, Depends, Header, HTTPException
-codex/implement-get-/verify-endpoint
-
 from orchestrator.settlement import PostgresEventStore, verify_execution
 
 router = APIRouter()
@@ -41,15 +33,6 @@ async def get_db_connection(request: Request) -> AsyncIterator[Any]:
 
     async with request.app.state.verify_db_pool.acquire() as conn:
         yield conn
-=======
-@asynccontextmanager
-async def get_db_connection() -> AsyncIterator[Any]:
-    raise HTTPException(
-        status_code=503,
-        detail="Database connection dependency is not configured",
-    )
-    yield
-codex/implement-get-/verify-endpoint
 
 
 def get_event_store() -> PostgresEventStore:

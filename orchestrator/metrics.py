@@ -26,7 +26,7 @@ registry = REGISTRY
 request_counter = Counter(
     'a2a_orchestrator_requests_total',
     'Total orchestrator requests by result type',
-    labelNames=['result'],  # values: 'success', 'halt', 'error'
+    labelnames=['result'],  # values: 'success', 'halt', 'error'
     registry=registry
 )
 
@@ -34,7 +34,7 @@ request_counter = Counter(
 plan_counter = Counter(
     'a2a_orchestrator_plan_ingress_total',
     'Total plan ingress events by status',
-    labelNames=['status'],  # values: 'created', 'resumed', 'error'
+    labelnames=['status'],  # values: 'created', 'resumed', 'error'
     registry=registry
 )
 
@@ -42,7 +42,7 @@ plan_counter = Counter(
 verification_counter = Counter(
     'a2a_orchestrator_verification_results_total',
     'Total verification operations by validity',
-    labelNames=['valid'],  # values: 'true', 'false'
+    labelnames=['valid'],  # values: 'true', 'false'
     registry=registry
 )
 
@@ -50,7 +50,7 @@ verification_counter = Counter(
 halt_counter = Counter(
     'a2a_orchestrator_system_halt_total',
     'Total SYSTEM_HALT decisions by reason',
-    labelNames=['reason'],  # values: 'missing_fields', 'out_of_range', 'invalid_schema', 'timeout'
+    labelnames=['reason'],  # values: 'missing_fields', 'out_of_range', 'invalid_schema', 'timeout'
     registry=registry
 )
 
@@ -58,7 +58,7 @@ halt_counter = Counter(
 duration_histogram = Histogram(
     'a2a_orchestrator_duration_ms',
     'Orchestrator operation latency in milliseconds',
-    labelNames=['result'],  # values: 'success', 'halt', 'error'
+    labelnames=['result'],  # values: 'success', 'halt', 'error'
     buckets=[10, 25, 50, 100, 250, 500, 1000, 2000, 5000],  # ms
     registry=registry
 )

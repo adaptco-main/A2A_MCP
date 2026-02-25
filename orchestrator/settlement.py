@@ -61,11 +61,6 @@ def compute_lineage(prev_hash: Optional[str], state: str, payload: dict[str, Any
         separators=(",", ":"),
         ensure_ascii=False,
     ).encode("utf-8")
-=======
-def compute_lineage(prev_hash: Optional[str], state: str, payload: dict[str, Any]) -> str:
-    prev = prev_hash or ""
-    material = f"{prev}:{state}:{canonical_payload(payload)}".encode("utf-8")
-codex/implement-get-/verify-endpoint
     return hashlib.sha256(material).hexdigest()
 
 
