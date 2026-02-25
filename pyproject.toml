@@ -14,16 +14,18 @@ dependencies = [
     "requests",
     "jsonschema",
     "mcp[cli]",
+    "fastmcp",
+    "PyJWT",
+    "numpy",
+    "scipy",
+    "torch",
+    "prometheus-client",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
     "pytest-asyncio",
-]
-
-dependencies = [
-    "PyJWT",
 ]
 
 [tool.pytest.ini_options]

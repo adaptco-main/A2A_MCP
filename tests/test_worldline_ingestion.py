@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 import pytest
-from mcp.client import client as Client
+from fastmcp import Client
 
 from knowledge_ingestion import app_ingest
 
