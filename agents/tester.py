@@ -1,7 +1,10 @@
 from schemas.agent_artifacts import MCPArtifact
+from orchestrator.llm_adapters.base import InternalLLMRequest
 from orchestrator.llm_util import LLMService
 from orchestrator.storage import DBManager
 from pydantic import BaseModel
+
+from schemas.prompt_inputs import PromptIntent
 
 class TestReport(BaseModel):
     status: str  # "PASS" or "FAIL"
@@ -26,8 +29,15 @@ class TesterAgent:
             )
         
         # Phase 3 Logic: Using LLM to verify code logic vs. requirements
-        prompt = f"Analyze this code for bugs or anti-patterns:\n{artifact.content}"
-        analysis = self.llm.call_llm(prompt)
+        prompt_intent = PromptIntent(
+            task_context=artifact.content,
+            user_input="Analyze this code for bugs or anti-patterns.",
+            workflow_constraints=[
+                "Return a concise quality assessment with concrete issues and remediation hints."
+            ],
+            metadata={"agent": self.agent_name, "artifact_id": artifact_id},
+        )
+        analysis = self.llm.call_llm(prompt_intent=prompt_intent)
 
         # Determine status (Heuristic for demo, LLM-guided for Production)
         status = "FAIL" if "error" in analysis.lower() or "bug" in analysis.lower() else "PASS"

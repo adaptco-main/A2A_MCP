@@ -50,11 +50,6 @@ def canonical_payload(payload: dict[str, Any]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-<<<<<<< ours
-def compute_lineage(prev_hash: Optional[str], payload: dict[str, Any]) -> str:
-    prev = prev_hash or ""
-    material = f"{prev}:{canonical_payload(payload)}".encode("utf-8")
-=======
 def compute_lineage(prev_hash: Optional[str], state: str, payload: dict[str, Any]) -> str:
     material = json.dumps(
         {
@@ -66,7 +61,11 @@ def compute_lineage(prev_hash: Optional[str], state: str, payload: dict[str, Any
         separators=(",", ":"),
         ensure_ascii=False,
     ).encode("utf-8")
->>>>>>> theirs
+=======
+def compute_lineage(prev_hash: Optional[str], state: str, payload: dict[str, Any]) -> str:
+    prev = prev_hash or ""
+    material = f"{prev}:{state}:{canonical_payload(payload)}".encode("utf-8")
+codex/implement-get-/verify-endpoint
     return hashlib.sha256(material).hexdigest()
 
 
@@ -95,7 +94,7 @@ def verify_execution(events: list[Event]) -> VerifyResult:
             if i != len(events_sorted) - 1:
                 return VerifyResult(False, None, len(events_sorted), "FINALIZED is not terminal")
 
-        recomputed = compute_lineage(prev_hash, event.payload)
+        recomputed = compute_lineage(prev_hash, event.state, event.payload)
         if recomputed != event.hash_current:
             return VerifyResult(False, None, len(events_sorted), f"Hash mismatch at event_id={event.id}")
 

@@ -6,10 +6,13 @@ import pytest
 from fastmcp import Client
 
 from knowledge_ingestion import app_ingest
-from unittest.mock import patch
+
 
 from app.security.oidc import OIDCAuthError
 
+
+
+from app.security.oidc import OIDCAuthError
 
 
 @pytest.fixture

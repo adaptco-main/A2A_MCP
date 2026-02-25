@@ -12,7 +12,7 @@ def test_generate_solution_returns_and_persists_artifact(monkeypatch):
     agent = CoderAgent()
 
     monkeypatch.setattr(agent.db, "get_artifact", lambda _id: SimpleNamespace(content="parent context"))
-    monkeypatch.setattr(agent.llm, "call_llm", lambda prompt: f"generated::{prompt}")
+    monkeypatch.setattr(agent.llm, "call_llm", lambda **kwargs: f"generated::{kwargs['prompt_intent'].user_input}")
 
     saved = {}
 
