@@ -60,7 +60,7 @@ jobs:
               'event': event_name,
               'base_sha': base,
               'head_sha': head,
-              'test_command': 'PYTHONPATH=scripts:src pytest -q tests/test_mcp_agents.py',
+              'test_command': 'PYTHONPATH=scripts:src:. pytest -q tests/test_mcp_agents.py',
               'commit_results': [],
           }
 
@@ -70,7 +70,7 @@ jobs:
               subprocess.check_call(['git', 'checkout', '--quiet', sha])
               start = time.time()
               env = dict(os.environ)
-              env['PYTHONPATH'] = 'scripts:src'
+              env['PYTHONPATH'] = 'scripts:src:.'
               proc = subprocess.run(
                   ['pytest', '-q', 'tests/test_mcp_agents.py'],
                   text=True,
