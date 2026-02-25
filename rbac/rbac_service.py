@@ -12,11 +12,9 @@ import hashlib
 import os
 from typing import Dict, List
 
-from fastapi import FastAPI, HTTPException, status, Header, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from orchestrator.logging import setup_logging
-
-setup_logging()
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from rbac.models import (
     ACTION_PERMISSIONS,
@@ -50,43 +48,17 @@ app.add_middleware(
 # In-memory agent registry (MVP — swap for DB-backed store in production)
 _registry: Dict[str, AgentRecord] = {}
 
-RBAC_SECRET = os.getenv("RBAC_SECRET", "dev-secret-change-me").encode("utf-8")
+RBAC_SECRET = os.getenv("RBAC_SECRET", "dev-secret-change-me")
+security = HTTPBearer()
 
 
-# ── Security Helpers ─────────────────────────────────────────────────────
-
-def validate_rbac_config():
-    """Validate environment variables on startup."""
-    if os.getenv("ENV") == "production":
-        if os.getenv("RBAC_SECRET") in [None, "dev-secret-change-me", ""]:
-            raise RuntimeError("RBAC_SECRET must be set to a secure value in production.")
-
-validate_rbac_config()
-
-def verify_rbac_signature(
-    x_rbac_signature: str | None = Header(default=None),
-    x_rbac_timestamp: str | None = Header(default=None),
-):
-    """
-    Verify that the request is signed with the RBAC_SECRET.
-    Expected header: X-RBAC-Signature: hmac_sha256(timestamp + request_path)
-    """
-    if os.getenv("RBAC_AUTH_DISABLED") == "true" and os.getenv("ENV") != "production":
-        return
-
-    if not x_rbac_signature or not x_rbac_timestamp:
+async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Enforce token-based authentication."""
+    if credentials.credentials != RBAC_SECRET:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing RBAC authentication headers.",
-        )
-
-    # Simplified signature check for core scope: sign the timestamp
-    expected_mac = hmac.new(RBAC_SECRET, x_rbac_timestamp.encode("utf-8"), hashlib.sha256).hexdigest()
-    
-    if not hmac.compare_digest(expected_mac, x_rbac_signature):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid RBAC signature.",
+            detail="Invalid authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
 
@@ -103,12 +75,7 @@ async def health():
 
 # ── Agent Onboarding ─────────────────────────────────────────────────────    
 
-@app.post(
-    "/agents/onboard", 
-    response_model=OnboardingResult, 
-    status_code=201,
-    dependencies=[Depends(verify_rbac_signature)]
-)
+@app.post("/agents/onboard", response_model=OnboardingResult, status_code=201, dependencies=[Depends(verify_token)])
 async def onboard_agent(registration: AgentRegistration):
     """
     Register a new agent with a role and optional embedding config.
@@ -143,7 +110,7 @@ async def onboard_agent(registration: AgentRegistration):
 
 # ── Permission Queries ───────────────────────────────────────────────────        
 
-@app.get("/agents/{agent_id}/permissions", dependencies=[Depends(verify_rbac_signature)])
+@app.get("/agents/{agent_id}/permissions", dependencies=[Depends(verify_token)])
 async def get_agent_permissions(agent_id: str):
     """Return the full permission scope for a registered agent."""
     record = _registry.get(agent_id)
@@ -163,7 +130,7 @@ async def get_agent_permissions(agent_id: str):
     }
 
 
-@app.post("/agents/{agent_id}/verify", response_model=PermissionCheckResponse)
+@app.post("/agents/{agent_id}/verify", response_model=PermissionCheckResponse, dependencies=[Depends(verify_token)])
 async def verify_permission(agent_id: str, check: PermissionCheckRequest):
     """
     Check whether an agent is permitted to perform a specific action or
@@ -228,7 +195,7 @@ async def verify_permission(agent_id: str, check: PermissionCheckRequest):
 
 # ── Agent Management ─────────────────────────────────────────────────────    
 
-@app.get("/agents", dependencies=[Depends(verify_rbac_signature)])
+@app.get("/agents", dependencies=[Depends(verify_token)])
 async def list_agents():
     """List all registered agents."""
     return {
@@ -244,7 +211,7 @@ async def list_agents():
     }
 
 
-@app.delete("/agents/{agent_id}", status_code=204, dependencies=[Depends(verify_rbac_signature)])
+@app.delete("/agents/{agent_id}", status_code=204, dependencies=[Depends(verify_token)])
 async def deactivate_agent(agent_id: str):
     """Soft-deactivate an agent (preserves record for audit)."""
     record = _registry.get(agent_id)
