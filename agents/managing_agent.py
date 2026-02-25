@@ -46,14 +46,19 @@ class ManagingAgent:
                 "Act as a project-management planner.",
                 "Return output as a numbered task list that is easy to parse line-by-line.",
             ],
-            metadata={"agent": self.AGENT_NAME, "requester": requester},
+            metadata={
+                "agent": self.AGENT_NAME,
+                "requester": requester,
+                "summary": f"Categorizing project: {description[:50]}...",
+                "constraints_count": len(["Act as a project-management planner.", "Return output as a numbered task list that is easy to parse line-by-line."])
+            },
         )
 
         # Convert PromptIntent to string for LLMService compatibility
         prompt_str = (
             f"Context: {prompt_intent.task_context}\n"
             f"Task: {prompt_intent.user_input}\n"
-            f"Constraints: {", ".join(prompt_intent.workflow_constraints)}"
+            f"Constraints: {', '.join(prompt_intent.workflow_constraints)}"
         )
         # Optimize: Move blocking LLM call to a thread
         raw_response = await asyncio.to_thread(self.llm.call_llm, prompt=prompt_str)
