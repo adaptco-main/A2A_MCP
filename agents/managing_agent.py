@@ -7,6 +7,7 @@ PlanAction tasks, and assigns each to the appropriate downstream agent.
 """
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import List, Optional
 
@@ -64,7 +65,7 @@ class ManagingAgent:
             content=raw_response,
             metadata={"agent": self.AGENT_NAME, "plan_id": plan.plan_id},
         )
-        self.db.save_artifact(artifact)
+        await asyncio.to_thread(self.db.save_artifact, artifact)
         return plan
 
     # ------------------------------------------------------------------
