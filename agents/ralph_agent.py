@@ -4,6 +4,7 @@ Implements the Pickle Rick lifecycle: PRD -> Breakdown -> Research -> Plan -> Im
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import uuid
 from typing import List, Dict, Any, Optional
@@ -195,7 +196,7 @@ class RalphAgent:
             metadata={"agent": self.AGENT_NAME, "chore": chore}
         )
 
-        response = self.llm.call_llm(prompt_intent=intent)
+        response = await asyncio.to_thread(self.llm.call_llm, prompt_intent=intent)
         
         # Save artifact
         artifact = MCPArtifact(

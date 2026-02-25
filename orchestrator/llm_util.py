@@ -1,6 +1,8 @@
 import os
+from typing import Optional
 
 from dotenv import load_dotenv
+from schemas.prompt_inputs import PromptIntent
 
 load_dotenv()
 
@@ -31,9 +33,25 @@ class LLMService:
 
     def call_llm(
         self,
-        prompt: str,
+        prompt: str | None = None,
         system_prompt: str = "You are a helpful coding assistant.",
+        prompt_intent: Optional[PromptIntent] = None,
     ):
+        if prompt_intent and not prompt:
+            # Construct prompt from intent
+            context = prompt_intent.task_context or ""
+            user_msg = prompt_intent.user_input
+            # Ensure workflow_constraints is a list of strings
+            constraints_list = prompt_intent.workflow_constraints or []
+            constraints = ", ".join(constraints_list)
+            prompt = f"Context: {context}\nTask: {user_msg}\nConstraints: {constraints}"
+
+        if not prompt:
+            # Fallback if someone passed prompt_intent but logic failed, or passed neither
+            if prompt_intent:
+                 pass # Logic above should handle it
+            raise ValueError("Either 'prompt' or 'prompt_intent' must be provided.")
+
         if not self.api_key or not self.endpoint:
             raise ValueError("API Key or Endpoint missing from your local .env file!")
 
