@@ -4,6 +4,8 @@ Implements the Pickle Rick lifecycle: PRD -> Breakdown -> Research -> Plan -> Im
 """
 from __future__ import annotations
 
+import asyncio
+import os
 import uuid
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
@@ -49,6 +51,29 @@ class RalphAgent:
         self.llm = LLMService()
         self.db = DBManager()
         self.state = RalphExecutionState()
+        self._ingest_ci_rules()
+
+    def _ingest_ci_rules(self) -> None:
+        """Phase 1: Ingest CI rules into agent context."""
+        rules = {}
+        for path in [".pylintrc", "pyproject.toml"]:
+            try:
+                with open(path, "r") as f:
+                    rules[path] = f.read()
+            except FileNotFoundError:
+                pass
+        
+        # Ingest workflow definitions to understand gates
+        workflow_dir = ".github/workflows"
+        if os.path.exists(workflow_dir):
+            for wf in os.listdir(workflow_dir):
+                if wf.endswith((".yml", ".yaml")):
+                    try:
+                        with open(os.path.join(workflow_dir, wf), "r") as f:
+                            rules[wf] = f.read()
+                    except Exception:
+                        pass
+        self.state.context["ci_rules"] = rules
 
     async def execute_task(self, prompt: str, max_iterations: int = 5) -> str:
         """
@@ -67,6 +92,18 @@ class RalphAgent:
             
             # Execute the current chore
             result = await self._run_chore(current_chore, prompt)
+            
+            # Phase 2: Local Validation Emulation
+            if current_chore == "Implement":
+                validation = self._run_local_pylint()
+                if "fail" in validation.lower():
+                    report.append(f"\n--- Local Pylint Failure (Iteration {self.state.iteration}) ---")
+                    report.append(validation)
+                    # Force a retry/refactor phase with the feedback
+                    self.state.context["pylint_feedback"] = validation
+                    self.state.iteration += 1
+                    continue
+
             report.append(f"\n--- Phase: {current_chore} (Iteration {self.state.iteration}) ---")
             report.append(result)
             
@@ -80,6 +117,52 @@ class RalphAgent:
             self.state.iteration += 1
             
         return "\n".join(report)
+
+    def _run_local_pylint(self) -> str:
+        """Runs pylint on generated artifacts to catch errors before push."""
+        import subprocess
+        # Scan changed python files or specific directory
+        try:
+            res = subprocess.run(
+                ["pylint", "agents/", "orchestrator/", "app/", "--fail-under=8.0"],
+                capture_output=True, text=True
+            )
+            if res.returncode != 0:
+                return f"Pylint failed:\n{res.stdout}\n{res.stderr}"
+            return "Pylint passed!"
+        except Exception as e:
+            return f"Validation error: {str(e)}"
+
+    async def _monitor_github_checks(self, pr_number: int) -> str:
+        """Phase 3: Monitor PR status and pull logs on failure."""
+        import subprocess
+        import json
+        
+        try:
+            # Check PR status
+            res = subprocess.run(
+                ["gh", "pr", "view", str(pr_number), "--json", "statusCheckRollup"],
+                capture_output=True, text=True
+            )
+            data = json.loads(res.stdout)
+            failures = [c for c in data.get("statusCheckRollup", []) if c.get("conclusion") == "FAILURE"]
+            
+            if not failures:
+                return "All checks passed!"
+                
+            feedback = ["GitHub Actions Failures Detected:"]
+            for f in failures:
+                name = f.get("name")
+                # Pull logs for the specific failed check
+                log_res = subprocess.run(
+                    ["gh", "run", "view", "--log", "-n", name],
+                    capture_output=True, text=True
+                )
+                feedback.append(f"--- Logs for {name} ---\n{log_res.stdout[:2000]}") # Truncate logs
+                
+            return "\n".join(feedback)
+        except Exception as e:
+            return f"Error monitoring GitHub: {str(e)}"
 
     async def _run_chore(self, chore: str, prompt: str) -> str:
         """Runs a specific engineering chore with Ralph's personality."""
@@ -113,7 +196,7 @@ class RalphAgent:
             metadata={"agent": self.AGENT_NAME, "chore": chore}
         )
 
-        response = self.llm.call_llm(prompt_intent=intent)
+        response = await asyncio.to_thread(self.llm.call_llm, prompt_intent=intent)
         
         # Save artifact
         artifact = MCPArtifact(
