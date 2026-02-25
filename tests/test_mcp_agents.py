@@ -1,6 +1,7 @@
 # tests/test_mcp_agents.py
 import ast
 import json
+import asyncio
 from unittest.mock import patch
 
 import pytest
@@ -44,6 +45,7 @@ def _extract_payload(response) -> dict:
     if "success" in text.lower():
         return {"ok": True, "data": {"message": text}}
     return {"ok": False, "error": {"message": text}}
+
 
 @pytest.mark.asyncio
 async def test_ingestion_with_valid_handshake(mock_snapshot):

@@ -16,3 +16,5 @@ jsonschema
 torch
 PyJWT
 prometheus-client
+alembic
+python-json-logger
