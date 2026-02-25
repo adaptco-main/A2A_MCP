@@ -51,9 +51,11 @@ Invokes an MCP tool through the HTTP compatibility surface.
 **Request Body:**
 ```json
 {
-  "tool_name": "ingest_worldline_block",
+  "tool_name": "ingest_repository_data",
   "arguments": {
-    "worldline_block": {},
+    "snapshot": {
+      "repository": "adaptco/A2A_MCP"
+    },
     "authorization": "Bearer <token>"
   }
 }
@@ -62,11 +64,20 @@ Invokes an MCP tool through the HTTP compatibility surface.
 **Response Body:**
 ```json
 {
-  "tool_name": "ingest_worldline_block",
+  "tool_name": "ingest_repository_data",
   "ok": true,
-  "result": "success: ingested worldline block ..."
+  "result": {
+    "ok": true,
+    "data": {
+      "repository": "adaptco/A2A_MCP",
+      "execution_hash": "<64-char-sha256>"
+    }
+  }
 }
 ```
+
+Canonical operator walkthrough:
+- See `docs/REALTIME_AGENT_CONFIGURATION_RUNBOOK.md` for local + remote setup, validation, and troubleshooting.
 
 ### 3. Native MCP Streamable HTTP
 

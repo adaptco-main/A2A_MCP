@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import requests
-from fastmcp import Client
+from mcp.client import Client
 
 from knowledge_ingestion import app_ingest
 from orchestrator.multimodal_worldline import build_worldline_block, serialize_worldline_block

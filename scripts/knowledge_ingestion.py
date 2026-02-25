@@ -12,7 +12,7 @@ from app.security.oidc import (
     validate_startup_oidc_requirements,
     verify_bearer_token,
 )
-from fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
 
 from app.mcp_tooling import (
     ingest_repository_data as protected_ingest_repository_data,
