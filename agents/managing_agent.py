@@ -47,7 +47,7 @@ class ManagingAgent:
             metadata={"agent": self.AGENT_NAME, "requester": requester},
         )
 
-        raw_response = self.llm.call_llm(prompt_intent=prompt_intent)
+        raw_response = await self.llm.acall_llm(prompt_intent=prompt_intent)
         actions = self._parse_actions(raw_response)
 
         plan = ProjectPlan(

@@ -113,7 +113,7 @@ class RalphAgent:
             metadata={"agent": self.AGENT_NAME, "chore": chore}
         )
 
-        response = self.llm.call_llm(prompt_intent=intent)
+        response = await self.llm.acall_llm(prompt_intent=intent)
         
         # Save artifact
         artifact = MCPArtifact(

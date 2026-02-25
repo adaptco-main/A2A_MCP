@@ -37,7 +37,7 @@ class TesterAgent:
             ],
             metadata={"agent": self.agent_name, "artifact_id": artifact_id},
         )
-        analysis = self.llm.call_llm(prompt_intent=prompt_intent)
+        analysis = await self.llm.acall_llm(prompt_intent=prompt_intent)
 
         # Determine status (Heuristic for demo, LLM-guided for Production)
         status = "FAIL" if "error" in analysis.lower() or "bug" in analysis.lower() else "PASS"
