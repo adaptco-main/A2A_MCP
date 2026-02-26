@@ -16,6 +16,9 @@ from typing import Callable, Dict, List, Optional, Any
 import time
 import threading
 import json
+import sys
+
+from schemas.runtime_event import EventPayload, RuntimeEvent
 
 
 class State(str, Enum):
@@ -23,6 +26,7 @@ class State(str, Enum):
     SCHEDULED = "SCHEDULED"
     EXECUTING = "EXECUTING"
     EVALUATING = "EVALUATING"
+    TOOL_INVOKE = "TOOL_INVOKE"
     RETRY = "RETRY"
     REPAIR = "REPAIR"
     TERMINATED_SUCCESS = "TERMINATED_SUCCESS"
@@ -81,9 +85,6 @@ class StateMachine:
         self._lock = threading.RLock()
         self._persistence_callback = persistence_callback
         self.plan_id: Optional[str] = None
-        self._transition_seq: int = 0
-        self._last_persisted_seq: int = 0
-        self._persist_cond = threading.Condition(self._lock)
 
     _TRANSITIONS: Dict[str, Any] = {
         "OBJECTIVE_INGRESS": ([State.IDLE], State.SCHEDULED),
@@ -93,6 +94,10 @@ class StateMachine:
         "VERDICT_PASS": ([State.EVALUATING], State.TERMINATED_SUCCESS),
         "VERDICT_PARTIAL": ([State.EVALUATING], State.RETRY),
         "VERDICT_FAIL": ([State.EVALUATING], State.TERMINATED_FAIL),
+        "AGENT_TOOL_REQUESTED": ([State.EVALUATING], State.TOOL_INVOKE),
+        "TOOL_RESULT_READY": ([State.TOOL_INVOKE], State.EXECUTING),
+        "AGENT_RESPONSE_SUCCESS": ([State.EVALUATING], State.TERMINATED_SUCCESS),
+        "AGENT_RESPONSE_FAILURE": ([State.EVALUATING], State.TERMINATED_FAIL),
         "RETRY_DISPATCHED": ([State.RETRY], State.EXECUTING),
         "RETRY_LIMIT_EXCEEDED": ([State.RETRY], State.TERMINATED_FAIL),
         "REPAIR_COMPLETE": ([State.REPAIR], State.EXECUTING),
@@ -104,6 +109,7 @@ class StateMachine:
         State.TERMINATED_FAIL,
         State.EXECUTING,
         State.EVALUATING,
+        State.TOOL_INVOKE,
         State.REPAIR,
         State.RETRY,
         State.SCHEDULED,
@@ -126,25 +132,16 @@ class StateMachine:
         if self._persistence_callback and callable(self._persistence_callback):
             try:
                 self._persistence_callback(plan_id, snapshot)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Stateflow persistence error: {e}", file=sys.stderr)
 
-    def _run_post_transition(self, rec: TransitionRecord, callbacks: List[Callable[[TransitionRecord], None]], snapshot: Dict[str, Any], plan_id: Optional[str], seq: int) -> None:
-        with self._persist_cond:
-            while seq != self._last_persisted_seq + 1:
-                self._persist_cond.wait()
-
+    def _run_post_transition(self, rec: TransitionRecord, callbacks: List[Callable[[TransitionRecord], None]], snapshot: Dict[str, Any], plan_id: Optional[str]) -> None:
         self._persist_snapshot(snapshot, plan_id)
-
-        with self._persist_cond:
-            self._last_persisted_seq = seq
-            self._persist_cond.notify_all()
-
         for cb in callbacks:
             try:
                 cb(rec)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Stateflow callback error: {e}", file=sys.stderr)
 
     def trigger(self, event: str, **meta) -> TransitionRecord:
         with self._lock:
@@ -162,27 +159,20 @@ class StateMachine:
                     callbacks = self._enter_state(rec)
                     snapshot = self.to_dict()
                     plan_id = self.plan_id
-                    self._transition_seq += 1
-                    seq = self._transition_seq
                 else:
                     rec = self._record(self.state, to_state, event, meta)
                     callbacks = self._enter_state(rec)
                     snapshot = self.to_dict()
                     plan_id = self.plan_id
-                    self._transition_seq += 1
-                    seq = self._transition_seq
             else:
-                # Do not reset attempts on RETRY_DISPATCHED; only reset after PASS.
                 if event == "VERDICT_PASS":
                     self.attempts = 0
                 rec = self._record(self.state, to_state, event, meta)
                 callbacks = self._enter_state(rec)
                 snapshot = self.to_dict()
                 plan_id = self.plan_id
-                self._transition_seq += 1
-                seq = self._transition_seq
 
-        self._run_post_transition(rec, callbacks, snapshot, plan_id, seq)
+        self._run_post_transition(rec, callbacks, snapshot, plan_id)
         return rec
 
     def evaluate_apply_policy(self, policy_fn: Callable[[], bool], **meta) -> TransitionRecord:
@@ -194,6 +184,38 @@ class StateMachine:
             except PartialVerdict:
                 return self.trigger("VERDICT_PARTIAL", **meta)
             return self.trigger("VERDICT_PASS" if ok else "VERDICT_FAIL", **meta)
+
+    def consume_runtime_event(self, event: RuntimeEvent) -> TransitionRecord:
+        """Consume normalized AGENT_RESPONSE events and map them to stateflow transitions."""
+        if event.event_type != "AGENT_RESPONSE":
+            raise ValueError(f"Unsupported runtime event type: {event.event_type}")
+        if not event.trace_id:
+            raise ValueError("Runtime event must include trace_id")
+
+        meta = {
+            "trace_id": event.trace_id,
+            "span_id": event.span_id,
+            "parent_span_id": event.parent_span_id,
+            "status": event.content.status,
+        }
+
+        if event.content.tool_request:
+            return self.trigger("AGENT_TOOL_REQUESTED", **meta)
+
+        status = (event.content.status or "success").lower()
+        if status in {"success", "ok", "completed"}:
+            return self.trigger("AGENT_RESPONSE_SUCCESS", **meta)
+        return self.trigger("AGENT_RESPONSE_FAILURE", **meta)
+
+    def build_next_hop_event(
+        self,
+        source_event: RuntimeEvent,
+        *,
+        event_type: str,
+        payload: EventPayload,
+    ) -> RuntimeEvent:
+        """Create a lineage-preserving event for downstream publication."""
+        return source_event.next_hop(event_type=event_type, content=payload)
 
     def override(self, to_state: State, reason: str = "manual_override", override_by: Optional[str] = None, forward_only: bool = True) -> TransitionRecord:
         with self._lock:
@@ -210,10 +232,8 @@ class StateMachine:
             callbacks = self._enter_state(rec)
             snapshot = self.to_dict()
             plan_id = self.plan_id
-            self._transition_seq += 1
-            seq = self._transition_seq
 
-        self._run_post_transition(rec, callbacks, snapshot, plan_id, seq)
+        self._run_post_transition(rec, callbacks, snapshot, plan_id)
         return rec
 
     def to_dict(self) -> Dict[str, Any]:
@@ -233,8 +253,6 @@ class StateMachine:
         sm.state = State(d["state"])
         sm.attempts = int(d.get("attempts", 0))
         sm.history = [TransitionRecord.from_dict(h) for h in d.get("history", [])]
-        sm._transition_seq = len(sm.history)
-        sm._last_persisted_seq = len(sm.history)
         return sm
 
     def current_state(self) -> State:
