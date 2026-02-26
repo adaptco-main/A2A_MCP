@@ -24,12 +24,12 @@ class PINNAgent:
             values.append((byte / 255.0) * 2.0 - 1.0)
         return values
 
-    def rank_prompt(self, prompt: str) -> Sequence[float]:
+    async def rank_prompt(self, prompt: str) -> Sequence[float]:
         """Return embedding from LLM provider, with deterministic fallback."""
         return self._deterministic_embedding(prompt)
 
-    def ingest_artifact(self, artifact_id: str, content: str, parent_id: str | None = None) -> VectorToken:
-        vector = list(self.rank_prompt(content))
+    async def ingest_artifact(self, artifact_id: str, content: str, parent_id: str | None = None) -> VectorToken:
+        vector = list(await self.rank_prompt(content))
         token = VectorToken(
             token_id=str(uuid.uuid4()),
             source_artifact_id=artifact_id,
