@@ -5,8 +5,10 @@ ManagingAgent — Task categorisation and swarm dispatch.
 Accepts a free-text project description, breaks it into discrete
 PlanAction tasks, and assigns each to the appropriate downstream agent.
 """
+
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import List, Optional
 
@@ -44,10 +46,22 @@ class ManagingAgent:
                 "Act as a project-management planner.",
                 "Return output as a numbered task list that is easy to parse line-by-line.",
             ],
-            metadata={"agent": self.AGENT_NAME, "requester": requester},
+            metadata={
+                "agent": self.AGENT_NAME,
+                "requester": requester,
+                "summary": f"Categorizing project: {description[:50]}...",
+                "constraints_count": len(["Act as a project-management planner.", "Return output as a numbered task list that is easy to parse line-by-line."])
+            },
         )
 
-        raw_response = await self.llm.acall_llm(prompt_intent=prompt_intent)
+        # Convert PromptIntent to string for LLMService compatibility
+        prompt_str = (
+            f"Context: {prompt_intent.task_context}\n"
+            f"Task: {prompt_intent.user_input}\n"
+            f"Constraints: {', '.join(prompt_intent.workflow_constraints)}"
+        )
+        # Optimize: Move blocking LLM call to a thread
+        raw_response = await asyncio.to_thread(self.llm.call_llm, prompt=prompt_str)
         actions = self._parse_actions(raw_response)
 
         plan = ProjectPlan(
@@ -64,7 +78,7 @@ class ManagingAgent:
             content=raw_response,
             metadata={"agent": self.AGENT_NAME, "plan_id": plan.plan_id},
         )
-        self.db.save_artifact(artifact)
+        await asyncio.to_thread(self.db.save_artifact, artifact)
         return plan
 
     # ------------------------------------------------------------------

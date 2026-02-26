@@ -29,15 +29,14 @@ class TesterAgent:
             )
         
         # Phase 3 Logic: Using LLM to verify code logic vs. requirements
-        prompt_intent = PromptIntent(
-            task_context=artifact.content,
-            user_input="Analyze this code for bugs or anti-patterns.",
-            workflow_constraints=[
-                "Return a concise quality assessment with concrete issues and remediation hints."
-            ],
-            metadata={"agent": self.agent_name, "artifact_id": artifact_id},
+        system_prompt = (
+            "You are a helpful coding assistant. "
+            "Return a concise quality assessment with concrete issues and remediation hints. "
+            f"Metadata: agent={self.agent_name}, artifact_id={artifact_id}"
         )
-        analysis = await self.llm.acall_llm(prompt_intent=prompt_intent)
+        prompt = f"Task Context: {artifact.content}\n\nUser Input: Analyze this code for bugs or anti-patterns."
+        
+        analysis = self.llm.call_llm(prompt=prompt, system_prompt=system_prompt)
 
         # Determine status (Heuristic for demo, LLM-guided for Production)
         status = "FAIL" if "error" in analysis.lower() or "bug" in analysis.lower() else "PASS"

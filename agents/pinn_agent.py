@@ -26,14 +26,6 @@ class PINNAgent:
 
     async def rank_prompt(self, prompt: str) -> Sequence[float]:
         """Return embedding from LLM provider, with deterministic fallback."""
-        try:
-            _ = await self.llm.acall_llm(
-                prompt=f"Return only an embedding for: {prompt}",
-                system_prompt="You are an embedding helper.",
-            )
-        except Exception:
-            return self._deterministic_embedding(prompt)
-
         return self._deterministic_embedding(prompt)
 
     async def ingest_artifact(self, artifact_id: str, content: str, parent_id: str | None = None) -> VectorToken:

@@ -62,7 +62,8 @@ class DBManager:
                 autoflush=False,
                 bind=DBManager._shared_engine,
             )
-            Base.metadata.create_all(bind=DBManager._shared_engine)
+            if os.getenv("ENV") != "production":
+                Base.metadata.create_all(bind=DBManager._shared_engine)
 
         self.engine = DBManager._shared_engine
         self.SessionLocal = DBManager._shared_session_local
@@ -73,9 +74,9 @@ class DBManager:
         try:
             db_artifact = ArtifactModel(
                 id=artifact.artifact_id,
-                parent_artifact_id=getattr(artifact, "parent_artifact_id", artifact.metadata.get('parent_artifact_id')),
-                agent_name=getattr(artifact, "agent_name", artifact.metadata.get('agent_name', 'UnknownAgent')),
-                version=getattr(artifact, "version", artifact.metadata.get('version', '1.0.0')),
+                parent_artifact_id=getattr(artifact, "parent_artifact_id", artifact.metadata.get('parent_artifact_id') if hasattr(artifact, 'metadata') else None),
+                agent_name=getattr(artifact, "agent_name", artifact.metadata.get('agent_name', 'UnknownAgent') if hasattr(artifact, 'metadata') else 'UnknownAgent'),
+                version=getattr(artifact, "version", artifact.metadata.get('version', '1.0.0') if hasattr(artifact, 'metadata') else '1.0.0'),
                 type=artifact.type,
                 content=artifact.content if isinstance(artifact.content, str) else json.dumps(artifact.content),
             )
@@ -93,6 +94,11 @@ class DBManager:
         db = self.SessionLocal()
         try:
             return db.query(ArtifactModel).filter(ArtifactModel.id == artifact_id).first()
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception(f"Error retrieving artifact {artifact_id}")
+            raise
         finally:
             db.close()
 

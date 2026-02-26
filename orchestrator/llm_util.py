@@ -1,8 +1,9 @@
 import asyncio
 import os
-from typing import Any, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
+from schemas.prompt_inputs import PromptIntent
 
 load_dotenv()
 
@@ -33,26 +34,15 @@ class LLMService:
 
     def call_llm(
         self,
-        prompt: Optional[str] = None,
+        prompt: str | None = None,
         system_prompt: str = "You are a helpful coding assistant.",
-        **kwargs: Any,
-    ) -> str:
-        """
-        Synchronous call to the LLM.
-        Supports both positional 'prompt' and keyword 'prompt_intent'.
-        """
-        prompt_intent = kwargs.get("prompt_intent")
+        prompt_intent: "PromptIntent" | None = None,
+    ):
         if prompt_intent:
-            # Extract content from PromptIntent schema if provided
-            task_context = getattr(prompt_intent, "task_context", "") or ""
-            user_input = getattr(prompt_intent, "user_input", "") or ""
-            constraints = "\n".join(getattr(prompt_intent, "workflow_constraints", []) or [])
-
-            prompt = f"Context:\n{task_context}\n\nTask:\n{user_input}\n\nConstraints:\n{constraints}"
-
-        if not prompt:
-            raise ValueError("No prompt or prompt_intent provided to call_llm")
-
+            # Simple conversion from intent to prompt string
+            prompt = f"{prompt_intent.task_context}\n\n{prompt_intent.user_input}"
+            if prompt_intent.workflow_constraints:
+                prompt += f"\n\nConstraints:\n- " + "\n- ".join(prompt_intent.workflow_constraints)
         if not self.api_key or not self.endpoint:
             raise ValueError("API Key or Endpoint missing from your local .env file!")
 
