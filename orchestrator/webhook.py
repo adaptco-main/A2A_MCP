@@ -1,5 +1,6 @@
+import logging
 import time
-from fastapi import FastAPI, HTTPException, Body, Response, APIRouter
+from fastapi import FastAPI, HTTPException, Body, Response, APIRouter, Depends
 from prometheus_client import generate_latest, REGISTRY
 from orchestrator.stateflow import StateMachine
 from orchestrator.utils import extract_plan_id_from_path
@@ -9,6 +10,9 @@ from orchestrator.metrics import (
     record_request, record_plan_ingress
 )
 from orchestrator.verify_api import router as verify_router
+from orchestrator.auth import authenticate_user
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="A2A MCP Webhook")
 app.include_router(verify_router)
@@ -17,6 +21,14 @@ ingress_router = APIRouter()
 
 # in-memory map (replace with DB-backed persistence or plan state store in prod)
 PLAN_STATE_MACHINES = {}
+
+
+def persistence_callback(plan_id: str, state_dict: dict) -> None:
+    """Callback to persist FSM state to database."""
+    try:
+        save_plan_state(plan_id, state_dict)
+    except Exception as e:
+        logger.warning(f"Failed to persist plan state for {plan_id}: {e}")
 
 
 def _resolve_plan_id(path_plan_id: str | None, payload: dict) -> str | None:
@@ -30,11 +42,6 @@ def _resolve_plan_id(path_plan_id: str | None, payload: dict) -> str | None:
     plan_file_path = payload.get("plan_file_path", "")
     extracted = extract_plan_id_from_path(plan_file_path)
     return extracted.strip() if extracted else None
-
-
-def persistence_callback(plan_id: str, state_dict: dict):
-    """Bridge FSM changes to persistent storage."""
-    save_plan_state(plan_id, state_dict)
 
 
 async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):
@@ -66,26 +73,27 @@ async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):
         return {"status": "scheduled", "plan_id": plan_id, "transition": rec.to_dict()}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("plan ingress failure")
         duration_ms = (time.time() - start) * 1000
         record_request(result='error', duration_ms=duration_ms, halt_reason='exception')
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="an internal error occurred during plan ingress") from None
 
 
 @ingress_router.post("/plans/ingress")
-async def plan_ingress(payload: dict = Body(...)):
+async def plan_ingress(payload: dict = Body(...), auth: dict = Depends(authenticate_user)):
     return await _plan_ingress_impl(None, payload)
 
 
 @ingress_router.post("/plans/{plan_id}/ingress")
-async def plan_ingress_by_id(plan_id: str, payload: dict = Body(default={})):
+async def plan_ingress_by_id(plan_id: str, payload: dict = Body(default={}), auth: dict = Depends(authenticate_user)):
     return await _plan_ingress_impl(plan_id, payload)
 
 app.include_router(ingress_router)
 
 
 @app.post("/orchestrate")
-async def orchestrate(user_query: str):
+async def orchestrate(user_query: str, auth: dict = Depends(authenticate_user)):
     """
     Triggers the full A2A pipeline (Managing->Orchestration->Architecture->Coder->Tester).
     Matches the contract expected by mcp_server.py.
@@ -113,10 +121,13 @@ async def orchestrate(user_query: str):
         duration_ms = (time.time() - start) * 1000
         record_request(result='success', duration_ms=duration_ms)
         return summary
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("orchestration failure")
         duration_ms = (time.time() - start) * 1000
         record_request(result='error', duration_ms=duration_ms, halt_reason='exception')
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="an internal error occurred during orchestration") from None
 
 
 @app.get("/health")

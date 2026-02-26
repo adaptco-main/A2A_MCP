@@ -10,7 +10,7 @@ from bytesampler_adapter import sample_covering_tree, build_vvl_record, digest_j
 
 def assert_eq(a: any, b: any, msg: str):
     if a != b:
-        raise AssertionError(f"{msg}\n- Expected: {b}\n- Got: {a}")
+        raise AssertionError(f"{msg}")
 
 def test_replay():
     print("Running test: test_replay")
@@ -96,8 +96,10 @@ def main():
         test_multimodel_ensemble()
         test_vvl_record_creation()
         print("\nAll harness tests passed!")
+
     except AssertionError as e:
         print(f"\nTEST FAILED: {e}")
+
         sys.exit(1)
 
 if __name__ == "__main__":

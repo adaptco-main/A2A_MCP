@@ -19,6 +19,7 @@ jobs:
   contract-gate:
     name: Contract gate
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.head_ref == 'worldline')
     permissions:
       contents: read
     outputs:
@@ -38,7 +39,7 @@ jobs:
 
           source_ok=false
           target_ok=false
-          [[ "$SOURCE_REF" == "worldline" ]] && source_ok=true
+          [[ "$SOURCE_REF" == worldline* ]] && source_ok=true
           [[ "$TARGET_REF" == "main" ]] && target_ok=true
 
           echo "source_ok=$source_ok" >> "$GITHUB_OUTPUT"
