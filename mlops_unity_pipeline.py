@@ -17,6 +17,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib import request
 from uuid import uuid4
 
 from croniter import croniter
@@ -195,9 +196,18 @@ public class {asset.name} : Agent
 
 
 class TrainingScheduler:
-    def __init__(self, orchestrator: UnityMLOpsOrchestrator) -> None:
+    def __init__(
+        self,
+        orchestrator: UnityMLOpsOrchestrator,
+        *,
+        max_concurrent_jobs: int = 2,
+        webhook_url: Optional[str] = None,
+    ) -> None:
         self.orchestrator = orchestrator
         self._schedules: List[TrainingSchedule] = []
+        self._last_triggered_minute: Dict[str, str] = {}
+        self._semaphore = asyncio.Semaphore(max_concurrent_jobs)
+        self.webhook_url = webhook_url
 
     def add_schedule(self, schedule: TrainingSchedule) -> None:
         self._schedules.append(schedule)
@@ -221,21 +231,55 @@ class TrainingScheduler:
     def _is_due(self, schedule: TrainingSchedule, now: datetime) -> bool:
         itr = croniter(schedule.cron_expression, now)
         prev_tick = itr.get_prev(datetime)
-        return (now - prev_tick).total_seconds() < 60
+        is_due = (now - prev_tick).total_seconds() < 60
+        minute_key = now.strftime("%Y-%m-%dT%H:%M")
+        if is_due and self._last_triggered_minute.get(schedule.schedule_id) == minute_key:
+            return False
+        if is_due:
+            self._last_triggered_minute[schedule.schedule_id] = minute_key
+        return is_due
 
     async def _run_schedule(self, schedule: TrainingSchedule) -> List[TrainingResult]:
-        results: List[TrainingResult] = []
-        for asset in schedule.asset_specs:
-            job = TrainingJob(
-                job_id=f"{schedule.schedule_id}-{asset.asset_id}-{uuid4().hex[:6]}",
-                asset_spec=asset,
-                rl_config=schedule.rl_config,
-                project_path=schedule.project_path,
-                output_dir=schedule.output_dir,
-                register_to_vertex=schedule.register_to_vertex,
+        tasks = [self._run_asset_job(schedule, asset) for asset in schedule.asset_specs]
+        return await asyncio.gather(*tasks)
+
+    async def _run_asset_job(self, schedule: TrainingSchedule, asset: UnityAssetSpec) -> TrainingResult:
+        job = TrainingJob(
+            job_id=f"{schedule.schedule_id}-{asset.asset_id}-{uuid4().hex[:6]}",
+            asset_spec=asset,
+            rl_config=schedule.rl_config,
+            project_path=schedule.project_path,
+            output_dir=schedule.output_dir,
+            register_to_vertex=schedule.register_to_vertex,
+        )
+        async with self._semaphore:
+            result = await self.orchestrator.execute_training_job(job)
+        await self._notify_webhook(schedule, result)
+        return result
+
+    async def _notify_webhook(self, schedule: TrainingSchedule, result: TrainingResult) -> None:
+        if not self.webhook_url:
+            return
+        payload = {
+            "schedule_id": schedule.schedule_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "result": asdict(result),
+        }
+
+        def _send() -> None:
+            req = request.Request(
+                self.webhook_url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
             )
-            results.append(await self.orchestrator.execute_training_job(job))
-        return results
+            with request.urlopen(req, timeout=10) as resp:  # noqa: S310
+                LOGGER.info("webhook_sent status=%s", resp.status)
+
+        try:
+            await asyncio.to_thread(_send)
+        except Exception:  # noqa: BLE001
+            LOGGER.exception("Webhook notification failed for schedule=%s", schedule.schedule_id)
 
 
 def run_cli(command: str, cwd: Optional[str] = None) -> subprocess.CompletedProcess:
