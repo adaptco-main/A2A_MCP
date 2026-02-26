@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from typing import Any
+import numpy as np
 
 # Note: TELEMETRY should be imported from orchestrator.metrics or handled via a placeholder if app.mcp_tooling is not yet fixed
 try:
@@ -19,12 +20,10 @@ except ImportError:
 
 
 def _deterministic_embedding(text: str, dimensions: int = 1536) -> list[float]:
-    digest = hashlib.sha256(text.encode("utf-8")).digest()
-    values: list[float] = []
-    for i in range(dimensions):
-        byte = digest[i % len(digest)]
-        values.append((byte / 255.0) * 2.0 - 1.0)
-    return values
+    """Generate a deterministic pseudo-embedding for demonstration."""
+    hash_val = int(hashlib.sha256(text.encode("utf-8")).hexdigest(), 16)
+    rng = np.random.default_rng(hash_val & 0xFFFFFFFF)
+    return rng.standard_normal(dimensions).tolist()
 
 
 @dataclass

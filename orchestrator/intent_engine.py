@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import uuid
 from dataclasses import dataclass, field
 from types import SimpleNamespace
@@ -38,6 +40,8 @@ class PipelineResult:
 class IntentEngine:
     """Coordinates multi-agent execution across the full swarm."""
 
+    _logger = logging.getLogger("IntentEngine")
+
     def __init__(self) -> None:
         self.manager = ManagingAgent()
         self.orchestrator = OrchestrationAgent()
@@ -49,13 +53,43 @@ class IntentEngine:
         self.vector_gate = VectorGate()
         self.db = DBManager()
 
+        # RBAC integration (optional, gracefully degrades)
+        self._rbac_enabled = os.getenv("RBAC_ENABLED", "true").lower() == "true"
+        self._rbac_client = None
+        if self._rbac_enabled:
+            try:
+                from rbac.client import RBACClient
+                rbac_url = os.getenv("RBAC_URL", "http://rbac-gateway:8001")
+                self._rbac_client = RBACClient(rbac_url)
+            except ImportError:
+                self._logger.warning("rbac package not installed — RBAC disabled.")
+
     async def run_full_pipeline(
         self,
         description: str,
         requester: str = "system",
         max_healing_retries: int = 3,
     ) -> PipelineResult:
-        """Run the full Managing -> Orchestrator -> Architect -> Coder -> Tester flow."""
+        """
+        End-to-end orchestration:
+
+        1. **ManagingAgent** — categorise *description* into PlanActions.
+        2. **OrchestrationAgent** — build a typed blueprint with delegation.
+        3. **ArchitectureAgent** — map system architecture + WorldModel.
+        4. **CoderAgent** — generate code artifacts for each action.
+        5. **TesterAgent** — validate artifacts; self-heal on failure.
+
+        Returns a ``PipelineResult`` with all intermediary artefacts.
+        """
+        # ── RBAC gate ───────────────────────────────────────────────
+        if self._rbac_client and self._rbac_enabled:
+            if not self._rbac_client.verify_permission(requester, action="run_pipeline"):
+                raise PermissionError(
+                    f"Agent '{requester}' is not permitted to run the pipeline. "
+                    f"Onboard the agent with role 'pipeline_operator' or 'admin' first."
+                )
+            self._logger.info("RBAC: '%s' authorized for run_pipeline.", requester)
+
         result = PipelineResult(
             plan=ProjectPlan(
                 plan_id="pending",

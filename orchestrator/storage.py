@@ -94,6 +94,11 @@ class DBManager:
         db = self.SessionLocal()
         try:
             return db.query(ArtifactModel).filter(ArtifactModel.id == artifact_id).first()
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.exception(f"Error retrieving artifact {artifact_id}")
+            raise
         finally:
             db.close()
 
