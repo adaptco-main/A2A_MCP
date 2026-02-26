@@ -18,4 +18,4 @@ class ProjectPlan(BaseModel):
     plan_id: str
     project_name: str
     requester: str
-    'actions: List[PlanAction] = Field(default_factory=list)'
+    actions: List[PlanAction] = Field(default_factory=list)

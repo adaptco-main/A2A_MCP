@@ -42,9 +42,10 @@ curl -X 'POST' \
 
 ---
 
-### 2. Plan Ingress
+### 2. Plan Ingress Endpoints
 
-`POST /plans/ingress`
+- `POST /plans/ingress`
+- `POST /plans/{plan_id}/ingress`
 
 Triggers a plan state-machine transition via the Stateflow FSM. Used for webhook-driven plan orchestration.
 
@@ -84,7 +85,7 @@ curl -X 'POST' \
 
 ---
 
-### 2. MCP Compatibility Tool Call
+### 3. MCP Compatibility Tool Call
 
 `POST /tools/call`
 
@@ -118,21 +119,13 @@ Invokes an MCP tool through the HTTP compatibility surface.
 }
 ```
 
-Canonical operator walkthrough:
-- See `docs/REALTIME_AGENT_CONFIGURATION_RUNBOOK.md` for local + remote setup, validation, and troubleshooting.
+---
 
-### 3. Native MCP Streamable HTTP
+### 4. Native MCP Streamable HTTP
 
 `POST /mcp`
 
 Native FastMCP endpoint for streamable HTTP clients.
-
-### 4. Plan Ingress Endpoints
-
-- `POST /plans/ingress`
-- `POST /plans/{plan_id}/ingress`
-
-Schedules plan ingress for stateflow execution.
 
 ---
 
