@@ -7,8 +7,10 @@ pipeline and executing lifecycle transitions.
 
 from __future__ import annotations
 
+import hmac
+import hashlib
 import os
-from typing import Dict
+from typing import Dict, List
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,11 +35,13 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Production-ready CORS
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins if os.getenv("ENV") == "production" else ["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -69,15 +73,12 @@ async def health():
     }
 
 
-# ── Agent Onboarding ────────────────────────────────────────────────────
+# ── Agent Onboarding ─────────────────────────────────────────────────────    
 
 @app.post("/agents/onboard", response_model=OnboardingResult, status_code=201, dependencies=[Depends(verify_token)])
 async def onboard_agent(registration: AgentRegistration):
     """
     Register a new agent with a role and optional embedding config.
-
-    The agent's role determines which lifecycle transitions and actions it
-    may perform within the pipeline.
     """
     if registration.agent_id in _registry:
         raise HTTPException(
@@ -107,7 +108,7 @@ async def onboard_agent(registration: AgentRegistration):
     )
 
 
-# ── Permission Queries ──────────────────────────────────────────────────
+# ── Permission Queries ───────────────────────────────────────────────────        
 
 @app.get("/agents/{agent_id}/permissions", dependencies=[Depends(verify_token)])
 async def get_agent_permissions(agent_id: str):
@@ -133,7 +134,7 @@ async def get_agent_permissions(agent_id: str):
 async def verify_permission(agent_id: str, check: PermissionCheckRequest):
     """
     Check whether an agent is permitted to perform a specific action or
-    lifecycle transition.
+    lifecycle transition. (Public endpoint, no signature required for verification query)
     """
     record = _registry.get(agent_id)
     if not record:
@@ -192,7 +193,7 @@ async def verify_permission(agent_id: str, check: PermissionCheckRequest):
     )
 
 
-# ── Agent Management ────────────────────────────────────────────────────
+# ── Agent Management ─────────────────────────────────────────────────────    
 
 @app.get("/agents", dependencies=[Depends(verify_token)])
 async def list_agents():
@@ -222,7 +223,7 @@ async def deactivate_agent(agent_id: str):
     record.active = False
 
 
-# ── Entry point ─────────────────────────────────────────────────────────
+# ── Entry point ──────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     import uvicorn

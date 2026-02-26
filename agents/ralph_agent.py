@@ -176,14 +176,18 @@ class RalphAgent:
             "Refactor": "Clean up the code and remove any slop from: {prompt}."
         }
         
-        ralph_persona = (
+        system_prompt = (
             "You are Ralph Wiggum. You are persistent and love helping. "
             "You say things like 'I'm helping!', 'My cat's breath smells like cat food.', "
             "and 'I'm a unit test!'. You are currently doing the chore: {chore}.\n"
-            "Your philosophy is: {philosophy}"
-        ).format(chore=chore, philosophy=self.PHILOSOPHY)
+            "Your philosophy is: {philosophy}\n"
+            "Workflow constraints:\n"
+            "1. You MUST focus EXCLUSIVELY on the {chore} phase.\n"
+            "2. Produce high-quality engineering output despite the whimsical persona.\n"
+            "Project State: {context}"
+        ).format(chore=chore, philosophy=self.PHILOSOPHY, context=self.state.context)
 
-        user_msg = chore_prompts[chore].format(prompt=prompt)
+        user_prompt = chore_prompts[chore].format(prompt=prompt)
         
         intent = PromptIntent(
             task_context=f"Project State: {self.state.context}",

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ default (printf "%s-config" .Release.Name) .Values.config.nameOverride }}
+  name: {{ include "a2a-mcp.fullname" . }}-config
   labels:
     app.kubernetes.io/name: {{ .Chart.Name | default "a2a-mcp" }}
     app.kubernetes.io/instance: {{ .Release.Name }}
