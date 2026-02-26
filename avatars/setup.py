@@ -97,6 +97,17 @@ def setup_default_avatars() -> None:
                 ui_config={"color_primary": "#0066cc", "icon": "physicist"},
             ),
         ),
+        (
+            "ralph",
+            AvatarProfile(
+                avatar_id="avatar_ralph",
+                name="Ralph",
+                style=AvatarStyle.ENGINEER,
+                bound_agent="RalphAgent",
+                voice_config={"tone": "whimsical"},
+                ui_config={"color_primary": "#FFD700", "icon": "ralph"},
+            ),
+        ),
     ]
 
     for key, profile in profiles:

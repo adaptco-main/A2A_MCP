@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+import os
+import uuid
 from dataclasses import dataclass, field
-from typing import Dict, List
+from types import SimpleNamespace
+from typing import Dict, List, Any
 
 from agents.architecture_agent import ArchitectureAgent
 from agents.coder import CoderAgent
@@ -36,6 +40,8 @@ class PipelineResult:
 class IntentEngine:
     """Coordinates multi-agent execution across the full swarm."""
 
+    _logger = logging.getLogger("IntentEngine")
+
     def __init__(self) -> None:
         self.manager = ManagingAgent()
         self.orchestrator = OrchestrationAgent()
@@ -47,13 +53,43 @@ class IntentEngine:
         self.vector_gate = VectorGate()
         self.db = DBManager()
 
+        # RBAC integration (optional, gracefully degrades)
+        self._rbac_enabled = os.getenv("RBAC_ENABLED", "true").lower() == "true"
+        self._rbac_client = None
+        if self._rbac_enabled:
+            try:
+                from rbac.client import RBACClient
+                rbac_url = os.getenv("RBAC_URL", "http://rbac-gateway:8001")
+                self._rbac_client = RBACClient(rbac_url)
+            except ImportError:
+                self._logger.warning("rbac package not installed — RBAC disabled.")
+
     async def run_full_pipeline(
         self,
         description: str,
         requester: str = "system",
         max_healing_retries: int = 3,
     ) -> PipelineResult:
-        """Run the full Managing -> Orchestrator -> Architect -> Coder -> Tester flow."""
+        """
+        End-to-end orchestration:
+
+        1. **ManagingAgent** — categorise *description* into PlanActions.
+        2. **OrchestrationAgent** — build a typed blueprint with delegation.
+        3. **ArchitectureAgent** — map system architecture + WorldModel.
+        4. **CoderAgent** — generate code artifacts for each action.
+        5. **TesterAgent** — validate artifacts; self-heal on failure.
+
+        Returns a ``PipelineResult`` with all intermediary artefacts.
+        """
+        # ── RBAC gate ───────────────────────────────────────────────
+        if self._rbac_client and self._rbac_enabled:
+            if not self._rbac_client.verify_permission(requester, action="run_pipeline"):
+                raise PermissionError(
+                    f"Agent '{requester}' is not permitted to run the pipeline. "
+                    f"Onboard the agent with role 'pipeline_operator' or 'admin' first."
+                )
+            self._logger.info("RBAC: '%s' authorized for run_pipeline.", requester)
+
         result = PipelineResult(
             plan=ProjectPlan(
                 plan_id="pending",
@@ -80,9 +116,10 @@ class IntentEngine:
 
         arch_artifacts = await self.architect.map_system(blueprint)
         result.architecture_artifacts = arch_artifacts
-
+        last_code_artifact_id: str | None = None
         for action in blueprint.actions:
             action.status = "in_progress"
+            parent_id = last_code_artifact_id or blueprint.plan_id
 
             coder_context = self.judge.get_agent_system_context("CoderAgent")
             coder_gate = self.vector_gate.evaluate(
@@ -97,13 +134,18 @@ class IntentEngine:
                 "Implement this task with tests and safety checks:\n"
                 f"{action.instruction}"
             )
+            
             artifact = await self._generate_with_gate(
-                parent_id=blueprint.plan_id,
+                parent_id=parent_id,
                 feedback=coding_task,
                 context_tokens=coder_gate.matches,
             )
             self._attach_gate_metadata(artifact, coder_gate)
-            self.db.save_artifact(artifact)
+            # CoderAgent usually persists, but we ensure it's saved if needed
+            if not self.db.get_artifact(artifact.artifact_id):
+                self.db.save_artifact(artifact)
+            
+            last_code_artifact_id = artifact.artifact_id
 
             healed = False
             for attempt in range(max_healing_retries):
@@ -160,9 +202,11 @@ class IntentEngine:
                     context_tokens=healing_gate.matches,
                 )
                 self._attach_gate_metadata(artifact, healing_gate)
-                self.db.save_artifact(artifact)
+                if not self.db.get_artifact(artifact.artifact_id):
+                    self.db.save_artifact(artifact)
 
             result.code_artifacts.append(artifact)
+            last_code_artifact_id = artifact.artifact_id
             action.status = "completed" if healed else "failed"
 
         result.success = all(a.status == "completed" for a in blueprint.actions)
@@ -179,9 +223,11 @@ class IntentEngine:
     async def execute_plan(self, plan: ProjectPlan) -> List[str]:
         """Legacy action-level coder->tester loop for backward compatibility."""
         artifact_ids: List[str] = []
+        last_code_artifact_id: str | None = None
 
         for action in plan.actions:
             action.status = "in_progress"
+            parent_id = last_code_artifact_id or plan.plan_id
 
             coder_gate = self.vector_gate.evaluate(
                 node="legacy_coder_input",
@@ -189,14 +235,20 @@ class IntentEngine:
                 world_model=self.architect.pinn.world_model,
             )
             coder_vector_context = self.vector_gate.format_prompt_context(coder_gate)
+            
             artifact = await self._generate_with_gate(
-                parent_id=plan.plan_id,
+                parent_id=parent_id,
                 feedback=f"{coder_vector_context}\n\n{action.instruction}",
                 context_tokens=coder_gate.matches,
             )
             self._attach_gate_metadata(artifact, coder_gate)
+            if not self.db.get_artifact(artifact.artifact_id):
+                self.db.save_artifact(artifact)
+            
             artifact_ids.append(artifact.artifact_id)
+            last_code_artifact_id = artifact.artifact_id
 
+            # Validate with Tester
             tester_gate = self.vector_gate.evaluate(
                 node="legacy_tester_input",
                 query=f"{action.instruction}\n{getattr(artifact, 'content', '')}",
@@ -208,32 +260,31 @@ class IntentEngine:
                 supplemental_context=tester_context,
                 context_tokens=tester_gate.matches,
             )
-            artifact_ids.append(report.status)
-
-            healing_gate = self.vector_gate.evaluate(
-                node="legacy_healing_input",
-                query=f"{action.instruction}\n{report.critique}",
-                world_model=self.architect.pinn.world_model,
+            
+            # Save Test Report
+            test_artifact_id = str(uuid.uuid4())
+            report_artifact = SimpleNamespace(
+                artifact_id=test_artifact_id,
+                parent_artifact_id=artifact.artifact_id,
+                agent_name=self.tester.agent_name,
+                version="1.0.0",
+                type="test_report",
+                content=report.model_dump_json() if hasattr(report, 'model_dump_json') else str(report),
             )
-            healing_vector_context = self.vector_gate.format_prompt_context(healing_gate)
-            refined = await self._generate_with_gate(
-                parent_id=artifact.artifact_id,
-                feedback=f"{healing_vector_context}\n\n{report.critique}",
-                context_tokens=healing_gate.matches,
-            )
-            self._attach_gate_metadata(refined, healing_gate)
-            # Compatibility path for tests/mocks that return unsaved ad-hoc artifacts.
-            if not hasattr(refined, "agent_name"):
-                self.db.save_artifact(refined)
-            artifact_ids.append(refined.artifact_id)
+            # Minimal metadata for DBManager.save_artifact compatibility
+            if not hasattr(report_artifact, "metadata"):
+                report_artifact.metadata = {}
+            
+            self.db.save_artifact(report_artifact)
+            artifact_ids.append(test_artifact_id)
 
-            action.status = "completed"
+            action.status = "completed" if report.status == "PASS" else "failed"
 
         self._notify_completion(
             project_name=plan.project_name,
-            success=True,
-            completed_actions=len(plan.actions),
-            failed_actions=0,
+            success=all(a.status == "completed" for a in plan.actions),
+            completed_actions=sum(1 for a in plan.actions if a.status == "completed"),
+            failed_actions=sum(1 for a in plan.actions if a.status == "failed"),
         )
         return artifact_ids
 
@@ -264,12 +315,7 @@ class IntentEngine:
         supplemental_context: str,
         context_tokens,
     ):
-        """
-        Validate artifacts with vector context when supported.
-
-        Some tests patch TesterAgent.validate with a one-arg coroutine; in that
-        case we gracefully fall back to the legacy call signature.
-        """
+        """Validate artifacts with vector context when supported."""
         try:
             return await self.tester.validate(
                 artifact_id,
@@ -286,12 +332,7 @@ class IntentEngine:
                 return await self.tester.validate(artifact_id)
 
     async def _generate_with_gate(self, parent_id: str, feedback: str, context_tokens):
-        """
-        Generate artifacts with token context when supported.
-
-        Some tests patch CoderAgent.generate_solution with a legacy two-arg
-        signature, so this preserves backward compatibility.
-        """
+        """Generate artifacts with token context when supported."""
         try:
             return await self.coder.generate_solution(
                 parent_id=parent_id,

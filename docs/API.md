@@ -42,9 +42,10 @@ curl -X 'POST' \
 
 ---
 
-### 2. Plan Ingress
+### 2. Plan Ingress Endpoints
 
-`POST /plans/ingress`
+- `POST /plans/ingress`
+- `POST /plans/{plan_id}/ingress`
 
 Triggers a plan state-machine transition via the Stateflow FSM. Used for webhook-driven plan orchestration.
 
@@ -81,6 +82,50 @@ curl -X 'POST' \
   }
 }
 ```
+
+---
+
+### 3. MCP Compatibility Tool Call
+
+`POST /tools/call`
+
+Invokes an MCP tool through the HTTP compatibility surface.
+
+**Request Body:**
+```json
+{
+  "tool_name": "ingest_repository_data",
+  "arguments": {
+    "snapshot": {
+      "repository": "adaptco/A2A_MCP"
+    },
+    "authorization": "Bearer <token>"
+  }
+}
+```
+
+**Response Body:**
+```json
+{
+  "tool_name": "ingest_repository_data",
+  "ok": true,
+  "result": {
+    "ok": true,
+    "data": {
+      "repository": "adaptco/A2A_MCP",
+      "execution_hash": "<64-char-sha256>"
+    }
+  }
+}
+```
+
+---
+
+### 4. Native MCP Streamable HTTP
+
+`POST /mcp`
+
+Native FastMCP endpoint for streamable HTTP clients.
 
 ---
 
