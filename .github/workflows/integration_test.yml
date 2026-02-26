@@ -31,22 +31,21 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
+      
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-asyncio
-
+          pip install -e .
+      
       - name: Run Persistence Unit Tests
         env:
           DATABASE_URL: postgresql://postgres:pass@localhost:5432/mcp_db
-          PYTHONPATH: .
+          PYTHONPATH: .:src:scripts
         run: |
           pytest tests/test_storage.py
 
       - name: Run MCP Handshake Tests
         env:
-          PYTHONPATH: .
+          PYTHONPATH: .:src:scripts
         run: |
           pytest tests/test_mcp_agents.py

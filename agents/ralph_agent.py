@@ -4,6 +4,7 @@ Implements the Pickle Rick lifecycle: PRD -> Breakdown -> Research -> Plan -> Im
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import uuid
 from typing import List, Dict, Any, Optional
@@ -188,7 +189,18 @@ class RalphAgent:
 
         user_prompt = chore_prompts[chore].format(prompt=prompt)
         
-        response = self.llm.call_llm(prompt=user_prompt, system_prompt=system_prompt)
+        intent = PromptIntent(
+            task_context=f"Project State: {self.state.context}",
+            user_input=user_msg,
+            workflow_constraints=[
+                ralph_persona,
+                f"You MUST focus EXCLUSIVELY on the {chore} phase.",
+                "Produce high-quality engineering output despite the whimsical persona."
+            ],
+            metadata={"agent": self.AGENT_NAME, "chore": chore}
+        )
+
+        response = await asyncio.to_thread(self.llm.call_llm, prompt_intent=intent)
         
         # Save artifact
         artifact = MCPArtifact(

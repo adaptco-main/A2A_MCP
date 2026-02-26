@@ -1,5 +1,7 @@
 """Multi-criteria decision model for agent judgment."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
@@ -18,7 +20,7 @@ class DecisionCriteria:
     """Evaluation criteria for decision scoring."""
     criteria_type: CriteriaType
     weight: float = 1.0  # Relative importance (0.0-1.0)
-    scorer: Callable[[Any], float] = None  # Function: context → score [0, 1]
+    scorer: Callable[[Any], float] = None  # Function: context -> score [0, 1]
     description: str = ""
 
     def score(self, context: Any) -> float:
@@ -68,7 +70,7 @@ class JudgmentModel:
                 key = crit_type.value
                 if key in weights:
                     self._criteria[crit_type].weight = weights[key]
-        except Exception as e:
+        except Exception:
             # Fallback to defaults if specs loading fails
             if not self._criteria:
                 self._load_default_criteria()
@@ -79,108 +81,112 @@ class JudgmentModel:
             DecisionCriteria(
                 criteria_type=CriteriaType.SAFETY,
                 weight=1.0,
+                description="Vehicle and environment safety constraints",
                 scorer=self._scorer_safety,
-                description="No out-of-bounds, collision-free, token cap respected"
             ),
             DecisionCriteria(
                 criteria_type=CriteriaType.SPEC_ALIGNMENT,
                 weight=0.8,
+                description="Adherence to Supra physics and performance specs",
                 scorer=self._scorer_spec,
-                description="Adherence to Supra/game specs"
             ),
             DecisionCriteria(
                 criteria_type=CriteriaType.PLAYER_INTENT,
                 weight=0.7,
+                description="Alignment with user/player goal",
                 scorer=self._scorer_intent,
-                description="Alignment with player intent"
             ),
             DecisionCriteria(
                 criteria_type=CriteriaType.LATENCY,
                 weight=0.5,
+                description="Execution within time budget",
                 scorer=self._scorer_latency,
-                description="Execution within time budget"
             ),
         ]
 
-        for criteria in defaults:
-            self._criteria[criteria.criteria_type] = criteria
+        for criterion in defaults:
+            self._criteria[criterion.criteria_type] = criterion
 
-    def register_criterion(self, criteria: DecisionCriteria) -> None:
+    def register_criterion(self, criterion: DecisionCriteria) -> None:
         """Register a custom decision criterion."""
-        self._criteria[criteria.criteria_type] = criteria
+        self._criteria[criterion.criteria_type] = criterion
 
-    def judge_actions(self, actions: List[str], context: Dict[str, Any]) -> List[ActionScore]:
+    def judge_actions(
+        self,
+        actions: List[str],
+        context: Dict[str, Any]
+    ) -> List[ActionScore]:
         """
-        Score a list of candidate actions given context.
-
-        Args:
-            actions: List of action strings to evaluate
-            context: Game state, player intent, constraints, etc.
-
-        Returns:
-            Sorted list of ActionScore (best first)
+        Evaluate multiple actions using MCDA framework.
+        Returns sorted list by overall_score (highest first).
         """
-        scores = []
+        scores: List[ActionScore] = []
 
         for action in actions:
-            criterion_scores = {}
+            # Calculate per-criterion scores
+            criterion_scores: Dict[CriteriaType, float] = {}
             weighted_sum = 0.0
             weight_sum = 0.0
 
-            # Evaluate each criterion
-            for crit_type, criteria in self._criteria.items():
-                score = criteria.score(context)
-                criterion_scores[crit_type] = score
-                weighted_sum += score * criteria.weight
-                weight_sum += criteria.weight
+            for crit_type, criterion in self._criteria.items():
+                crit_score = criterion.score(context)
+                criterion_scores[crit_type] = crit_score
+                weighted_sum += criterion.weight * crit_score
+                weight_sum += criterion.weight
 
-            # Normalize by total weight
-            overall_score = weighted_sum / weight_sum if weight_sum > 0 else 0.0
+            # Weighted average
+            overall_score = weighted_sum / weight_sum if weight_sum > 0 else 0.5
 
-            action_score = ActionScore(
+            score = ActionScore(
                 action=action,
                 overall_score=overall_score,
                 criterion_scores=criterion_scores,
-                metadata={"context_keys": list(context.keys())}
+                metadata={"preset": self._preset, "context_keys": list(context.keys())},
             )
-            scores.append(action_score)
+            scores.append(score)
 
-        # Sort by overall score, descending
-        scores.sort(key=lambda x: x.overall_score, reverse=True)
+        # Sort by score (highest first)
+        scores.sort(key=lambda s: s.overall_score, reverse=True)
         return scores
 
-    def best_action(self, actions: List[str], context: Dict[str, Any]) -> Optional[ActionScore]:
-        """Return the highest-scoring action."""
+    def best_action(
+        self,
+        actions: List[str],
+        context: Dict[str, Any]
+    ) -> Optional[ActionScore]:
+        """Get highest-scoring action."""
         scores = self.judge_actions(actions, context)
         return scores[0] if scores else None
 
-    # Default criterion scorers (override / extend as needed)
+    # Default criterion scorers
 
     @staticmethod
     def _scorer_safety(context: Dict[str, Any]) -> float:
-        """Safety criterion: check bounds, collisions, tokens."""
-        # Placeholder: context should include bot_in_bounds, no_collision, token_budget_ok
-        safe = context.get("safe", True)
-        return 1.0 if safe else 0.0
+        """Safety criterion: check bounds, collisions, distance."""
+        if "nearest_obstacle_distance_m" in context:
+            dist = context["nearest_obstacle_distance_m"]
+            return 1.0 if dist > 5 else 0.6 if dist > 2 else 0.0
+        return 1.0 if context.get("safe", True) else 0.0
 
     @staticmethod
     def _scorer_spec(context: Dict[str, Any]) -> float:
         """Spec alignment: adherence to vehicle/game specs."""
-        spec_compliant = context.get("spec_compliant", True)
-        return 1.0 if spec_compliant else 0.0
+        return 1.0 if context.get("spec_compliant", True) else 0.0
 
     @staticmethod
     def _scorer_intent(context: Dict[str, Any]) -> float:
         """Player intent: alignment with user goal."""
-        intent_match = context.get("intent_match", 0.5)
-        return max(0.0, min(1.0, intent_match))
+        return max(0.0, min(1.0, context.get("intent_match", 0.85)))
 
     @staticmethod
     def _scorer_latency(context: Dict[str, Any]) -> float:
         """Latency: execution within time budget."""
-        elapsed_ms = context.get("elapsed_ms", 0)
-        budget_ms = context.get("budget_ms", 100)
-        return max(0.0, 1.0 - (elapsed_ms / budget_ms))
+        elapsed = context.get("elapsed_ms", 0)
+        budget = context.get("budget_ms", 100)
+        return max(0.0, 1.0 - (elapsed / budget)) if budget > 0 else 1.0
 
     def __repr__(self) -> str:
-        return f"<JudgmentModel criteria={list(self._criteria.keys())}>"
+        criteria_info = ", ".join(
+            f"{ct.value}={c.weight:.1f}" for ct, c in self._criteria.items()
+        )
+        return f"<JudgmentModel preset={self._preset} criteria=[{criteria_info}]>"
