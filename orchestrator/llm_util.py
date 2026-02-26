@@ -1,3 +1,4 @@
+import asyncio
 import os
 from typing import Optional
 
@@ -91,3 +92,7 @@ class LLMService:
             f"No supported model found for endpoint '{self.endpoint}'. "
             f"Tried: {tried}. Details: {detail}"
         )
+
+    async def acall_llm(self, *args: Any, **kwargs: Any) -> str:
+        """Async wrapper around call_llm to prevent blocking the event loop."""
+        return await asyncio.to_thread(self.call_llm, *args, **kwargs)
