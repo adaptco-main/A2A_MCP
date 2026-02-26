@@ -23,6 +23,14 @@ ingress_router = APIRouter()
 PLAN_STATE_MACHINES = {}
 
 
+def persistence_callback(plan_id: str, state_dict: dict) -> None:
+    """Callback to persist FSM state to database."""
+    try:
+        save_plan_state(plan_id, state_dict)
+    except Exception as e:
+        logger.warning(f"Failed to persist plan state for {plan_id}: {e}")
+
+
 def _resolve_plan_id(path_plan_id: str | None, payload: dict) -> str | None:
     if path_plan_id:
         return path_plan_id.strip()
@@ -34,11 +42,6 @@ def _resolve_plan_id(path_plan_id: str | None, payload: dict) -> str | None:
     plan_file_path = payload.get("plan_file_path", "")
     extracted = extract_plan_id_from_path(plan_file_path)
     return extracted.strip() if extracted else None
-
-
-def persistence_callback(plan_id: str, state_dict: dict):
-    """Bridge FSM changes to persistent storage."""
-    save_plan_state(plan_id, state_dict)
 
 
 async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):

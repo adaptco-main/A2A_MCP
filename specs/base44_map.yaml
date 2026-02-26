@@ -52,15 +52,15 @@ zones:
       secondary: [25, 25, 5]
       tertiary: [75, 75, 5]
     wasd_blocking:
-      N: false  # Can go north
+      N: false
       S: false
       E: false
       W: false
     connections:
-      N: 4      # Downtown North
-      S: 12     # Parking District
-      E: 1      # Main Street
-      W: null   # Boundary
+      N: 4
+      S: 12
+      E: 1
+      W: 8
     zone_speed_limit_mph: 35
     hazards:
       - pedestrian_crossing
@@ -125,17 +125,16 @@ zones:
     name: "Harbor Industrial"
     description: "Port area, heavy trucks, industrial"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
       S: false
-      E: false  # Dead end east (edge of map)
+      E: false
       W: false
     connections:
       N: 7
       S: 15
-      E: null  # Boundary
+      E: null
       W: 2
     zone_speed_limit_mph: 30
     hazards:
@@ -150,8 +149,7 @@ zones:
     name: "Downtown North"
     description: "Upper downtown, mixed commercial/residential"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
       S: false
@@ -174,8 +172,7 @@ zones:
     name: "Market District"
     description: "Central market, pedestrian-heavy"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
       S: false
@@ -200,8 +197,7 @@ zones:
     name: "Park Avenue"
     description: "Tree-lined avenue, moderate traffic"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
       S: false
@@ -224,8 +220,7 @@ zones:
     name: "Civic Center"
     description: "Government buildings, organized layout"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
       S: false
@@ -247,15 +242,14 @@ zones:
     name: "University District"
     description: "Campus area, light to moderate traffic"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
-      N: true   # Blocked north (mountain ramp begins)
+      N: true
       S: false
       E: false
-      W: true   # Blocked west (boundary)
+      W: true
     connections:
-      N: null   # Ramp to elevated layer
+      N: null
       S: 4
       E: 9
       W: null
@@ -271,10 +265,9 @@ zones:
     name: "Residential Valley"
     description: "Suburban homes, quiet streets"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
-      N: true   # Ramp begins
+      N: true
       S: false
       E: false
       W: false
@@ -295,10 +288,9 @@ zones:
     name: "Lakeside Residential"
     description: "Peaceful lakeside homes, scenic"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
-      N: true   # Ramp begins
+      N: true
       S: false
       E: false
       W: false
@@ -318,12 +310,11 @@ zones:
     name: "Hillside Ascent"
     description: "Uphill residential, sloped terrain"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
-      N: true   # Mountain passes ramp
+      N: true
       S: false
-      E: null   # Boundary
+      E: null
       W: false
     connections:
       N: null
@@ -339,14 +330,13 @@ zones:
   "12":
     grid_pos: [0, 3]
     layer: 0
-    name: "industrial Park"
+    name: "Industrial Park"
     description: "Factories, warehouses, large lots"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
-      S: null  # Boundary
+      S: null
       E: false
       W: null
     connections:
@@ -366,8 +356,7 @@ zones:
     name: "Parking District"
     description: "Large parking lots, minimal traffic"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
       S: null
@@ -389,8 +378,7 @@ zones:
     name: "Airport Access"
     description: "Airport road, straight corridor"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
       S: null
@@ -412,8 +400,7 @@ zones:
     name: "Dockside Avenue"
     description: "Final urban zone before highways"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 5]
+    spawn_points: [50, 50, 5]
     wasd_blocking:
       N: false
       S: null
@@ -436,16 +423,15 @@ zones:
     name: "North Freeway On-Ramp"
     description: "Entry to elevated highway from downtown"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: false
-      S: true   # Can't go back to city
+      S: true
       E: false
       W: true
     connections:
       N: 20
-      S: null   # No direct ramp down
+      S: null
       E: 17
       W: null
     zone_speed_limit_mph: 60
@@ -460,8 +446,7 @@ zones:
     name: "North Highway Stretch"
     description: "Open highway, moderate traffic"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: false
       S: false
@@ -483,8 +468,7 @@ zones:
     name: "North Mountain Approach"
     description: "Freeway beginning to elevate, views"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: false
       S: false
@@ -507,10 +491,9 @@ zones:
     name: "North Pass Gate"
     description: "Mountain pass entrance, scenic overlook"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
-      N: true   # Ramp to aerial
+      N: true
       S: false
       E: null
       W: false
@@ -531,8 +514,7 @@ zones:
     name: "West Highway Loop"
     description: "Curved freeway section, moderate traffic"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: false
       S: false
@@ -554,8 +536,7 @@ zones:
     name: "Central Interchange"
     description: "Major freeway intersection, complex merging"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: false
       S: false
@@ -579,8 +560,7 @@ zones:
     name: "East Elevated Curve"
     description: "Scenic elevated curve with views"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: false
       S: false
@@ -602,10 +582,9 @@ zones:
     name: "East Mountain Transition"
     description: "Freeway begins steep climb into mountains"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
-      N: true   # Ramp to aerial
+      N: true
       S: false
       E: null
       W: false
@@ -626,8 +605,7 @@ zones:
     name: "West Elevated Descent"
     description: "Freeway descends from elevated sections"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: false
       S: false
@@ -649,8 +627,7 @@ zones:
     name: "Central Elevated Plateau"
     description: "High-elevation freeway, moderate curves"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: false
       S: false
@@ -673,10 +650,9 @@ zones:
     name: "East Elevated Peak"
     description: "Highest elevated freeway zone, scenic"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
-      N: true   # Ramp to aerial
+      N: true
       S: false
       E: false
       W: false
@@ -697,10 +673,9 @@ zones:
     name: "East Final Ascent"
     description: "Last freeway stretch before mountain summit"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
-      N: true   # Ramp to aerial
+      N: true
       S: false
       E: null
       W: false
@@ -721,10 +696,9 @@ zones:
     name: "West Highway End"
     description: "Freeway terminus, view point"
     difficulty_rating: 1
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
-      N: true   # Ramp to aerial
+      N: true
       S: false
       E: false
       W: null
@@ -743,8 +717,7 @@ zones:
     name: "Central Highway Terminus"
     description: "Mid-point access to mountains"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: true   # Ramp to aerial
       S: false
@@ -766,8 +739,7 @@ zones:
     name: "East Highway Terminus"
     description: "Eastern freeway end, mountain gate"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
       N: true   # Ramp to aerial
       S: false
@@ -789,10 +761,9 @@ zones:
     name: "East Final Pass"
     description: "Final freeway zone, summit approach"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 50]
+    spawn_points: [50, 50, 50]
     wasd_blocking:
-      N: true   # Ramp to aerial
+      N: true
       S: false
       E: null
       W: false
@@ -814,11 +785,10 @@ zones:
     name: "North Summit Road"
     description: "Alpine road, extreme curves, thin air"
     difficulty_rating: 4
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
-      S: true   # Can't descend directly
+      S: true
       E: false
       W: true
     connections:
@@ -840,8 +810,7 @@ zones:
     name: "North Alpine Ridge"
     description: "Scenic alpine road, moderate curves"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -864,8 +833,7 @@ zones:
     name: "North Alpine Pass"
     description: "Mountain pass through peaks"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -888,8 +856,7 @@ zones:
     name: "North Summit Peak"
     description: "Highest point on map, scenic endpoint"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -913,8 +880,7 @@ zones:
     name: "West Alpine Descent"
     description: "Descending alpine road"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -937,8 +903,7 @@ zones:
     name: "Central Alpine Valley"
     description: "Alpine valley between peaks"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -960,8 +925,7 @@ zones:
     name: "East Alpine Peak"
     description: "Eastern summit with views"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -975,17 +939,16 @@ zones:
     zone_speed_limit_mph: 45
     hazards:
       - hairpin_turn
-      - altitude
+      - cliff_edges
     obstacle_density: "very_low"
 
   "39":
     grid_pos: [3, 1]
     layer: 2
     name: "East Summit Scenic"
-    description: "Highest eastern point, panoramic views"
+    description: "Scenic alpine road endpoint"
     difficulty_rating: 3
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -998,8 +961,7 @@ zones:
       W: 38
     zone_speed_limit_mph: 40
     hazards:
-      - extreme_altitude
-      - edge_hazards
+      - scenic_distractions
     obstacle_density: "very_low"
 
   "40":
@@ -1008,15 +970,14 @@ zones:
     name: "West Alpine Descent 2"
     description: "Continued descent, more curves"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
       E: false
       W: true
     connections:
-      N: null  # Boundary (descends back to elevated)
+      N: null
       S: 36
       E: 41
       W: null
@@ -1031,8 +992,7 @@ zones:
     name: "Central Alpine Plateau"
     description: "Flat alpine plateau, scenic"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -1053,8 +1013,7 @@ zones:
     name: "East Alpine Plateau"
     description: "Eastern plateau, high elevation"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false
@@ -1076,8 +1035,7 @@ zones:
     name: "East Alpine Terminus"
     description: "Easternmost alpine zone, scenic endpoint"
     difficulty_rating: 2
-    spawn_points:
-      primary: [50, 50, 100]
+    spawn_points: [50, 50, 100]
     wasd_blocking:
       N: false
       S: false

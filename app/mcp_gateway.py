@@ -3,25 +3,23 @@
 from __future__ import annotations
 
 import os
+import uuid
 from typing import Any
 
 from bootstrap import bootstrap_paths
 
 bootstrap_paths()
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from mcp.server.fastmcp import FastMCP
+from app.mcp_tooling import register_tools, call_tool_by_name
+from app.security.oidc import validate_startup_oidc_requirements
+from orchestrator.logging import setup_logging
 
-def call_tool_by_name(tool_name: str, arguments: dict, authorization_header: str | None = None):
-    """Placeholder for calling a tool by name."""
-    return "error: tool not found"
-
-def register_tools(mcp):
-    """Placeholder for registering tools."""
-    pass
-
+setup_logging()
+validate_startup_oidc_requirements()
 
 class ToolCallRequest(BaseModel):
     """Compatibility payload for legacy `/tools/call` clients."""
@@ -64,27 +62,38 @@ async def readyz() -> dict[str, str]:
 
 @app.post("/tools/call")
 async def tools_call(
+    request: Request,
     payload: ToolCallRequest,
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> dict[str, Any]:
+    request_id = str(uuid.uuid4())
     try:
         result = call_tool_by_name(
             tool_name=payload.tool_name,
             arguments=payload.arguments,
             authorization_header=authorization,
+            request_id=request_id
         )
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except TypeError as exc:
-        raise HTTPException(status_code=400, detail=f"invalid arguments for {payload.tool_name}: {exc}") from exc
-    except Exception as exc:  # noqa: BLE001 - surfaced to client for compatibility debugging.
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=404, 
+            detail={"error": "tool_not_found", "message": str(exc), "request_id": request_id}
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400, 
+            detail={"error": "execution_failed", "message": str(exc), "request_id": request_id}
+        ) from exc
 
-    ok = not (isinstance(result, str) and result.lower().startswith("error:"))
+    ok = True
+    if isinstance(result, dict) and result.get("ok") is False:
+        ok = False
+
     return {
         "tool_name": payload.tool_name,
         "ok": ok,
         "result": result,
+        "request_id": request_id
     }
 
 
