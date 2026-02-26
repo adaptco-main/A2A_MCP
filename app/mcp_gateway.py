@@ -31,17 +31,19 @@ class ToolCallRequest(BaseModel):
 mcp = FastMCP("A2A_Orchestrator_HTTP")
 register_tools(mcp)
 
-# Ensure mcp.http_app is available; if not, fallback or error clearly
-try:
+# Attempt to get ASGI app from FastMCP (API varies across versions)
+if hasattr(mcp, "http_app"):
     mcp_http_app = mcp.http_app(transport="streamable-http", path="/")
-except AttributeError:
-    # Handle versions of FastMCP where http_app might be different or unavailable
-    raise RuntimeError("FastMCP instance does not support http_app() as expected.")
+elif hasattr(mcp, "app"):
+    mcp_http_app = mcp.app
+else:
+    # Fallback to the object itself if it is ASGI-compatible
+    mcp_http_app = mcp
 
 app = FastAPI(
     title="A2A MCP Gateway",
     version="1.0.0",
-    lifespan=mcp_http_app.lifespan,
+    lifespan=getattr(mcp_http_app, "lifespan", None),
 )
 
 # Path `/mcp` is preserved externally while FastMCP handles root path internally.
