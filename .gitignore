@@ -36,11 +36,3 @@ specs/tmpclaude-*-cwd
 *.db
 exports/
 staging/
-
-# Test output dumps
-test_output*.txt
-test_results*.txt
-test_full_output*.txt
-
-# Pytest
-.pytest_cache/
