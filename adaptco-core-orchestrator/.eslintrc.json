@@ -10,5 +10,20 @@
   "parserOptions": {
     "ecmaVersion": 2022
   },
-  "rules": {}
+  "rules": {},
+  "overrides": [
+    {
+      "files": ["src/bin/**/*.js"],
+      "rules": {
+        "no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "random",
+            "message": "Math.random is not allowed in deterministic runtime paths."
+          }
+        ]
+      }
+    }
+  ]
 }

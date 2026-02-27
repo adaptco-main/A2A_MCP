@@ -16,6 +16,26 @@
       "synthetic.noise.injector.v1",
       "synthetic.contradiction.synth.v1"
     ],
+    "neutral_perturbation_models": [
+      "synthetic.noise.injector.v1",
+      "synthetic.contradiction.synth.v1"
+    ],
+    "module_policy": {
+      "retired": [
+        "CNE",
+        "FSV",
+        "content_noise_enricher",
+        "feature_shift_validator",
+        "fact_stream_validator"
+      ],
+      "replacement_map": {
+        "CNE": "synthetic.noise.injector.v1",
+        "FSV": "synthetic.noise.injector.v1",
+        "content_noise_enricher": "synthetic.noise.injector.v1",
+        "feature_shift_validator": "synthetic.noise.injector.v1",
+        "fact_stream_validator": "synthetic.contradiction.synth.v1"
+      }
+    },
     "ingress": {
       "artifact_only": true,
       "requires_council_attestation": true,
@@ -26,6 +46,26 @@
       "aggregate_metrics_only": true,
       "ledger_append_only": true,
       "no_per_agent_traces": true
+    },
+    "module_policy": {
+      "retired_modules": [
+        "CNE",
+        "FSV",
+        "content_noise_enricher",
+        "feature_shift_validator",
+        "fact_stream_validator"
+      ],
+      "replacement_map": {
+        "CNE": "synthetic.noise.injector.v1",
+        "FSV": "synthetic.noise.injector.v1",
+        "content_noise_enricher": "synthetic.noise.injector.v1",
+        "feature_shift_validator": "synthetic.noise.injector.v1",
+        "fact_stream_validator": "synthetic.contradiction.synth.v1"
+      },
+      "neutral_perturbation_models": [
+        "synthetic.noise.injector.v1",
+        "synthetic.contradiction.synth.v1"
+      ]
     }
   },
   "modules": [
@@ -101,7 +141,29 @@
     "routing": [
       "synthetic.noise.injector.v1",
       "synthetic.contradiction.synth.v1"
-    ]
+    ],
+    "input_contract": {
+      "required_blocks": [
+        "noise_request",
+        "contradiction_request",
+        "metadata"
+      ],
+      "metadata_fields": [
+        "content_id",
+        "source_registry",
+        "sha256_payload",
+        "council_attestation_id",
+        "run_id"
+      ],
+      "constraints": {
+        "noise_request_module": "synthetic.noise.injector.v1",
+        "contradiction_request_module": "synthetic.contradiction.synth.v1",
+        "source_registry_allowlist": [
+          "ssot://registry/truthful_inputs",
+          "ssot://registry/trusted_uris"
+        ]
+      }
+    }
   },
   "runtime": {
     "queue": "cie.neutral.audit",
