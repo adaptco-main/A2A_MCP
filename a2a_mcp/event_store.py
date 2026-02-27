@@ -3,7 +3,7 @@ import json
 import datetime
 from typing import Any, Dict, List, Optional
 
-class PostgresEventStore:
+class InMemoryEventStore:
     """
     Sovereignty Layer: Event Store for recording every agent action.
     Mock implementation for demo, using hash chains for integrity.
