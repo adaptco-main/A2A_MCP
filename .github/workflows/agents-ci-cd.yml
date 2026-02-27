@@ -2,7 +2,11 @@ name: Agents CI/CD
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'release/**'
     paths:
       - "agents/**"
       - "orchestrator/**"
