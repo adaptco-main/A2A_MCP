@@ -388,7 +388,7 @@ class TrainingScheduler:
         next_due = croniter(schedule.cron_expression, base).get_next(datetime)
 
         if next_due <= now:
-            checkpoint_file.write_text(json.dumps({"last_run_ts": now.isoformat()}), encoding="utf-8")
+            checkpoint_file.write_text(json.dumps({"last_run_ts": next_due.isoformat()}), encoding="utf-8")
             return True
         return False
 
