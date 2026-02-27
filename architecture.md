@@ -1,57 +1,261 @@
-# ML CI/CD Pipeline Architecture
+# A2A MCP System Architecture
 
-This document outlines a **complete MLOps CI/CD pipeline** based on modern best practices.  The architecture follows a six‑layer design inspired by recent MLOps advances.  Each layer addresses a specific responsibility in the model lifecycle, ensuring that data, code, models and infrastructure are all managed and deployed reliably.
+## 1. Repository Inventory
 
-## Overview of the Six Layers
+### Local Repositories
 
-| Layer | Purpose |
-| --- | --- |
-| **Data layer** | Handles data ingestion, validation, feature engineering and storage.  A feature store ensures that training and serving use consistent features. |
-| **Model development layer** | Provides a reproducible environment for experiments, tracks models and hyperparameters, and automates evaluation metrics. |
-| **CI/CD layer** | Automates training, testing and deployment pipelines.  It differs from traditional CI/CD by including data validation, model performance checks and drift detection. |
-| **Deployment layer** | Serves models in batch or real‑time via containers or serverless functions; supports auto‑scaling and fault tolerance. |
-| **Monitoring & observability** | Continuously tracks model performance, latency, data drift and bias.  Alerts trigger retraining or rollback if metrics degrade. |
-| **Governance & security** | Enforces explainability, access controls, audit logs and regulatory compliance (e.g., GDPR, HIPAA). |
+- **A2A_MCP** (main): Multi-agent orchestration system for code generation and
+  testing.
+- **PhysicalAI-Autonomous-Vehicles** (subproject): Autonomous vehicle sensor
+  data and ML training datasets.
 
-### Diagram
+### GitHub Repositories
 
-The following diagram illustrates how the layers connect in a sequential pipeline.  Data flows through each layer, passing gates such as validation and testing before models are deployed and monitored.  (A diagram is included in the system architecture document but not embedded here.)
+- **Primary**: [A2A_MCP](https://github.com/adaptco/A2A_MCP)
+- **Dependencies**: Mistral API, MCP CLI tools
 
-## Tool Choices
+## 2. Core Orchestrator Architecture
 
-- **Data layer**: Apache Spark or Pandas for ingestion; Great Expectations for data validation; **Feast** or **Tecton** as a feature store.
-- **Model development layer**: **MLflow** or **Weights & Biases** for experiment tracking and model registry; **Docker** for reproducible environments.
-- **CI/CD layer**: **GitHub Actions** for workflow orchestration; **GitHub** for version control; testing with **pytest**; custom Python scripts for training and validation.
-- **Deployment layer**: **AWS EKS** (Kubernetes), **SageMaker** or **Vertex AI** for managed serving; alternatively **Docker** containers deployed via **Kubernetes**.
-- **Monitoring & observability**: **Prometheus** and **Grafana** for technical metrics; **Fiddler** or **Evidently** for model performance and drift detection.
-- **Governance & security**: **Terraform** state management; IAM roles and policies; encryption at rest and in transit; integrated auditing.
+### 2.1 Component Overview
 
-## Workflow Stages
+```text
+MCP Server Layer (mcp_server.py)
+- get_artifact_trace()
+- trigger_new_research()
+            |
+            v
+Orchestrator Layer
+- IntentEngine (intent_engine.py)
+  - run_full_pipeline(description)
+  - execute_plan(plan)
+- StateMachine (stateflow.py)
+  - 8 states with persistence hooks
+  - thread-safe with RLock
+- DBManager (storage.py)
+  - artifact CRUD
+  - save_plan_state()
+- Additional Services
+  - LLMService (llm_util.py)
+  - SimpleScheduler
+  - Webhook endpoints
+  - MCPHub healing loop
+            |
+            v
+Shared Components
+- Agent Swarm
+- Schemas
+- Database Models
+            |
+            v
+External Services
+- Mistral/Codestral
+- SQLite/PostgreSQL
+- Redis (optional)
+```
 
-1. **Data validation** – The pipeline begins by validating incoming data for completeness, schema correctness and distribution drift.  If validation fails, the pipeline halts and alerts the team.
+### 2.2 Orchestrator Files
 
-2. **Model training and evaluation** – A training job spins up in a reproducible environment.  After training, automated tests compare performance metrics (accuracy, precision, recall, etc.) against thresholds.  Only models that meet the bar proceed.
+| File | Purpose | Key Classes and Functions |
+| --- | --- | --- |
+| `intent_engine.py` | Pipeline coordinator | `IntentEngine`, `PipelineResult` |
+| `stateflow.py` | Finite state machine | `StateMachine`, `State`, `TransitionRecord` |
+| `storage.py` | Database manager | `DBManager`, `save_plan_state()`, `load_plan_state()` |
+| `llm_util.py` | LLM integration | `LLMService.call_llm()` |
+| `webhook.py` | Plan ingress endpoint | `plan_ingress()` |
+| `main.py` | Self-healing loop | `MCPHub.run_healing_loop()` |
+| `scheduler.py` | Async job scheduler | `SimpleScheduler` |
+| `database_utils.py` | Legacy DB setup | `SessionLocal` (deprecated) |
+| `utils` | Path utilities | `extract_plan_id_from_path()` |
 
-3. **Container build and registry push** – A Docker image is built containing the trained model and inference service.  The image is pushed to an ECR (AWS) or GCR (Google) repository.
+## 3. Integration Points and Data Flows
 
-4. **Deployment** – Using a canary or blue/green strategy, the new model is gradually rolled out.  Traffic is routed through a small subset of users, monitored for regressions, then increased.
+### 3.1 Full 5-Agent Pipeline (`run_full_pipeline`)
 
-5. **Monitoring and drift detection** – Deployed models are continuously monitored for performance, latency and fairness.  Data drift or performance drops trigger automated retraining pipelines.
+Source: `orchestrator/intent_engine.py`
 
-6. **Governance** – All steps are logged.  Artefacts (datasets, models, metrics) are versioned, and access is controlled via IAM policies.
+```text
+User Description
+  -> IntentEngine.run_full_pipeline()
+    -> Stage 1: ManagingAgent.categorize_project()
+    -> Stage 2: OrchestrationAgent.build_blueprint()
+    -> Stage 3: ArchitectureAgent.map_system()
+    -> Stage 4-5: Self-healing loop per action
+       -> CoderAgent.generate_solution()
+       -> TesterAgent.validate()
+       -> PASS: complete action
+       -> FAIL: feedback to CoderAgent (max 3 retries)
 
-## Infrastructure as Code
+Output: PipelineResult
+- plan
+- blueprint
+- architecture_artifacts
+- code_artifacts
+- test_verdicts
+- success
+```
 
-The `infrastructure` directory contains Terraform code that provisions fundamental resources like an S3 bucket for artefacts, an ECR repository for Docker images and placeholders for additional services (e.g., EKS cluster, IAM roles).  You can extend these modules to include VPCs, databases and compute clusters.
+### 3.2 State Machine Transitions
 
-## GitHub Actions Workflow
+Source: `orchestrator/stateflow.py`
 
-The `.github/workflows/ml_pipeline.yml` file defines a CI/CD workflow that runs on every push to `main` or on a schedule.  The workflow performs data validation, training, testing, containerization and deployment.  Secrets such as AWS credentials are referenced from repository secrets; adjust environment variables to match your cloud provider.
+```text
+IDLE
+  -> OBJECTIVE_INGRESS
+SCHEDULED
+  -> RUN_DISPATCHED
+EXECUTING <-> REPAIR
+  -> EVALUATING
+EVALUATING
+  -> VERDICT_PASS -> TERMINATED_SUCCESS
+  -> VERDICT_FAIL -> TERMINATED_FAIL
+  -> VERDICT_PARTIAL -> RETRY -> RETRY_DISPATCHED
+  -> RETRY_LIMIT_EXCEEDED -> TERMINATED_FAIL
+```
 
-## Next Steps
+### 3.3 Database Persistence
 
-- Define your domain‑specific model code in a `src` directory with scripts for data ingestion, feature engineering, model training and inference.
-- Customize the Terraform code to create additional infrastructure (Kubernetes cluster, IAM roles, database).
-- Integrate monitoring dashboards and alerts using your chosen observability stack.
+Source: `orchestrator/storage.py`
 
-This architecture provides a robust foundation for deploying and iterating on machine‑learning models using modern CI/CD practices.
+```text
+save_artifact(MCPArtifact)
+- extract fields
+- create ArtifactModel row
+- persist via SQLAlchemy session
+
+save_plan_state(plan_id, snapshot)
+- serialize FSM snapshot to JSON
+- create/update PlanStateModel row
+- persist via SQLAlchemy session
+
+load_plan_state(plan_id)
+- query PlanStateModel by plan_id
+- deserialize JSON to FSM state dict
+```
+
+## 4. Key Source File Locations
+
+### Orchestrator Core
+
+- Main coordinator: `orchestrator/intent_engine.py`
+- Pipeline execution: `orchestrator/intent_engine.py`
+- State machine: `orchestrator/stateflow.py`
+- DB persistence: `orchestrator/storage.py`
+- LLM service: `orchestrator/llm_util.py`
+- Webhook ingress: `orchestrator/webhook.py`
+
+### Data Models
+
+- Artifacts: `schemas/agent_artifacts.py`
+- Plans: `schemas/project_plan.py`
+- Database: `schemas/database.py`
+- World model: `schemas/world_model.py`
+
+### Agents
+
+- Managing: `agents/managing_agent.py`
+- Orchestration: `agents/orchestration_agent.py`
+- Architecture: `agents/architecture_agent.py`
+- Coder: `agents/coder.py`
+- Tester: `agents/tester.py`
+
+### MCP Server
+
+- FastMCP tools: `mcp_server.py`
+
+## 5. Known Issues and Cleanup Tasks
+
+### Issue 1: Redundant Database Utils
+
+- Location: `orchestrator/database_utils.py`
+- Problem: Duplicates `DBManager` functionality from `storage.py`.
+- Impact: `mcp_server.py` imports `SessionLocal` from legacy module.
+- Fix: Consolidate around `storage.DBManager`.
+
+### Issue 2: Incomplete FastAPI Initialization
+
+- Location: `orchestrator/webhook.py`
+- Problem: `app = FastAPI(...)` placeholder.
+- Impact: Invalid Python syntax.
+- Fix: Use `app = FastAPI(title="A2A Plan Orchestrator")`.
+
+### Issue 3: Redundant Import
+
+- Location: `orchestrator/webhook.py`
+- Problem: `StateMachine` imported twice.
+- Impact: Code smell.
+- Fix: Keep a single import.
+
+### Issue 4: Missing Type Hints
+
+- Location: `orchestrator/storage.py`
+- Problem: Missing method type hints.
+- Impact: Reduced IDE and static-analysis quality.
+- Fix: Add return and parameter types.
+
+### Issue 5: Global Eager Singleton
+
+- Location: `orchestrator/storage.py`
+- Problem: Eager `_db_manager = DBManager()` at import time.
+- Impact: Unnecessary database setup on import.
+- Fix: Lazy initialization or factory.
+
+### Issue 6: In-Memory FSM State in Webhook
+
+- Location: `orchestrator/webhook.py`
+- Problem: `PLAN_STATE_MACHINES = {}` is in-memory only.
+- Impact: State loss on restart.
+- Fix: Persist callbacks via `storage.save_plan_state()`.
+
+## 6. Integration Checklist
+
+- [x] `mcp_server.py` uses `storage.DBManager` instead of `database_utils`
+- [x] `webhook.py` has proper FastAPI initialization
+- [x] No duplicate imports in `webhook.py`
+- [x] Type hints added in `storage.py`
+- [x] Webhook FSM persistence callback wired
+- [ ] Agents initialized consistently with `LLMService` and `DBManager`
+- [ ] Database tables created on startup
+- [ ] Orchestrator tests pass
+
+## 7. Configuration
+
+### Environment Variables
+
+Create `.env`:
+
+```text
+DATABASE_URL=sqlite:///./a2a_mcp.db
+LLM_API_KEY=<your-mistral-key>
+LLM_ENDPOINT=https://api.mistral.ai/v1/chat/completions
+```
+
+### FastMCP Config
+
+Create `mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "A2A_Orchestrator": {
+      "command": "python mcp_server.py"
+    }
+  }
+}
+```
+
+## 8. Testing Strategy
+
+- Unit tests: State machine transitions, LLM service, utility functions.
+- Integration tests: End-to-end pipeline with mocked LLM service.
+- Persistence tests: Artifact and plan-state CRUD behavior.
+- FSM tests: Transition coverage and error paths.
+
+## 9. Deployment Considerations
+
+1. Database: SQLite for development, PostgreSQL for production.
+2. Scalability: Thread-safe FSM for concurrent plan execution.
+3. Observability: Transition history for auditability.
+4. Resilience: Self-healing loop with bounded retries.
+5. Extensibility: Add new agents without changing pipeline contract.
+
+Generated: 2026-02-11
