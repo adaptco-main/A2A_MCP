@@ -49,7 +49,7 @@ def get_path(obj: dict, dotted: str) -> Any:
     return cur
 
 
-def set_path(obj: dict, dotted: str, value) -> None:
+def set_path(obj: dict, dotted: str, value: Any) -> None:
     parts = dotted.split(".")
     cur = obj
     for idx, part in enumerate(parts):
