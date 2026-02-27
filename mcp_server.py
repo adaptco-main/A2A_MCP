@@ -2,10 +2,7 @@ from bootstrap import bootstrap_paths
 
 bootstrap_paths()
 
-try:
-    from fastmcp import FastMCP
-except ModuleNotFoundError:
-    from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
 from app.mcp_tooling import register_tools
 
 # Initialize FastMCP Server

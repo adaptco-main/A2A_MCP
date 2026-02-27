@@ -16,8 +16,14 @@ from typing import Callable, Dict, List, Optional, Any
 import time
 import threading
 import json
+import sys
 
-from schemas.runtime_event import EventPayload, RuntimeEvent
+try:
+    from schemas.runtime_event import EventPayload, RuntimeEvent
+except ImportError:
+    # Fallback for environments where schemas are not yet fully available
+    RuntimeEvent = Any
+    EventPayload = Any
 
 
 class State(str, Enum):
@@ -134,8 +140,8 @@ class StateMachine:
         if self._persistence_callback and callable(self._persistence_callback):
             try:
                 self._persistence_callback(plan_id, snapshot)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Stateflow persistence error: {e}", file=sys.stderr)
 
     def _run_post_transition(self, rec: TransitionRecord, callbacks: List[Callable[[TransitionRecord], None]], snapshot: Dict[str, Any], plan_id: Optional[str], seq: int) -> None:
         with self._persist_cond:
@@ -151,8 +157,8 @@ class StateMachine:
         for cb in callbacks:
             try:
                 cb(rec)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Stateflow callback error: {e}", file=sys.stderr)
 
     def trigger(self, event: str, **meta) -> TransitionRecord:
         with self._lock:
@@ -180,7 +186,6 @@ class StateMachine:
                     self._transition_seq += 1
                     seq = self._transition_seq
             else:
-                # Do not reset attempts on RETRY_DISPATCHED; only reset after PASS.
                 if event == "VERDICT_PASS":
                     self.attempts = 0
                 rec = self._record(self.state, to_state, event, meta)
@@ -205,9 +210,9 @@ class StateMachine:
 
     def consume_runtime_event(self, event: RuntimeEvent) -> TransitionRecord:
         """Consume normalized AGENT_RESPONSE events and map them to stateflow transitions."""
-        if event.event_type != "AGENT_RESPONSE":
-            raise ValueError(f"Unsupported runtime event type: {event.event_type}")
-        if not event.trace_id:
+        if not hasattr(event, 'event_type') or event.event_type != "AGENT_RESPONSE":
+            raise ValueError(f"Unsupported runtime event type: {getattr(event, 'event_type', 'None')}")
+        if not getattr(event, 'trace_id', None):
             raise ValueError("Runtime event must include trace_id")
 
         meta = {

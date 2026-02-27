@@ -1,10 +1,15 @@
+from __future__ import annotations
+
+import atexit
+import json
+import os
+from typing import Any, Dict, Optional
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from schemas.database import Base, ArtifactModel, PlanStateModel
-import os
-import json
-from datetime import datetime, timezone
-from typing import Optional
+
+from schemas.agent_artifacts import MCPArtifact
+from schemas.database import ArtifactModel, Base, PlanStateModel
 
 SQLITE_DEFAULT_PATH = "./a2a_mcp.db"
 
@@ -44,23 +49,36 @@ def _build_connect_args(database_url: str) -> dict:
 
 
 class DBManager:
-    def __init__(self):
-        # check_same_thread is required for SQLite
-        connect_args = _build_connect_args(DATABASE_URL)
-        self.engine = create_engine(DATABASE_URL, connect_args=connect_args)
-        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        Base.metadata.create_all(bind=self.engine)
+    _shared_engine = None
+    _shared_session_local = None
 
-    def save_artifact(self, artifact):
+    def __init__(self) -> None:
+        # Reuse a single engine/sessionmaker across all manager instances.
+        if DBManager._shared_engine is None:
+            connect_args = _build_connect_args(DATABASE_URL)
+            DBManager._shared_engine = create_engine(DATABASE_URL, connect_args=connect_args)
+            DBManager._shared_session_local = sessionmaker(
+                autocommit=False,
+                autoflush=False,
+                bind=DBManager._shared_engine,
+            )
+            if os.getenv("ENV") != "production":
+                Base.metadata.create_all(bind=DBManager._shared_engine)
+
+        self.engine = DBManager._shared_engine
+        self.SessionLocal = DBManager._shared_session_local
+
+    def save_artifact(self, artifact: MCPArtifact) -> ArtifactModel:
+        """Save an MCPArtifact to the database."""
         db = self.SessionLocal()
         try:
             db_artifact = ArtifactModel(
                 id=artifact.artifact_id,
-                parent_artifact_id=artifact.metadata.get('parent_artifact_id'),
-                agent_name=artifact.metadata.get('agent_name', 'UnknownAgent'),
-                version=artifact.metadata.get('version', '1.0.0'),
+                parent_artifact_id=getattr(artifact, "parent_artifact_id", artifact.metadata.get('parent_artifact_id') if hasattr(artifact, 'metadata') else None),
+                agent_name=getattr(artifact, "agent_name", artifact.metadata.get('agent_name', 'UnknownAgent') if hasattr(artifact, 'metadata') else 'UnknownAgent'),
+                version=getattr(artifact, "version", artifact.metadata.get('version', '1.0.0') if hasattr(artifact, 'metadata') else '1.0.0'),
                 type=artifact.type,
-                content=artifact.content
+                content=artifact.content if isinstance(artifact.content, str) else json.dumps(artifact.content),
             )
             db.add(db_artifact)
             db.commit()
@@ -71,11 +89,11 @@ class DBManager:
         finally:
             db.close()
 
-    def get_artifact(self, artifact_id):
+    def get_artifact(self, artifact_id: str) -> Optional[ArtifactModel]:
+        """Retrieve an artifact by ID from the database."""
         db = self.SessionLocal()
         try:
-            artifact = db.query(ArtifactModel).filter(ArtifactModel.id == artifact_id).first()
-            return artifact
+            return db.query(ArtifactModel).filter(ArtifactModel.id == artifact_id).first()
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
@@ -87,8 +105,13 @@ class DBManager:
 
 _db_manager = DBManager()
 
+# Engine/session for backward compatibility
+engine = _db_manager.engine
+SessionLocal = _db_manager.SessionLocal
 
-def save_plan_state(plan_id: str, snapshot: dict) -> None:
+
+def save_plan_state(plan_id: str, snapshot: Dict[str, Any]) -> None:
+    """Save FSM plan state snapshot to the database."""
     from orchestrator.fsm_persistence import persist_state_machine_snapshot
 
     db = _db_manager.SessionLocal()
@@ -107,16 +130,25 @@ def save_plan_state(plan_id: str, snapshot: dict) -> None:
     finally:
         db.close()
 
-    # Append-only FSM persistence (event + derived snapshot)
-    persist_state_machine_snapshot(plan_id, snapshot)
+    # Append-only FSM persistence
+    try:
+        persist_state_machine_snapshot(plan_id, snapshot)
+    except Exception:
+        # Don't fail the primary save if FSM persistence fails
+        pass
 
 
-def load_plan_state(plan_id: str) -> Optional[dict]:
+def load_plan_state(plan_id: str) -> Optional[Dict[str, Any]]:
+    """Load FSM plan state snapshot from the database."""
     from orchestrator.fsm_persistence import load_state_machine_snapshot
 
-    snapshot = load_state_machine_snapshot(plan_id)
-    if snapshot is not None:
-        return snapshot
+    # Try newer FSM persistence first
+    try:
+        snapshot = load_state_machine_snapshot(plan_id)
+        if snapshot is not None:
+            return snapshot
+    except Exception:
+        pass
 
     db = _db_manager.SessionLocal()
     try:
@@ -128,14 +160,14 @@ def load_plan_state(plan_id: str) -> Optional[dict]:
         db.close()
 
 
-# Create engine for SessionLocal
-connect_args = _build_connect_args(DATABASE_URL)
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
-
-# SessionLocal for backward compatibility (used by mcp_server.py)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def _dispose_engine() -> None:
+    if DBManager._shared_engine is not None:
+        DBManager._shared_engine.dispose()
 
 
-def init_db():
+atexit.register(_dispose_engine)
+
+
+def init_db() -> None:
     """Initialize database tables."""
     Base.metadata.create_all(bind=engine)

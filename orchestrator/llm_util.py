@@ -1,6 +1,9 @@
+import asyncio
 import os
+from typing import Optional
 
 from dotenv import load_dotenv
+from schemas.prompt_inputs import PromptIntent
 
 load_dotenv()
 
@@ -31,9 +34,15 @@ class LLMService:
 
     def call_llm(
         self,
-        prompt: str,
+        prompt: str | None = None,
         system_prompt: str = "You are a helpful coding assistant.",
+        prompt_intent: "PromptIntent" | None = None,
     ):
+        if prompt_intent:
+            # Simple conversion from intent to prompt string
+            prompt = f"{prompt_intent.task_context}\n\n{prompt_intent.user_input}"
+            if prompt_intent.workflow_constraints:
+                prompt += f"\n\nConstraints:\n- " + "\n- ".join(prompt_intent.workflow_constraints)
         if not self.api_key or not self.endpoint:
             raise ValueError("API Key or Endpoint missing from your local .env file!")
 
@@ -83,3 +92,7 @@ class LLMService:
             f"No supported model found for endpoint '{self.endpoint}'. "
             f"Tried: {tried}. Details: {detail}"
         )
+
+    async def acall_llm(self, *args: Any, **kwargs: Any) -> str:
+        """Async wrapper around call_llm to prevent blocking the event loop."""
+        return await asyncio.to_thread(self.call_llm, *args, **kwargs)

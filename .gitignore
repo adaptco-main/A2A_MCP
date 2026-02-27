@@ -22,7 +22,11 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Dependencies
+openJdk-25/
+
 # Local transient orchestration sandboxes
+tmpclaude-*
 tmpclaude-*-cwd/
 tmpclaude-*-cwd
 specs/tmpclaude-*-cwd
@@ -32,3 +36,11 @@ specs/tmpclaude-*-cwd
 *.db
 exports/
 staging/
+
+# Test output dumps
+test_output*.txt
+test_results*.txt
+test_full_output*.txt
+
+# Pytest
+.pytest_cache/
