@@ -1,0 +1,17 @@
+name: Agents Unit Tests
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run agents unit test composite action
+        uses: ./.github/actions/agents-unit-tests

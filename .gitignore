@@ -5,6 +5,7 @@ __pycache__/
 
 # Environments
 .env
+.env.*
 .venv
 env/
 venv/
@@ -21,10 +22,17 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Dependencies
+openJdk-25/
+
 # Local transient orchestration sandboxes
+tmpclaude-*
 tmpclaude-*-cwd/
 tmpclaude-*-cwd
 specs/tmpclaude-*-cwd
 
 # Local runtime artifacts
 *.sqlite
+*.db
+exports/
+staging/
