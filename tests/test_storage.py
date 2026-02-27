@@ -1,9 +1,8 @@
+import json
 import pytest
 from orchestrator.storage import DBManager
 from schemas.agent_artifacts import MCPArtifact
-import json
 import uuid
-import json
 
 def test_artifact_persistence_lifecycle():
     """
@@ -31,8 +30,8 @@ def test_artifact_persistence_lifecycle():
     
     assert retrieved is not None
     assert retrieved.agent_name == "TestAgent"
-    content_payload = json.loads(retrieved.content)
-    assert content_payload["status"] == "verified"
+    content = json.loads(retrieved.content) if isinstance(retrieved.content, str) else retrieved.content
+    assert content["status"] == "verified"
     print(f"✓ Persistence Lifecycle Verified for ID: {test_id}")
 
 if __name__ == "__main__":

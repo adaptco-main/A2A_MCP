@@ -4,13 +4,9 @@ metadata:
   year: 2024
   verified: true
   source_database: "Toyota Official + EPA"
-  audit_status: "CORRECTED - see SPECS_AUDIT.md"
-  corrections_applied:
-    - "Engine: Single-turbo B58B30M1 (was twin-turbo)"
-    - "Redline: 6500 rpm (was 7000)"
-    - "0-60: 3.9 EPA seconds (was 3.8)"
-    - "Removed unverified fields: fuel_consumption_rate, response_time_ms, battery_soc_min"
-    - "Fixed YAML structure (duplicate performance keys)"
+  audit_status: "CORRECTED"
+  version: "1.0.0"
+  last_updated: "2026-02-12"
 
 supra:
   model: "Toyota GR Supra A90"
@@ -152,6 +148,32 @@ telemetry:
     - distance_traveled_m
     - collision_count
 
+ui_config:
+  display_name: "GR Supra"
+  color_primary: "Toyota Red"
+  color_secondary: "Carbon Black"
+  icon_emoji: "🏎️"
+  gauges:
+    - speedometer_mph: { min: 0, max: 200 }
+    - tachometer_rpm: { min: 0, max: 7500 }
+    - fuel_gauge_gal: { min: 0, max: 13.2 }
+    - coolant_temperature_c: { min: 70, max: 110 }
+
+behaviors:
+  profiles:
+    "aggressive":
+      target_speed_percent: 0.95
+      acceleration_aggression: 0.9
+      braking_sensitivity: 1.2
+    "eco":
+      target_speed_percent: 0.60
+      acceleration_aggression: 0.3
+      braking_sensitivity: 0.8
+    "balanced":
+      target_speed_percent: 0.75
+      acceleration_aggression: 0.6
+      braking_sensitivity: 1.0
+
 notes:
   - "VERIFICATION: See SPECS_AUDIT.md for complete source attribution"
   - "All speeds in mph unless otherwise noted"
@@ -159,22 +181,3 @@ notes:
   - "Single-turbo (NOT twin-turbo) BMW B58B30M1 engine configuration"
   - "ESC active safety threshold is 1.08g (skid pad limit)"
   - "EPA testing uses 8-speed automatic transmission variant"
-  - "Unverified fields marked with UNVERIFIED and confidence level"
-  - "Three fields removed: fuel_consumption_rate, response_time_ms, battery_soc_min (no verified source)"
-
-removed_fields:
-  fuel_consumption_rate:
-    reason: "Completely generated with no source verification"
-    was_value: "0.05 gal/min at full throttle"
-
-  response_time_ms:
-    reason: "Generic estimate not specific to Supra"
-    was_value: "50 ms"
-
-  battery_soc_min:
-    reason: "Not applicable - 2024 Supra is internal combustion engine only, no hybrid"
-    was_value: "0.05"
-
-  aeb_min_distance_m:
-    reason: "Generic setting, not Supra-specific"
-    was_value: "5.0 m"

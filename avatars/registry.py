@@ -1,7 +1,9 @@
 """Avatar registry for managing agent-avatar bindings."""
 
+from __future__ import annotations
+
 from typing import Dict, Optional, List
-from avatars.avatar import Avatar, AvatarProfile, AvatarStyle
+from avatars.avatar import Avatar, AvatarProfile
 
 
 class AvatarRegistry:
@@ -20,10 +22,13 @@ class AvatarRegistry:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def register_avatar(self, profile: AvatarProfile) -> Avatar:
+    def register_avatar(self, profile: AvatarProfile, key: Optional[str] = None) -> Avatar:
         """Register a new avatar and optionally bind to an agent."""
         avatar = Avatar(profile)
+        # Store by ID and optionally by key for compatibility
         self._avatars[profile.avatar_id] = avatar
+        if key:
+            self._avatars[key] = avatar
 
         if profile.bound_agent:
             self._agent_bindings[profile.bound_agent] = profile.avatar_id
@@ -31,7 +36,7 @@ class AvatarRegistry:
         return avatar
 
     def get_avatar(self, avatar_id: str) -> Optional[Avatar]:
-        """Get avatar by ID."""
+        """Get avatar by ID or key."""
         return self._avatars.get(avatar_id)
 
     def get_avatar_for_agent(self, agent_name: str) -> Optional[Avatar]:
@@ -39,6 +44,10 @@ class AvatarRegistry:
         avatar_id = self._agent_bindings.get(agent_name)
         if avatar_id:
             return self._avatars.get(avatar_id)
+        # Fallback search if binding map is incomplete but profiles have bound_agent
+        for avatar in self._avatars.values():
+            if avatar.profile.bound_agent == agent_name:
+                return avatar
         return None
 
     def bind_agent_to_avatar(self, agent_name: str, avatar_id: str) -> None:
@@ -48,8 +57,8 @@ class AvatarRegistry:
         self._agent_bindings[agent_name] = avatar_id
 
     def list_avatars(self) -> List[Avatar]:
-        """Get all registered avatars."""
-        return list(self._avatars.values())
+        """Get all unique registered avatars."""
+        return list({id(a): a for a in self._avatars.values()}.values())
 
     def list_bindings(self) -> Dict[str, str]:
         """Get all agent-avatar bindings."""
@@ -62,7 +71,7 @@ class AvatarRegistry:
 
     def __repr__(self) -> str:
         return (
-            f"<AvatarRegistry avatars={len(self._avatars)} "
+            f"<AvatarRegistry avatars={len(self.list_avatars())} "
             f"bindings={len(self._agent_bindings)}>"
         )
 
@@ -70,3 +79,8 @@ class AvatarRegistry:
 def get_avatar_registry() -> AvatarRegistry:
     """Access the global avatar registry singleton."""
     return AvatarRegistry()
+
+
+def get_registry() -> AvatarRegistry:
+    """Compatibility alias."""
+    return get_avatar_registry()

@@ -7,6 +7,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 class SpecsLoader:
     """Load and cache specification files."""
 
@@ -119,11 +120,22 @@ class SpecsLoader:
         presets = tuning.get("presets", {})
         preset = presets.get(preset_name, {})
 
-        # Convert preset weights
+        # Convert preset weights (mapping long names to short internal keys if needed)
         weights = {}
-        for key in ["safety", "spec", "intent", "latency"]:
+        mapping = {
+            "safety": "safety",
+            "spec": "spec",
+            "spec_alignment": "spec",
+            "intent": "intent",
+            "player_intent": "intent",
+            "latency": "latency"
+        }
+        
+        for key in ["safety", "spec", "intent", "latency", "spec_alignment", "player_intent"]:
             weight_key = f"{key}_weight"
-            weights[key] = preset.get(weight_key, 1.0)
+            if weight_key in preset:
+                internal_key = mapping.get(key, key)
+                weights[internal_key] = preset.get(weight_key, 1.0)
 
         return weights
 

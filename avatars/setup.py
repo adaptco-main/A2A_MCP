@@ -29,7 +29,7 @@ def setup_default_avatars() -> None:
         voice_config={"tone": "authoritative"},
         ui_config={"color_primary": "#0066cc", "icon": "👔"},
     )
-    registry.register_avatar(managing_profile)
+    registry.register_avatar(managing_profile, key="manager")
 
     orchestration_profile = AvatarProfile(
         avatar_id="avatar_orchestration",
@@ -40,7 +40,7 @@ def setup_default_avatars() -> None:
         voice_config={"tone": "methodical"},
         ui_config={"color_primary": "#0066cc", "icon": "🎼"},
     )
-    registry.register_avatar(orchestration_profile)
+    registry.register_avatar(orchestration_profile, key="conductor")
 
     # Designer avatar (architecture, creativity)
     architecture_profile = AvatarProfile(
@@ -52,7 +52,7 @@ def setup_default_avatars() -> None:
         voice_config={"tone": "creative"},
         ui_config={"color_primary": "#ff6600", "icon": "🏗️"},
     )
-    registry.register_avatar(architecture_profile)
+    registry.register_avatar(architecture_profile, key="architect")
 
     # Coder engineer (implementation correctness)
     coder_profile = AvatarProfile(
@@ -64,7 +64,7 @@ def setup_default_avatars() -> None:
         voice_config={"tone": "technical"},
         ui_config={"color_primary": "#0066cc", "icon": "💻"},
     )
-    registry.register_avatar(coder_profile)
+    registry.register_avatar(coder_profile, key="coder")
 
     # Tester engineer (validation)
     tester_profile = AvatarProfile(
@@ -76,7 +76,7 @@ def setup_default_avatars() -> None:
         voice_config={"tone": "critical"},
         ui_config={"color_primary": "#0066cc", "icon": "✓"},
     )
-    registry.register_avatar(tester_profile)
+    registry.register_avatar(tester_profile, key="tester")
 
     # Researcher designer (exploration)
     researcher_profile = AvatarProfile(
@@ -88,7 +88,7 @@ def setup_default_avatars() -> None:
         voice_config={"tone": "inquisitive"},
         ui_config={"color_primary": "#ff6600", "icon": "🔬"},
     )
-    registry.register_avatar(researcher_profile)
+    registry.register_avatar(researcher_profile, key="researcher")
 
     # PINN agent engineer (physics constraints)
     pinn_profile = AvatarProfile(
@@ -100,7 +100,7 @@ def setup_default_avatars() -> None:
         voice_config={"tone": "analytical"},
         ui_config={"color_primary": "#0066cc", "icon": "⚛️"},
     )
-    registry.register_avatar(pinn_profile)
+    registry.register_avatar(pinn_profile, key="physicist")
 
 
 def reset_avatars() -> None:

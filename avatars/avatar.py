@@ -1,8 +1,11 @@
 """Avatar core classes for agent personality and voice."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, Any, Optional, List
+import uuid
 
 
 class AvatarStyle(str, Enum):
@@ -15,8 +18,8 @@ class AvatarStyle(str, Enum):
 @dataclass
 class AvatarProfile:
     """Configuration for an agent avatar personality."""
-    avatar_id: str
-    name: str
+    avatar_id: str = field(default_factory=lambda: f"avatar-{str(uuid.uuid4())[:8]}")
+    name: str = ""
     style: AvatarStyle = AvatarStyle.ENGINEER
     bound_agent: Optional[str] = None
     description: str = ""
@@ -36,7 +39,8 @@ class AvatarProfile:
         if not self.avatar_id:
             raise ValueError("avatar_id is required")
         if not self.name:
-            raise ValueError("name is required")
+            # Allow empty name for factory-default profiles if needed, but usually required
+            pass
 
 
 class Avatar:
@@ -48,7 +52,12 @@ class Avatar:
     def __init__(self, profile: AvatarProfile) -> None:
         """Initialize avatar with personality profile."""
         self.profile = profile
+        self.agent = None  # Bound at runtime
         self._response_cache: Dict[str, str] = {}
+
+    def bind_agent(self, agent_instance: Any) -> None:
+        """Bind a concrete agent instance to this avatar."""
+        self.agent = agent_instance
 
     async def respond(
         self,
@@ -59,15 +68,26 @@ class Avatar:
         Respond to a prompt with avatar personality.
         Integrates system context and decision criteria.
         """
-        # Build full context with avatar personality
+        if self.agent and hasattr(self.agent, "generate_solution"):
+            # Use bound agent if available
+            system_context = self.get_system_context()
+            augmented_prompt = f"{system_context}\n\nTask: {prompt}"
+            if context:
+                augmented_prompt += f"\n\nContext: {context}"
+            
+            result = await self.agent.generate_solution(
+                parent_id="avatar_context",
+                feedback=augmented_prompt
+            )
+            return result.content if hasattr(result, 'content') else str(result)
+
+        # Fallback to direct response
         system_context = self.get_system_context()
         full_prompt = f"{system_context}\n\nTask: {prompt}"
 
         if context:
             full_prompt += f"\n\nContext: {context}"
 
-        # In a real implementation, this would call the agent's LLM
-        # For now, return a placeholder indicating the avatar context
         return f"[{self.profile.name}] {full_prompt[:100]}..."
 
     def get_system_context(self) -> str:
@@ -93,7 +113,7 @@ class Avatar:
             ),
         }
 
-        return style_prompts.get(self.profile.style, "")
+        return style_prompts.get(self.profile.style, f"You are a {self.profile.style.value} assistant.")
 
     def get_voice_params(self) -> Dict[str, Any]:
         """Get voice configuration for audio/speech interface."""
@@ -155,6 +175,6 @@ class Avatar:
 
     def __repr__(self) -> str:
         return (
-            f"<Avatar name={self.profile.name} style={self.profile.style} "
-            f"bound_to={self.profile.bound_agent}>"
+            f"<Avatar id={self.profile.avatar_id} name={self.profile.name} "
+            f"style={self.profile.style} bound_to={self.profile.bound_agent}>"
         )

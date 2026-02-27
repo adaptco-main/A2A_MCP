@@ -3,6 +3,8 @@
 Provides judge evaluation of agent actions and avatar personality integration.
 """
 
+from __future__ import annotations
+
 from typing import Dict, Any, List, Optional
 from judge.decision import JudgmentModel, ActionScore
 from avatars.registry import get_avatar_registry, AvatarRegistry
@@ -125,7 +127,7 @@ class JudgeOrchestrator:
                 "name": a.profile.name,
                 "style": a.profile.style.value,
                 "bound_agent": a.profile.bound_agent,
-                "description": a.profile.description,
+                "description": getattr(a.profile, "description", ""),
             }
             for a in avatars
         ]
