@@ -11,7 +11,7 @@ secrets:
   # Sensitive values -> rendered into templates/secret.yaml and consumed as env vars.
   oidcAudience: ""
   oidcIssuer: ""
-  oidcJwksUri: ""
+  oidcJwksUrl: ""
   avatarTokenSigningKey: ""
   avatarTokenValidationKey: ""
 

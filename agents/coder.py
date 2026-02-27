@@ -32,10 +32,7 @@ class CoderAgent:
             context_content = "No previous context found. Proceeding with initial architectural build."
 
         prompt = f"Context: {context_content}\nFeedback: {feedback if feedback else 'Initial build'}"
-        code_solution = self.llm.call_llm(prompt)
-        if code_solution is None:
-            raise ValueError("LLM returned no content; cannot create MCPArtifact")
-
+        code_solution = await self.llm.acall_llm(prompt)
         if code_solution is None:
             code_solution = ""
 

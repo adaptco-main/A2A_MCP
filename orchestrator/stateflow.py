@@ -17,7 +17,12 @@ import time
 import threading
 import json
 
-from schemas.runtime_event import EventPayload, RuntimeEvent
+try:
+    from schemas.runtime_event import EventPayload, RuntimeEvent
+except ImportError:
+    # Fallback for environments where schemas are not yet fully available
+    RuntimeEvent = Any
+    EventPayload = Any
 
 
 class State(str, Enum):
@@ -218,9 +223,9 @@ class StateMachine:
 
     def consume_runtime_event(self, event: RuntimeEvent) -> TransitionRecord:
         """Consume normalized AGENT_RESPONSE events and map them to stateflow transitions."""
-        if event.event_type != "AGENT_RESPONSE":
-            raise ValueError(f"Unsupported runtime event type: {event.event_type}")
-        if not event.trace_id:
+        if not hasattr(event, 'event_type') or event.event_type != "AGENT_RESPONSE":
+            raise ValueError(f"Unsupported runtime event type: {getattr(event, 'event_type', 'None')}")
+        if not getattr(event, 'trace_id', None):
             raise ValueError("Runtime event must include trace_id")
 
         meta = {
