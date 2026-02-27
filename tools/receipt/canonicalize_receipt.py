@@ -90,7 +90,7 @@ def build_hash_surface(receipt: dict, strict: bool) -> OrderedDict:
 
 
 def canonical_json(obj: dict) -> str:
-    return json.dumps(obj, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(obj, separators=(",", ":"), ensure_ascii=False, sort_keys=True)
 
 
 def sha256_hex(content: bytes) -> str:
