@@ -19,6 +19,7 @@ jobs:
   contract-gate:
     name: Contract gate
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.head_ref == 'worldline')
     permissions:
       contents: read
     outputs:

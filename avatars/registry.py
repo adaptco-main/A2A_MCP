@@ -124,10 +124,6 @@ class AvatarRegistry:
                 bindings[agent_name] = avatar.profile.avatar_id
         return bindings
 
-    def get_profile(self, avatar_id: str) -> Optional[AvatarProfile]:
-        """Retrieve an avatar profile by ID."""
-        return self._profiles.get(avatar_id)
-
     def get_avatar_for_agent(self, agent_name: str) -> Optional[Avatar]:
         """Retrieve avatar bound to a given agent name."""
         for avatar in self._avatars.values():

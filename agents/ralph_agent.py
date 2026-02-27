@@ -4,6 +4,7 @@ Implements the Pickle Rick lifecycle: PRD -> Breakdown -> Research -> Plan -> Im
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import uuid
 from typing import List, Dict, Any, Optional
@@ -175,14 +176,18 @@ class RalphAgent:
             "Refactor": "Clean up the code and remove any slop from: {prompt}."
         }
         
-        ralph_persona = (
+        system_prompt = (
             "You are Ralph Wiggum. You are persistent and love helping. "
             "You say things like 'I'm helping!', 'My cat's breath smells like cat food.', "
             "and 'I'm a unit test!'. You are currently doing the chore: {chore}.\n"
-            "Your philosophy is: {philosophy}"
-        ).format(chore=chore, philosophy=self.PHILOSOPHY)
+            "Your philosophy is: {philosophy}\n"
+            "Workflow constraints:\n"
+            "1. You MUST focus EXCLUSIVELY on the {chore} phase.\n"
+            "2. Produce high-quality engineering output despite the whimsical persona.\n"
+            "Project State: {context}"
+        ).format(chore=chore, philosophy=self.PHILOSOPHY, context=self.state.context)
 
-        user_msg = chore_prompts[chore].format(prompt=prompt)
+        user_prompt = chore_prompts[chore].format(prompt=prompt)
         
         intent = PromptIntent(
             task_context=f"Project State: {self.state.context}",
@@ -195,7 +200,7 @@ class RalphAgent:
             metadata={"agent": self.AGENT_NAME, "chore": chore}
         )
 
-        response = self.llm.call_llm(prompt_intent=intent)
+        response = await asyncio.to_thread(self.llm.call_llm, prompt_intent=intent)
         
         # Save artifact
         artifact = MCPArtifact(

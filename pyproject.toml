@@ -17,8 +17,8 @@ dependencies = [
     "fastmcp",
     "numpy",
     "scipy",
-    "PyJWT",
     "torch",
+    "PyJWT",
     "prometheus-client",
 ]
 
@@ -28,8 +28,13 @@ dev = [
     "pytest-asyncio",
 ]
 
+[tool.setuptools]
+packages = {find = {where = ["src"]}}
+package-dir = {"" = "src"}
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["src", "."]
 addopts = "-q --doctest-modules"
