@@ -1,3 +1,8 @@
+"""
+PINNAgent - Physics-Informed Neural Network Agent.
+
+Provides deterministic embedding capabilities and world model integration.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -16,7 +21,9 @@ class PINNAgent:
         self.llm = LLMService()
         self.world_model = WorldModel()
 
-    def _deterministic_embedding(self, text: str, dimensions: int = 16) -> List[float]:
+    def _deterministic_embedding(
+        self, text: str, dimensions: int = 16
+    ) -> List[float]:
         digest = hashlib.sha256(text.encode("utf-8")).digest()
         values: List[float] = []
         for i in range(dimensions):
