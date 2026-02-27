@@ -1,4 +1,4 @@
-from .drift_metrics import ks_2samp_numpy, ks_pvalue_asymptotic, ks_statistic
+from .drift_metrics import ks_2samp_numpy, ks_statistic, ks_pvalue_asymptotic
 from .gate import gate_drift
 
 __all__ = [

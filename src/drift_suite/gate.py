@@ -18,7 +18,7 @@ class DriftGateResult:
 
 
 def gate_drift(
-    baseline: np.ndarray | None,
+    baseline: np.ndarray,
     candidate: np.ndarray,
     *,
     baseline_loader: Callable[[], np.ndarray] | None = None,
@@ -27,7 +27,12 @@ def gate_drift(
 ) -> DriftGateResult:
     """Run a deterministic KS-based drift gate.
 
-    Callers can pass baseline explicitly or provide baseline_loader.
+    CI-style drift gate:
+      - Compute KS two-sample test between baseline and candidate
+      - PASS if pvalue > pvalue_threshold
+      - FAIL otherwise
+
+    Deterministic: no randomness, fixed inputs => fixed output.
     """
     if not (0.0 < pvalue_threshold < 1.0):
         raise ValueError("pvalue_threshold must be between 0 and 1.")
@@ -40,11 +45,10 @@ def gate_drift(
     ks = ks_2samp_numpy(baseline, candidate)
     passed = ks.pvalue > pvalue_threshold
 
-    reason = (
-        f"PASS: pvalue {ks.pvalue:.6f} > threshold {pvalue_threshold:.6f}"
-        if passed
-        else f"FAIL: pvalue {ks.pvalue:.6f} <= threshold {pvalue_threshold:.6f}"
-    )
+    if passed:
+        reason = f"PASS: pvalue {ks.pvalue:.6f} > threshold {pvalue_threshold:.6f}"
+    else:
+        reason = f"FAIL: pvalue {ks.pvalue:.6f} <= threshold {pvalue_threshold:.6f}"
 
     return DriftGateResult(
         passed=passed,

@@ -14,6 +14,8 @@ dependencies = [
     "requests",
     "jsonschema",
     "mcp[cli]",
+    "numpy>=1.24",
+    "scipy",
 ]
 
 [project.optional-dependencies]
@@ -25,5 +27,5 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 addopts = "-q --doctest-modules"
