@@ -59,6 +59,22 @@ class AvatarRegistry:
                     "icon": "🏁",
                     "theme": "neon"
                 }
+            ),
+            "ralph": AvatarProfile(
+                avatar_id="avatar-ralph-001",
+                name="Ralph",
+                style=AvatarStyle.ENGINEER,
+                bound_agent="RalphAgent",
+                system_prompt=(
+                    "You are Ralph. You follow the engineering chores: "
+                    "PRD -> Breakdown -> Research -> Plan -> Implement -> Refactor. "
+                    "You are persistent and love helping! Iteration > Perfection."
+                ),
+                ui_config={
+                    "color": "#FFD700",
+                    "icon": "🖍️",
+                    "theme": "yellow-crayon"
+                }
             )
         }
 
@@ -68,14 +84,28 @@ class AvatarRegistry:
 
     def get_avatar(self, avatar_key: str) -> Optional[Avatar]:
         """Retrieve an avatar by key."""
-        return self._avatars.get(avatar_key)
+        avatar = self._avatars.get(avatar_key)
+        if avatar is not None:
+            return avatar
+
+        # Compatibility: callers may request by avatar_id instead of registry key.
+        for candidate in self._avatars.values():
+            if candidate.profile.avatar_id == avatar_key:
+                return candidate
+        return None
 
     def get_profile(self, avatar_key: str) -> Optional[AvatarProfile]:
         """Retrieve an avatar profile by key."""
         return self._profiles.get(avatar_key)
 
-    def register_avatar(self, key: str, profile: AvatarProfile) -> Avatar:
+    def register_avatar(self, key, profile: Optional[AvatarProfile] = None) -> Avatar:
         """Register a new avatar profile."""
+        if profile is None:
+            if not isinstance(key, AvatarProfile):
+                raise TypeError("register_avatar expects AvatarProfile or (key, AvatarProfile)")
+            profile = key
+            key = profile.avatar_id
+
         avatar = Avatar(profile)
         self._avatars[key] = avatar
         self._profiles[key] = profile
@@ -84,6 +114,27 @@ class AvatarRegistry:
     def list_avatars(self) -> Dict[str, Avatar]:
         """Return all registered avatars."""
         return dict(self._avatars)
+
+    def list_bindings(self) -> Dict[str, str]:
+        """Return agent -> avatar_id bindings for all mapped avatars."""
+        bindings: Dict[str, str] = {}
+        for avatar in self._avatars.values():
+            agent_name = avatar.profile.bound_agent
+            if agent_name:
+                bindings[agent_name] = avatar.profile.avatar_id
+        return bindings
+
+    def get_avatar_for_agent(self, agent_name: str) -> Optional[Avatar]:
+        """Retrieve avatar bound to a given agent name."""
+        for avatar in self._avatars.values():
+            if avatar.profile.bound_agent == agent_name:
+                return avatar
+        return None
+
+    def clear(self) -> None:
+        """Clear registry state; useful for tests."""
+        self._avatars.clear()
+        self._profiles.clear()
 
     def __repr__(self) -> str:
         return f"<AvatarRegistry avatars={list(self._avatars.keys())}>"
@@ -96,3 +147,8 @@ _global_registry = AvatarRegistry()
 def get_registry() -> AvatarRegistry:
     """Access the global avatar registry."""
     return _global_registry
+
+
+def get_avatar_registry() -> AvatarRegistry:
+    """Compatibility alias used by newer avatar integrations."""
+    return get_registry()

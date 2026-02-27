@@ -1,27 +1,26 @@
-# A2A_MCP/orchestrator/intent_engine.py
-"""
-IntentEngine — Core pipeline coordinator.
+"""Core pipeline coordinator for multi-agent orchestration."""
 
-Provides two execution modes:
-
-1. ``execute_plan(plan)`` — legacy action-level Coder→Tester loop.
-2. ``run_full_pipeline(description)`` — full 5-agent end-to-end pipeline:
-      ManagingAgent → OrchestrationAgent → ArchitectureAgent
-                                          → CoderAgent → TesterAgent
-"""
 from __future__ import annotations
 
 import logging
 import os
+import uuid
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from types import SimpleNamespace
+from typing import Dict, List, Any
 
 from agents.architecture_agent import ArchitectureAgent
 from agents.coder import CoderAgent
 from agents.managing_agent import ManagingAgent
 from agents.orchestration_agent import OrchestrationAgent
 from agents.tester import TesterAgent
+from orchestrator.judge_orchestrator import get_judge_orchestrator
+from orchestrator.notifier import (
+    WhatsAppNotifier,
+    send_pipeline_completion_notification,
+)
 from orchestrator.storage import DBManager
+from orchestrator.vector_gate import VectorGate, VectorGateDecision
 from schemas.agent_artifacts import MCPArtifact
 from schemas.project_plan import ProjectPlan
 
@@ -49,6 +48,9 @@ class IntentEngine:
         self.architect = ArchitectureAgent()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
+        self.judge = get_judge_orchestrator()
+        self.whatsapp_notifier = WhatsAppNotifier.from_env()
+        self.vector_gate = VectorGate()
         self.db = DBManager()
 
         # RBAC integration (optional, gracefully degrades)
@@ -61,10 +63,6 @@ class IntentEngine:
                 self._rbac_client = RBACClient(rbac_url)
             except ImportError:
                 self._logger.warning("rbac package not installed — RBAC disabled.")
-
-    # ------------------------------------------------------------------
-    # Full 5-agent pipeline
-    # ------------------------------------------------------------------
 
     async def run_full_pipeline(
         self,
@@ -105,11 +103,9 @@ class IntentEngine:
             ),
         )
 
-        # ── Stage 1: ManagingAgent ──────────────────────────────────
         plan = await self.manager.categorize_project(description, requester)
         result.plan = plan
 
-        # ── Stage 2: OrchestrationAgent ─────────────────────────────
         task_descriptions = [a.instruction for a in plan.actions]
         blueprint = await self.orchestrator.build_blueprint(
             project_name=plan.project_name,
@@ -118,81 +114,250 @@ class IntentEngine:
         )
         result.blueprint = blueprint
 
-        # ── Stage 3: ArchitectureAgent ──────────────────────────────
         arch_artifacts = await self.architect.map_system(blueprint)
         result.architecture_artifacts = arch_artifacts
-
-        # ── Stage 4 + 5: CoderAgent → TesterAgent (self-healing) ────
+        last_code_artifact_id: str | None = None
         for action in blueprint.actions:
             action.status = "in_progress"
+            parent_id = last_code_artifact_id or blueprint.plan_id
 
-            artifact = await self.coder.generate_solution(
-                parent_id=blueprint.plan_id,
-                feedback=action.instruction,
+            coder_context = self.judge.get_agent_system_context("CoderAgent")
+            coder_gate = self.vector_gate.evaluate(
+                node="coder_input",
+                query=f"{action.title}\n{action.instruction}",
+                world_model=self.architect.pinn.world_model,
             )
+            coder_vector_context = self.vector_gate.format_prompt_context(coder_gate)
+            coding_task = (
+                f"{coder_context}\n\n"
+                f"{coder_vector_context}\n\n"
+                "Implement this task with tests and safety checks:\n"
+                f"{action.instruction}"
+            )
+            
+            artifact = await self._generate_with_gate(
+                parent_id=parent_id,
+                feedback=coding_task,
+                context_tokens=coder_gate.matches,
+            )
+            self._attach_gate_metadata(artifact, coder_gate)
+            # CoderAgent usually persists, but we ensure it's saved if needed
+            if not self.db.get_artifact(artifact.artifact_id):
+                self.db.save_artifact(artifact)
+            
+            last_code_artifact_id = artifact.artifact_id
 
-
-            # Self-healing loop
             healed = False
             for attempt in range(max_healing_retries):
-                report = await self.tester.validate(artifact.artifact_id)
+                tester_gate = self.vector_gate.evaluate(
+                    node="tester_input",
+                    query=f"{action.instruction}\n{getattr(artifact, 'content', '')}",
+                    world_model=self.architect.pinn.world_model,
+                )
+                tester_context = self.vector_gate.format_prompt_context(tester_gate)
+                report = await self._validate_with_gate(
+                    artifact_id=artifact.artifact_id,
+                    supplemental_context=tester_context,
+                    context_tokens=tester_gate.matches,
+                )
+                judgment = self.judge.judge_action(
+                    action=(
+                        f"TesterAgent verdict for {artifact.artifact_id}: "
+                        f"{report.status}"
+                    ),
+                    context={
+                        "attempt": attempt + 1,
+                        "max_retries": max_healing_retries,
+                        "artifact_id": artifact.artifact_id,
+                    },
+                    agent_name="TesterAgent",
+                )
                 result.test_verdicts.append(
-                    {"artifact": artifact.artifact_id, "status": report.status}
+                    {
+                        "artifact": artifact.artifact_id,
+                        "status": report.status,
+                        "vector_gate": "open" if tester_gate.is_open else "closed",
+                        "judge_score": f"{judgment.overall_score:.3f}",
+                    }
                 )
 
                 if report.status == "PASS":
                     healed = True
                     break
 
-                # Re-generate with tester feedback
-                artifact = await self.coder.generate_solution(
-                    parent_id=artifact.artifact_id,
-                    feedback=report.critique,
+                refine_context = self.judge.get_agent_system_context("CoderAgent")
+                healing_gate = self.vector_gate.evaluate(
+                    node="healing_input",
+                    query=f"{action.instruction}\n{report.critique}",
+                    world_model=self.architect.pinn.world_model,
                 )
-
+                healing_vector_context = self.vector_gate.format_prompt_context(healing_gate)
+                artifact = await self._generate_with_gate(
+                    parent_id=artifact.artifact_id,
+                    feedback=(
+                        f"{refine_context}\n\n"
+                        f"{healing_vector_context}\n\n"
+                        f"Tester feedback:\n{report.critique}"
+                    ),
+                    context_tokens=healing_gate.matches,
+                )
+                self._attach_gate_metadata(artifact, healing_gate)
+                if not self.db.get_artifact(artifact.artifact_id):
+                    self.db.save_artifact(artifact)
 
             result.code_artifacts.append(artifact)
+            last_code_artifact_id = artifact.artifact_id
             action.status = "completed" if healed else "failed"
 
-        result.success = all(
-            a.status == "completed" for a in blueprint.actions
+        result.success = all(a.status == "completed" for a in blueprint.actions)
+        completed_actions = sum(1 for action in blueprint.actions if action.status == "completed")
+        failed_actions = sum(1 for action in blueprint.actions if action.status == "failed")
+        self._notify_completion(
+            project_name=blueprint.project_name,
+            success=result.success,
+            completed_actions=completed_actions,
+            failed_actions=failed_actions,
         )
         return result
 
-    # ------------------------------------------------------------------
-    # Legacy action-level loop (backward compat)
-    # ------------------------------------------------------------------
-
     async def execute_plan(self, plan: ProjectPlan) -> List[str]:
-        """
-        Walk through every action in the plan, invoking the coder and tester
-        for each one, and return a list of all artifact IDs produced.
-        """
+        """Legacy action-level coder->tester loop for backward compatibility."""
         artifact_ids: List[str] = []
+        last_code_artifact_id: str | None = None
 
         for action in plan.actions:
             action.status = "in_progress"
+            parent_id = last_code_artifact_id or plan.plan_id
 
-            # Generate code solution
-            artifact = await self.coder.generate_solution(
-                parent_id=plan.plan_id,
-                feedback=action.instruction,
+            coder_gate = self.vector_gate.evaluate(
+                node="legacy_coder_input",
+                query=f"{action.title}\n{action.instruction}",
+                world_model=self.architect.pinn.world_model,
             )
-
+            coder_vector_context = self.vector_gate.format_prompt_context(coder_gate)
+            
+            artifact = await self._generate_with_gate(
+                parent_id=parent_id,
+                feedback=f"{coder_vector_context}\n\n{action.instruction}",
+                context_tokens=coder_gate.matches,
+            )
+            self._attach_gate_metadata(artifact, coder_gate)
+            if not self.db.get_artifact(artifact.artifact_id):
+                self.db.save_artifact(artifact)
+            
             artifact_ids.append(artifact.artifact_id)
+            last_code_artifact_id = artifact.artifact_id
 
-            # Validate the artifact
-            report = await self.tester.validate(artifact.artifact_id)
-            artifact_ids.append(report.status)
+            # Validate with Tester
+            tester_gate = self.vector_gate.evaluate(
+                node="legacy_tester_input",
+                query=f"{action.instruction}\n{getattr(artifact, 'content', '')}",
+                world_model=self.architect.pinn.world_model,
+            )
+            tester_context = self.vector_gate.format_prompt_context(tester_gate)
+            report = await self._validate_with_gate(
+                artifact_id=artifact.artifact_id,
+                supplemental_context=tester_context,
+                context_tokens=tester_gate.matches,
+            )
+            
+            # Save Test Report
+            test_artifact_id = str(uuid.uuid4())
+            report_artifact = SimpleNamespace(
+                artifact_id=test_artifact_id,
+                parent_artifact_id=artifact.artifact_id,
+                agent_name=self.tester.agent_name,
+                version="1.0.0",
+                type="test_report",
+                content=report.model_dump_json() if hasattr(report, 'model_dump_json') else str(report),
+            )
+            # Minimal metadata for DBManager.save_artifact compatibility
+            if not hasattr(report_artifact, "metadata"):
+                report_artifact.metadata = {}
+            
+            self.db.save_artifact(report_artifact)
+            artifact_ids.append(test_artifact_id)
 
-            # Produce a refinement pass
-            refined = await self.coder.generate_solution(
-                parent_id=artifact.artifact_id,
-                feedback=report.critique,
+            action.status = "completed" if report.status == "PASS" else "failed"
+
+        self._notify_completion(
+            project_name=plan.project_name,
+            success=all(a.status == "completed" for a in plan.actions),
+            completed_actions=sum(1 for a in plan.actions if a.status == "completed"),
+            failed_actions=sum(1 for a in plan.actions if a.status == "failed"),
+        )
+        return artifact_ids
+
+    def _notify_completion(
+        self,
+        *,
+        project_name: str,
+        success: bool,
+        completed_actions: int,
+        failed_actions: int,
+    ) -> None:
+        """Send best-effort completion notification without breaking execution."""
+        try:
+            send_pipeline_completion_notification(
+                self.whatsapp_notifier,
+                project_name=project_name,
+                success=success,
+                completed_actions=completed_actions,
+                failed_actions=failed_actions,
+            )
+        except Exception:
+            # Notifications are out-of-band and must never break task execution.
+            pass
+
+    async def _validate_with_gate(
+        self,
+        artifact_id: str,
+        supplemental_context: str,
+        context_tokens,
+    ):
+        """Validate artifacts with vector context when supported."""
+        try:
+            return await self.tester.validate(
+                artifact_id,
+                supplemental_context=supplemental_context,
+                context_tokens=context_tokens,
+            )
+        except TypeError:
+            try:
+                return await self.tester.validate(
+                    artifact_id,
+                    supplemental_context=supplemental_context,
+                )
+            except TypeError:
+                return await self.tester.validate(artifact_id)
+
+    async def _generate_with_gate(self, parent_id: str, feedback: str, context_tokens):
+        """Generate artifacts with token context when supported."""
+        try:
+            return await self.coder.generate_solution(
+                parent_id=parent_id,
+                feedback=feedback,
+                context_tokens=context_tokens,
+            )
+        except TypeError:
+            return await self.coder.generate_solution(
+                parent_id=parent_id,
+                feedback=feedback,
             )
 
-            artifact_ids.append(refined.artifact_id)
+    @staticmethod
+    def _attach_gate_metadata(artifact: object, decision: VectorGateDecision) -> None:
+        """Attach gate provenance to artifacts that expose a metadata attribute."""
+        if not hasattr(artifact, "metadata"):
+            return
 
-            action.status = "completed"
-
-        return artifact_ids
+        metadata = getattr(artifact, "metadata") or {}
+        metadata["vector_gate"] = {
+            "node": decision.node,
+            "is_open": decision.is_open,
+            "threshold": decision.threshold,
+            "top_score": decision.top_score,
+            "match_count": len(decision.matches),
+            "matched_token_ids": [m.token_id for m in decision.matches],
+        }
+        setattr(artifact, "metadata", metadata)

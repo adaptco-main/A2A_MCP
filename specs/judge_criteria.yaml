@@ -1,4 +1,3 @@
----
 # Judge Criteria Scoring Rubric
 # Defines multi-criteria decision framework for agent action evaluation.
 # All criteria contribute to overall action score [0, 1].
@@ -15,7 +14,6 @@ criteria:
   safety:
     weight: 1.0
     description: "Vehicle and environment safety constraints"
-
     sub_criteria:
       bounds_check:
         description: "Entity stays within Base44 cell bounds"
@@ -66,13 +64,12 @@ criteria:
   spec_alignment:
     weight: 0.8
     description: "Adherence to Supra physics and performance specs"
-
     sub_criteria:
       acceleration_realism:
         description: "Acceleration matches Supra 0-60 envelope"
         scoring:
-          within_envelope: 1.0  # 3.8s ≤ 0-60 time
-          slightly_slow: 0.8    # 3.8-4.5s
+          within_envelope: 1.0  # 3.9s ≤ 0-60 time
+          slightly_slow: 0.8    # 3.9-4.5s
           well_below_spec: 0.4  # > 4.5s
 
       handling_compliance:
@@ -100,7 +97,6 @@ criteria:
   player_intent:
     weight: 0.7
     description: "Alignment with user/player goal"
-
     sub_criteria:
       objective_progress:
         description: "Action advances toward stated goal"
@@ -135,7 +131,6 @@ criteria:
   latency:
     weight: 0.5
     description: "Execution within time budget (frame-level)"
-
     sub_criteria:
       execution_time:
         description: "Action computes within frame budget"
@@ -195,58 +190,6 @@ context:
     - tactical_situation
     - weather_conditions
     - time_of_day
-
-# ========== SCORING EXAMPLES ==========
-examples:
-  action_a_move_forward:
-    description: "Accelerate to 60 mph, maintain lane"
-    context:
-      current_speed_mph: 30
-      max_speed_mph: 155
-      fuel_remaining_gal: 11.0
-      distance_to_obstacle_m: 50.0
-      lateral_g_force: 0.1
-      objective_type: "reach_checkpoint"
-      avatar_style: "balanced"
-    expected_scores:
-      safety: 1.0  # Clear road, sub-limit
-      spec_alignment: 1.0  # Realistic acceleration curve
-      player_intent: 0.85  # Progresses toward checkpoint
-      latency: 1.0  # Computed in <10ms
-      overall: 0.96  # Excellent action
-
-  action_b_sharp_turn:
-    description: "Hard right turn at current speed (50 mph)"
-    context:
-      current_speed_mph: 50
-      max_speed_mph: 155
-      lateral_g_force: 1.2  # ESC threshold is 1.08
-      turning_radius_ft: 25  # spec is 37.4
-      objective_type: "avoid_obstacle"
-      avatar_style: "driver"
-    expected_scores:
-      safety: 0.0  # Lateral g over limit, risk of skid
-      spec_alignment: 0.4  # Unrealistic turn tightness
-      player_intent: 1.0  # Avoids obstacle
-      latency: 0.9  # Slight delay
-      overall: 0.38  # Poor - safety critical failure
-
-  action_c_eco_cruise:
-    description: "Cruise at 45 mph (eco mode)"
-    context:
-      current_speed_mph: 45
-      max_speed_mph: 155
-      fuel_remaining_gal: 3.0  # Low!
-      distance_to_obstacle_m: 200
-      lateral_g_force: 0.0
-      objective_type: "reach_gas_station"
-      avatar_style: "engineer"
-    expected_scores:
-      safety: 0.3  # Low fuel is risky
-      spec_alignment: 0.8  # Realistic idle/cruise
-      player_intent: 1.0  # Direct path to objective
-      latency: 1.0
-      overall: 0.68  # Acceptable but fuel concern noted
 
 # ========== JUDGE TUNING ==========
 tuning:

@@ -1,0 +1,55 @@
+name: Agents CI/CD
+
+on:
+  pull_request:
+    branches:
+      - "**"
+  push:
+    branches:
+      - main
+
+jobs:
+  workflow-lint:
+    name: Lint workflow YAML
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate workflow syntax with actionlint
+        uses: rhysd/actionlint@v1
+
+      - name: Validate workflow YAML formatting
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: .github/workflows
+          config_data: |
+            extends: default
+            rules:
+              line-length:
+                max: 180
+                level: warning
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: workflow-lint
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build placeholder
+        run: echo "Add build steps here."
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs:
+      - workflow-lint
+      - build
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Test placeholder
+        run: echo "Add test steps here."
