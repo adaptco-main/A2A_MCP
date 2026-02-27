@@ -1,48 +1,40 @@
-# Recommendation: Split to Minimize Context Contamination and Token Waste
+# Recommendation: hard split to minimize contamination and token waste
 
-## Recommended split
-- **AGENTS_HOST:** `adaptco/core-orchestrator`
-- **MODELS_HOST:** `Q-Enterprises/core-orchestrator`
+## Chosen split
 
-## Why this split minimizes contamination and token waste
-1. Runtime prompts should only include compact tool schemas, IDs, and verdicts.
-2. Training/index assets are high-entropy payloads (corpora, checkpoints, vectors) and should be physically separated from runtime orchestration code.
-3. Separate release trains reduce accidental coupling: runtime hotfixes stay fast; model/index updates stay governed.
-4. Blast radius is reduced: compromise of AGENTS_HOST does not expose full corpora/weights if only IDs+commits+URIs are present.
+- **AGENTS_HOST:** `Q-Enterprises/core-orchestrator`
+- **MODELS_HOST:** `adaptco/core-orchestrator`
 
-## Hard boundaries (forbidden in AGENTS_HOST)
-Do **not** commit or store:
-- model weights/checkpoints (`*.safetensors`, `*.pt`, `*.bin`, `*.ckpt`, large `*.onnx`)
-- corpora/datasets (`datasets/`, `corpus/`)
-- prompt dumps/eval transcripts (`prompts_dump/`, raw chat logs)
-- vector DB snapshots/index files (FAISS/Qdrant/Milvus dumps)
-- embedding dumps (`embeddings_dump/`)
-- long-lived spool/log payloads with sensitive context
+## Why this minimizes context contamination
 
-## ZKP-style (lightweight) commitment requirements
-For each RAG build and LoRA build:
-- `dataset_manifest_commit = sha256(canonical_manifest_json)`
-- `build_manifest_commit   = sha256(canonical_build_json)`
-- `artifact_commit         = sha256(bytes)`
+1. Runtime orchestration and policy gates remain in one lean control-plane repo.
+2. Model-heavy churn (indexes, datasets, checkpoints, embedding exports) is isolated to a data-plane repo.
+3. Agent prompts no longer risk accidental inclusion of corpora/index internals from co-located files.
+4. CI/CD cadence can diverge safely: runtime hotfixes are not blocked by model pipeline rebuild cycles.
 
-Store commitment tuples in an append-only ledger. AGENTS_HOST consumes only IDs, commits, and URIs.
+## Explicit AGENTS_HOST boundaries (forbidden content)
 
-## Runtime data contract (AGENTS_HOST consumes only)
-- `index_id`, `artifact_id`, `receipt_id`
-- `dataset_manifest_commit`
-- `build_manifest_commit`
-- `artifact_commit`
-- immutable artifact URI
+The following are forbidden in AGENTS_HOST:
 
-No raw corpora or raw weights in agent prompts or AGENTS_HOST repository content.
+- Model weights/checkpoints: `*.safetensors`, `*.pt`, `*.bin`, `*.ckpt`, `*.onnx` (above threshold)
+- Corpora/data dumps: `datasets/`, `corpus/`, `prompts_dump/`, `embeddings_dump/`
+- Vector snapshots: FAISS indexes, Qdrant snapshots, Milvus dumps
+- Raw training/eval prompt dumps containing proprietary context
+- Large binary artifacts not in explicit allowlist storage
 
-## Token optimization contract
-LLM context is limited to:
-- tool schemas
-- compact IDs
-- short verdict summaries
+## AGENTS_HOST allowed content
 
-All heavy retrieval must flow through MCP tools:
-- `rag.query(index_id, query, top_k) -> snippets + commit proofs`
-- `artifact.fetch(artifact_id) -> payload + commit proofs`
-- `receipt.verify(receipt_id) -> pass/fail + reason`
+- Orchestrator logic, tool routers, MCP/A2A bridges
+- Policy/theta gates and receipt verification logic
+- Interface contracts: schemas, tool definitions, model/reference IDs
+- Commit proofs + URIs + verdict summaries only
+
+## MODELS_HOST responsibility boundary
+
+- Dataset and build manifests
+- Embedding pipelines and RAG index build jobs
+- LoRA/training jobs and model registration metadata
+- Publishing artifact commitments to append-only ledger
+## Takeover clarification
+
+See `TAKEOVER_CLARIFICATIONS.md` for the explicit answer about additional takeover changes and the specific adaptco model/data clusters to migrate.
