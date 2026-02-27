@@ -60,7 +60,7 @@ def test_intent_engine_executes_plan(monkeypatch):
 
     assert len(artifact_ids) == 6
     assert all(action.status == "completed" for action in plan.actions)
-    assert len(saved) == 4
+    assert len(saved) == 6
 
 
 

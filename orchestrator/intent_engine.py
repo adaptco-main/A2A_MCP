@@ -13,6 +13,7 @@ from agents.architecture_agent import ArchitectureAgent
 from agents.coder import CoderAgent
 from agents.managing_agent import ManagingAgent
 from agents.orchestration_agent import OrchestrationAgent
+from agents.pinn_agent import PINNAgent
 from agents.tester import TesterAgent
 from orchestrator.judge_orchestrator import get_judge_orchestrator
 from orchestrator.notifier import (
@@ -48,6 +49,7 @@ class IntentEngine:
         self.architect = ArchitectureAgent()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
+        self.pinn = PINNAgent()
         self.judge = get_judge_orchestrator()
         self.whatsapp_notifier = WhatsAppNotifier.from_env()
         self.vector_gate = VectorGate()
@@ -229,6 +231,7 @@ class IntentEngine:
             action.status = "in_progress"
             parent_id = last_code_artifact_id or plan.plan_id
 
+<<<<<<< HEAD
             coder_gate = self.vector_gate.evaluate(
                 node="legacy_coder_input",
                 query=f"{action.title}\n{action.instruction}",
@@ -278,6 +281,25 @@ class IntentEngine:
             self.db.save_artifact(report_artifact)
             artifact_ids.append(test_artifact_id)
 
+            # 4. Ingest into PINN (Vector Store) - Merged from origin branch
+            pinn_artifact_id = str(uuid.uuid4())
+            token = self.pinn.ingest_artifact(
+                artifact_id=pinn_artifact_id,
+                content=artifact.content if hasattr(artifact, 'content') else "",
+                parent_id=artifact.artifact_id,
+            )
+            pinn_artifact = SimpleNamespace(
+                artifact_id=pinn_artifact_id,
+                parent_artifact_id=artifact.artifact_id,
+                agent_name=self.pinn.agent_name,
+                version="1.0.0",
+                type="vector_token",
+                content=token.model_dump_json() if hasattr(token, 'model_dump_json') else str(token),
+            )
+            if not hasattr(pinn_artifact, "metadata"):
+                pinn_artifact.metadata = {}
+            self.db.save_artifact(pinn_artifact)
+            artifact_ids.append(pinn_artifact_id)
             action.status = "completed" if report.status == "PASS" else "failed"
 
         self._notify_completion(
