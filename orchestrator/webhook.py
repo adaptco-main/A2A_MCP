@@ -10,6 +10,11 @@ app.include_router(verify_router)
 PLAN_STATE_MACHINES = {}
 
 
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
+
 def _resolve_plan_id(path_plan_id: str | None, payload: dict) -> str | None:
     if path_plan_id:
         return path_plan_id.strip()

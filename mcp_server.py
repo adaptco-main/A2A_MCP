@@ -8,6 +8,9 @@ except ModuleNotFoundError:
     from mcp.server.fastmcp import FastMCP
 from orchestrator.storage import SessionLocal
 from schemas.database import ArtifactModel
+import os
+
+import requests
 
 # Initialize FastMCP Server
 mcp = FastMCP("A2A_Orchestrator")
@@ -27,8 +30,14 @@ def get_artifact_trace(root_id: str):
 @mcp.tool()
 def trigger_new_research(query: str):
     """Triggers the A2A pipeline for a new user query via the orchestrator."""
-    import requests
-    response = requests.post("http://localhost:8000/orchestrate", params={"user_query": query})
+    api_base_url = os.getenv("MCP_API_BASE_URL", "http://localhost:8000").rstrip("/")
+    timeout_seconds = float(os.getenv("MCP_API_TIMEOUT_SECONDS", "10"))
+    response = requests.post(
+        f"{api_base_url}/orchestrate",
+        params={"user_query": query},
+        timeout=timeout_seconds,
+    )
+    response.raise_for_status()
     return response.json()
 
 if __name__ == "__main__":
