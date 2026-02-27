@@ -12,7 +12,9 @@ def test_generate_solution_returns_and_persists_artifact(monkeypatch):
     agent = CoderAgent()
 
     monkeypatch.setattr(agent.db, "get_artifact", lambda _id: SimpleNamespace(content="parent context"))
-    monkeypatch.setattr(agent.llm, "call_llm", lambda **kwargs: f"generated::{kwargs['prompt_intent'].user_input}")
+    async def fake_acall_llm(prompt):
+        return f"generated::{prompt}"
+    monkeypatch.setattr(agent.llm, "acall_llm", fake_acall_llm)
 
     saved = {}
 
@@ -28,13 +30,13 @@ def test_generate_solution_returns_and_persists_artifact(monkeypatch):
     assert artifact.metadata["parent_artifact_id"] == "parent-1"
     assert saved["artifact"].parent_artifact_id == "parent-1"
     assert saved["artifact"].artifact_id == artifact.artifact_id
-
-
 def test_generate_solution_raises_when_llm_returns_none(monkeypatch):
     agent = CoderAgent()
 
     monkeypatch.setattr(agent.db, "get_artifact", lambda _id: SimpleNamespace(content="parent context"))
-    monkeypatch.setattr(agent.llm, "call_llm", lambda prompt: None)
+    async def fake_acall_llm(prompt):
+        return None
+    monkeypatch.setattr(agent.llm, "acall_llm", fake_acall_llm)
 
     try:
         asyncio.run(agent.generate_solution("parent-1", "feedback"))
