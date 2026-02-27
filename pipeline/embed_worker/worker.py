@@ -99,6 +99,16 @@ def process_batch(batch_payload: Dict[str, Any]) -> None:
         
         for chunk, embedding in zip(chunks, embeddings_list):
             chunk_id = chunk['chunk_id']
+            source_type = chunk.get('source_type', 'text')
+            chunk_locator = chunk.get('chunk_locator', {})
+            repo_key = chunk.get('repo_key', '')
+            repo_kind = chunk.get('repo_kind', '')
+            repo_url = chunk.get('repo_url', '')
+            repo_root = chunk.get('repo_root', '')
+            relative_path = chunk.get('relative_path', '')
+            commit_sha = chunk.get('commit_sha', '')
+            branch = chunk.get('branch', '')
+            module_name = chunk.get('module_name', '')
             
             # Create embedding record
             embedding_record = {
@@ -106,6 +116,17 @@ def process_batch(batch_payload: Dict[str, Any]) -> None:
                 "doc_id": chunk['doc_id'],
                 "text_content": chunk['text_content'],
                 "embedding": embedding,
+                "source_type": source_type,
+                "chunk_locator": chunk_locator,
+                "chunker_version": chunk.get('chunker_version'),
+                "repo_key": repo_key,
+                "repo_kind": repo_kind,
+                "repo_url": repo_url,
+                "repo_root": repo_root,
+                "relative_path": relative_path,
+                "commit_sha": commit_sha,
+                "branch": branch,
+                "module_name": module_name,
                 "embedder_model_id": MODEL_CONFIG['embedder_model_id'],
                 "weights_hash": MODEL_CONFIG['weights_hash'],
                 "chunk_integrity_hash": chunk['integrity_hash']
@@ -119,6 +140,17 @@ def process_batch(batch_payload: Dict[str, Any]) -> None:
                     "doc_id": chunk['doc_id'],
                     "chunk_index": chunk['chunk_index'],
                     "text_content": chunk['text_content'],
+                    "source_type": source_type,
+                    "chunk_locator": chunk_locator,
+                    "chunker_version": chunk.get('chunker_version'),
+                    "repo_key": repo_key,
+                    "repo_kind": repo_kind,
+                    "repo_url": repo_url,
+                    "repo_root": repo_root,
+                    "relative_path": relative_path,
+                    "commit_sha": commit_sha,
+                    "branch": branch,
+                    "module_name": module_name,
                     "chunk_integrity_hash": chunk['integrity_hash']
                 }
             )

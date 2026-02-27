@@ -14,6 +14,9 @@ on:
 jobs:
   build-train-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     if: github.event_name != 'pull_request'
     env:
       AWS_REGION: us-east-1
@@ -53,6 +56,12 @@ jobs:
           echo "Running unit tests..."
           if [ -d tests ]; then pytest -q tests; fi
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.DEPLOY_ROLE_ARN }}
+
       - name: Log in to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
@@ -65,13 +74,8 @@ jobs:
           echo "Pushing Docker image to ECR..."
           docker push $ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Configure AWS credentials for kubectl
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: ${{ secrets.DEPLOY_ROLE_ARN }}
-
       - name: Update Kubernetes deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           echo "Updating Kubernetes deployment..."
           # Use kubeconfig pointing to your EKS cluster

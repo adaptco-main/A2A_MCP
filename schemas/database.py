@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, JSON, String, Text
+from sqlalchemy import (
+    Column, String, Text, DateTime, Float, Boolean, JSON, Integer, 
+    LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index
+)
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -39,6 +41,73 @@ class PlanStateModel(Base):
     def __repr__(self) -> str:
         return f"<PlanState(plan_id={self.plan_id})>"
 
+
+class FSMExecutionModel(Base):
+    __tablename__ = "fsm_execution"
+
+    tenant_id = Column(Text, nullable=False)
+    execution_id = Column(Text, primary_key=True)
+    fsm_id = Column(Text, nullable=False)
+    started_at = Column(DateTime, nullable=False, default=_utc_now)
+    finalized_at = Column(DateTime, nullable=True)
+    head_seq = Column(BigInteger, nullable=False, default=0)
+    head_hash = Column(LargeBinary, nullable=True)
+    status = Column(String, nullable=False, default="RUNNING")
+    policy_hash = Column(LargeBinary, nullable=False, default=b"")
+    role_matrix_ver = Column(String, nullable=False, default="unknown")
+    materiality_ver = Column(String, nullable=False, default="unknown")
+    system_version = Column(String, nullable=False, default="1.0.0")
+    hash_version = Column(Integer, nullable=False, default=1)
+
+    __table_args__ = (
+        Index("ix_fsm_execution_tenant_fsm", "tenant_id", "fsm_id"),
+    )
+
+
+class FSMEventModel(Base):
+    __tablename__ = "fsm_event"
+
+    tenant_id = Column(Text, nullable=False)
+    fsm_id = Column(Text, nullable=False)
+    execution_id = Column(Text, nullable=False)
+    seq = Column(BigInteger, nullable=False)
+    event_type = Column(Text, nullable=False)
+    event_version = Column(Integer, nullable=False)
+    occurred_at = Column(DateTime, nullable=False)
+    payload_canonical = Column(LargeBinary, nullable=False)
+    payload_hash = Column(LargeBinary, nullable=False)
+    prev_event_hash = Column(LargeBinary, nullable=True)
+    event_hash = Column(LargeBinary, nullable=False)
+    system_version = Column(Text, nullable=False)
+    hash_version = Column(Integer, nullable=False)
+    certification = Column(Text, nullable=False)
+
+    __table_args__ = (
+        PrimaryKeyConstraint("tenant_id", "execution_id", "seq", name="pk_fsm_event"),
+        UniqueConstraint("tenant_id", "execution_id", "event_hash", name="uq_fsm_event_hash"),
+        Index("ix_fsm_event_tenant_execution", "tenant_id", "execution_id"),
+        Index("ix_fsm_event_tenant_fsm", "tenant_id", "fsm_id"),
+    )
+
+
+class FSMSnapshotModel(Base):
+    __tablename__ = "fsm_snapshot"
+
+    tenant_id = Column(Text, nullable=False)
+    execution_id = Column(Text, nullable=False)
+    snapshot_seq = Column(BigInteger, nullable=False)
+    snapshot_canonical = Column(LargeBinary, nullable=False)
+    snapshot_hash = Column(LargeBinary, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=_utc_now)
+
+    __table_args__ = (
+        PrimaryKeyConstraint("tenant_id", "execution_id", "snapshot_seq", name="pk_fsm_snapshot"),
+    )
+
+
+# ============================================================================
+# Telemetry Storage Models - Supporting Diagnostic Telemetry System
+# ============================================================================
 
 class TelemetryEventModel(Base):
     """Stores raw telemetry events from system execution."""

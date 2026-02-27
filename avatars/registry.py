@@ -59,6 +59,22 @@ class AvatarRegistry:
                     "icon": "🏁",
                     "theme": "neon"
                 }
+            ),
+            "ralph": AvatarProfile(
+                avatar_id="avatar-ralph-001",
+                name="Ralph",
+                style=AvatarStyle.ENGINEER,
+                bound_agent="RalphAgent",
+                system_prompt=(
+                    "You are Ralph. You follow the engineering chores: "
+                    "PRD -> Breakdown -> Research -> Plan -> Implement -> Refactor. "
+                    "You are persistent and love helping! Iteration > Perfection."
+                ),
+                ui_config={
+                    "color": "#FFD700",
+                    "icon": "🖍️",
+                    "theme": "yellow-crayon"
+                }
             )
         }
 
