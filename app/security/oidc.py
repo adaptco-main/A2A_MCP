@@ -4,6 +4,7 @@ import logging
 import os
 import uuid
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Mapping
 
 import jwt
@@ -15,8 +16,47 @@ class OIDCAuthError(Exception):
     """Authentication failure that is safe to return to clients."""
 
 
-class OIDCClaimError(Exception):
+class OIDCClaimError(OIDCAuthError):
     """Claim validation failure that is safe to return to clients."""
+
+
+class RejectionReason(str, Enum):
+    CLAIM_MISMATCH = "claim_mismatch"
+    QUOTA_EXCEEDED = "quota_exceeded"
+    INVALID_VECTOR = "invalid_vector"
+
+
+@dataclass(frozen=True)
+class IngestionValidationResult:
+    accepted: bool
+    reason: RejectionReason | None = None
+
+
+def validate_ingestion_claims(
+    client_id: str,
+    avatar_id: str,
+    claims: Mapping[str, Any],
+    token_vector: list[float],
+    projected_token_total: int,
+    quota: int,
+) -> IngestionValidationResult:
+    """
+    Validates ingestion claims against the verified OIDC token and quotas.
+    """
+    # 1. Claim Mismatch (Identity Verification)
+    # Using 'repository' as client_id and 'actor' as avatar_id for GitHub OIDC
+    if claims.get("repository") != client_id or claims.get("actor") != avatar_id:
+        return IngestionValidationResult(False, RejectionReason.CLAIM_MISMATCH)
+
+    # 2. Invalid Vector (Structural Integrity)
+    if not token_vector or any(not isinstance(v, (int, float)) for v in token_vector):
+        return IngestionValidationResult(False, RejectionReason.INVALID_VECTOR)
+
+    # 3. Quota Exceeded (Resource Management)
+    if projected_token_total > quota:
+        return IngestionValidationResult(False, RejectionReason.QUOTA_EXCEEDED)
+
+    return IngestionValidationResult(True)
 
 
 @dataclass(frozen=True)

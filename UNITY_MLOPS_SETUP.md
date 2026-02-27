@@ -68,7 +68,11 @@ from mlops_unity_pipeline import (
 
 async def run_forever() -> None:
     orchestrator = UnityMLOpsOrchestrator()
-    scheduler = TrainingScheduler(orchestrator)
+    scheduler = TrainingScheduler(
+        orchestrator,
+        max_concurrent_jobs=4,
+        webhook_url="https://example.com/training-events",
+    )
 
     schedule = TrainingSchedule(
         schedule_id="nightly",
@@ -93,5 +97,7 @@ asyncio.run(run_forever())
 ## Notes
 
 - The current implementation includes **safe local placeholders** for Unity build and RL training to keep the pipeline runnable in non-Unity environments.
+- `TrainingScheduler` prevents duplicate triggers in the same minute for the same schedule.
+- `TrainingScheduler` supports concurrent asset jobs and optional webhook notifications for completed runs.
 - Replace `build_unity_environment` and `train_rl_agent` with project-specific commands for full production usage.
 - Vertex registration writes metadata to `vertex_registration.json` and returns a resource URI-like string for traceability.

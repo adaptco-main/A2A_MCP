@@ -27,5 +27,6 @@ runs:
       shell: bash
       env:
         PYTHONDONTWRITEBYTECODE: "1"
+        PYTHONPATH: .:src:scripts
       run: |
         pytest -q tests/test_full_pipeline.py tests/test_intent_engine.py tests/test_avatar_integration.py tests/test_game_model.py tests/test_webgl_integration.py tests/test_cicd_pipeline.py tests/test_mcp_server.py

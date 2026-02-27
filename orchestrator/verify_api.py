@@ -1,30 +1,23 @@
 from __future__ import annotations
 
-<<<<<<< ours
-from typing import Any
-
-from fastapi import APIRouter, Depends, HTTPException
-=======
 import os
 import importlib
 from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
->>>>>>> theirs
-
 from orchestrator.settlement import PostgresEventStore, verify_execution
 
 router = APIRouter()
 
 
-async def get_tenant_id() -> str:
-    raise NotImplementedError
+async def get_tenant_id(x_tenant_id: str | None = Header(default=None)) -> str:
+    tenant_id = x_tenant_id or os.getenv("DEFAULT_TENANT_ID", "default")
+    tenant_id = tenant_id.strip()
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Missing tenant id")
+    return tenant_id
 
 
-<<<<<<< ours
-async def get_db_connection() -> Any:
-    raise NotImplementedError
-=======
 async def get_db_connection(request: Request) -> AsyncIterator[Any]:
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
@@ -40,7 +33,6 @@ async def get_db_connection(request: Request) -> AsyncIterator[Any]:
 
     async with request.app.state.verify_db_pool.acquire() as conn:
         yield conn
->>>>>>> theirs
 
 
 def get_event_store() -> PostgresEventStore:
