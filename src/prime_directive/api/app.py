@@ -11,16 +11,16 @@ app = FastAPI(title="PRIME_DIRECTIVE")
 _engine = PipelineEngine(PipelineContext(run_id="bootstrap"))
 
 
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(**_engine.health())
 
 
 @app.websocket("/ws/pipeline")
 async def pipeline_ws(websocket: WebSocket) -> None:
     await websocket.accept()
-    await websocket.send_json({"type": "state.transition", "state": engine.get_state().value})
+    # Note: Using _engine instead of engine to match local variable name
+    await websocket.send_json({"type": "state.transition", "state": _engine.get_state().value})
 
     try:
         while True:
@@ -30,7 +30,7 @@ async def pipeline_ws(websocket: WebSocket) -> None:
             if message_type == "ping":
                 await websocket.send_json({"type": "pong"})
             elif message_type == "get_state":
-                await websocket.send_json({"type": "state.transition", "state": engine.get_state().value})
+                await websocket.send_json({"type": "state.transition", "state": _engine.get_state().value})
             elif message_type == "render_request":
                 await websocket.send_json({"type": "ack", "message": "render_request received"})
             else:
