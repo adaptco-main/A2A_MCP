@@ -56,6 +56,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="Emit the rehearsal in live mode (non-deterministic overlay)",
     )
     rehearsal.set_defaults(training_mode=True)
+
+    geodesic = sub.add_parser(
+        "geodesic", help="Model the AxQxOS geodesic bridge terminal"
+    )
+    geodesic.add_argument(
+        "--name",
+        default="AxQxOS bridge terminal",
+        help="Name of the bridge terminal to model",
+    )
+    geodesic.add_argument(
+        "--anchors",
+        nargs="+",
+        default=["origin", "terminus"],
+        help="Ordered list of anchors used to build the bridge lattice",
+    )
+    geodesic.add_argument(
+        "--span",
+        type=float,
+        default=120.0,
+        help="Total span of the bridge in arbitrary units",
+    )
+    geodesic.add_argument(
+        "--tension",
+        type=float,
+        default=0.82,
+        help="Tension coefficient applied to curvature calculations",
+    )
+
+    psm = sub.add_parser(
+        "psm", help="Synthesize a Gaussian action from a PSM state"
+    )
+    psm.add_argument(
+        "axqos_flow",
+        help="Action x Query x Operational State flow string",
+    )
+    psm.add_argument(
+        "--state-id",
+        default="cfm.qf4",
+        help="Identifier for the requested PSM state",
+    )
     return parser
 
 
@@ -112,6 +152,24 @@ def main(args: list[str] | None = None) -> int:
     if parsed.command == "rehearsal":
         entries = qernel.emit_scrollstream_rehearsal(training_mode=parsed.training_mode)
         print(json.dumps({"entries": entries}, indent=2))
+        return 0
+
+    if parsed.command == "geodesic":
+        model = qernel.model_geodesic_terminal(
+            bridge_name=parsed.name,
+            anchors=parsed.anchors,
+            span=parsed.span,
+            tension=parsed.tension,
+        )
+        print(json.dumps(model, indent=2))
+        return 0
+
+    if parsed.command == "psm":
+        result = qernel.synthesize_gaussian_action(
+            axqos_flow=parsed.axqos_flow,
+            state_id=parsed.state_id,
+        )
+        print(json.dumps(result, indent=2))
         return 0
 
     parser.error(f"unsupported command: {parsed.command}")

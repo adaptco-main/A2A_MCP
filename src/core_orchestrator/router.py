@@ -7,7 +7,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import logging
-from typing import Any, Dict, Iterable, MutableSequence, Optional, Protocol, Sequence
+from typing import TYPE_CHECKING, Any, Dict, Iterable, MutableSequence, Optional, Protocol, Sequence
+
+if TYPE_CHECKING:
+    from .world_model import WorldModelIngress
 
 logger = logging.getLogger(__name__)
 
@@ -91,11 +94,13 @@ class Router:
         *,
         logger: Optional[logging.Logger] = None,
         sentinel: Optional["Sentinel"] = None,
+        ingress: Optional["WorldModelIngress"] = None,
     ) -> None:
         self._parsers: MutableSequence[Parser] = list(parsers or [])
         self._sinks: MutableSequence[Sink] = list(sinks or [])
         self._logger = logger or logging.getLogger(self.__class__.__name__)
         self._sentinel = sentinel
+        self._ingress = ingress
 
     # ------------------------------------------------------------------
     # Registration helpers
@@ -148,24 +153,43 @@ class Router:
     def _deliver(self, event: Event, parser: Parser) -> None:
         """Deliver ``event`` to all sinks that opt-in."""
 
-        self._record_with_sentinel(event, parser)
+        routed_event = event
+        if self._ingress is not None:
+            decision = self._ingress.gate_event(event)
+            world_model = {
+                "embedding": list(decision.event_embedding),
+                "scores": [
+                    {
+                        "agent_id": score.agent_id,
+                        "score": score.score,
+                        "accepted": score.accepted,
+                    }
+                    for score in decision.scores
+                ],
+                "routed_agent_ids": list(decision.routed_agent_ids),
+            }
+            raw = dict(routed_event.raw or {})
+            raw["world_model"] = world_model
+            routed_event = routed_event.copy(raw=raw)
+
+        self._record_with_sentinel(routed_event, parser)
         accepted = False
         for sink in self._sinks:
-            if not sink.handles(event):
+            if not sink.handles(routed_event):
                 continue
             accepted = True
             try:
-                sink.send(event)
+                sink.send(routed_event)
             except Exception:  # pragma: no cover - defensive logging
                 self._logger.exception(
                     "Sink %s failed to handle %s event emitted by %s",
                     sink.name,
-                    event.type,
+                    routed_event.type,
                     parser.name,
                 )
         if not accepted:
             self._logger.debug(
-                "No sinks accepted event %s emitted by parser %s", event.type, parser.name
+                "No sinks accepted event %s emitted by parser %s", routed_event.type, parser.name
             )
 
     # ------------------------------------------------------------------

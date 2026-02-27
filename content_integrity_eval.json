@@ -1,67 +1,111 @@
 {
-  "service_id": "content.integrity.eval.v1",
-  "service_name": "Content Integrity Evaluation",
-  "description": "Audit stack enforcing ZERO-DRIFT through neutral perturbation probes.",
-  "version": "1.1.0",
-  "status": "READY",
-  "compliance": {
-    "neutral_perturbation": true,
-    "last_reviewed": "2025-02-18T00:00:00Z",
-    "reviewed_by": "World OS Alignment Council"
-  },
-  "modules": {
-    "synthetic.noise.injector.v1": {
-      "role": "Inject calibrated neutral noise signatures across candidate payloads.",
+  "service": "content.integrity.eval.v1",
+  "description": "Content Integrity Evaluation Service configured with neutral perturbation models to enforce ZERO-DRIFT assurance.",
+  "status": "experimental",
+  "owners": [
+    "world-os@q-enterprises.invalid"
+  ],
+  "modules": [
+    {
+      "id": "synthetic.noise.injector.v1",
+      "purpose": "Inject neutral, bounded noise into content streams to measure drift sensitivity without altering semantic intent.",
+      "replaces": [
+        "CNE",
+        "FSV"
+      ],
       "inputs": [
-        "payload.sample.window",
-        "noise.profile.catalog"
+        "source_content",
+        "perturbation_profile"
       ],
       "outputs": [
-        "payload.sample.window.perturbed"
+        "content_with_neutral_noise"
       ],
       "controls": {
-        "amplitude_bounds": "±0.03",
-        "spectrum": "flat",
-        "safeguards": [
-          "no_adversarial_bias",
-          "no_semantic_shift"
-        ]
+        "bias_guardrails": "Neutral perturbations only; no semantic inversion or sentiment shift allowed.",
+        "entropy_budget": "max 0.15 bits/token",
+        "rollback": "Disable module if drift score exceeds threshold-neutral"
+      },
+      "lineage": {
+        "canonicalization": "Normalize whitespace, casing, and ordering before perturbation to prevent spurious drift.",
+        "hashing": "SHA-256 digest of canonical input and neutralized output recorded per invocation.",
+        "merkle_anchor": "Perturbation receipts grouped per batch and anchored into the evaluation ledger."
       }
     },
-    "synthetic.contradiction.synth.v1": {
-      "role": "Generate ethically bounded contradiction probes for resilience scoring.",
+    {
+      "id": "synthetic.contradiction.synth.v1",
+      "purpose": "Generate structured contradictions to validate robustness of content claims while preserving ethical boundaries.",
       "inputs": [
-        "payload.sample.window.perturbed",
-        "semantic.fact.index"
+        "source_content",
+        "claim_graph",
+        "contradiction_policy"
       ],
       "outputs": [
-        "payload.sample.window.contradictions",
-        "contradiction.audit.log"
+        "synthetic_contradictions",
+        "robustness_score"
       ],
       "controls": {
-        "logic_model": "paraconsistent",
-        "max_contradictions": 5,
-        "safeguards": [
-          "no_personal_data_injection",
-          "no_policy_override"
-        ]
+        "fact_preservation": "Contradictions must be synthetic and tagged; no unlabelled misinformation.",
+        "neutrality": "Models must operate under ZERO-DRIFT mandate with audit logging enabled.",
+        "coherence_gate": "Reject contradictions that break logical binding or role constraints."
+      },
+      "lineage": {
+        "canonicalization": "Claim graphs are normalized and ordered before contradiction synthesis.",
+        "hashing": "SHA-256 digest of claim graph and contradiction set stored with capsule refs.",
+        "merkle_anchor": "Contradiction capsules anchored with module signatures for replay and settlement."
       }
     }
+  ],
+  "interfaces": {
+    "ingest": "capsules/content-integrity/ingest.v1",
+    "eval": "capsules/content-integrity/eval.v1",
+    "export": "capsules/content-integrity/export.v1"
   },
   "telemetry": {
-    "metric_stream": "cie.v1.anchor.zero_drift",
-    "dashboards": [
-      "dashboard.cie.zero_drift_overview",
-      "dashboard.cie.synthetic_probe_depth"
-    ],
-    "alert_thresholds": {
-      "zero_drift": 0.05,
-      "contradiction_density": 0.35
+    "traceability": "All module invocations must emit capsule events with lineage and attributions.",
+    "metrics": [
+      "drift_score",
+      "neutral_noise_rate",
+      "contradiction_coverage",
+      "audit_pass_rate",
+      "merkle_settlement_latency"
+    ]
+  },
+  "audit_runs": {
+    "first_official": {
+      "purpose": "Baseline ZERO-DRIFT enforcement for production onboarding.",
+      "inputs": {
+        "source_content": "Canonical JSON capsule with deterministic ordering and UTF-8 normalization.",
+        "perturbation_profile": "Entropy budget ≤0.15 bits/token, permitted scopes (whitespace, punctuation), and neutrality labels.",
+        "claim_graph": "Optional DAG of claims with stable identifiers for contradiction synthesis.",
+        "contradiction_policy": "Required labels for all synthetic contradictions plus rejection rules for unlabeled inversions."
+      },
+      "gates": {
+        "drift_score_max": 0.1,
+        "neutral_noise_rate_min": 0.95,
+        "contradiction_coverage_min": 0.8
+      },
+      "artifacts": [
+        "intake receipt with capsule_id and SHA-256 digests",
+        "ignition receipt with entropy budget proof",
+        "binding receipt with contradiction labels and hashes",
+        "settlement receipt with Merkle root and dual council attestations"
+      ]
     }
   },
-  "attestation": {
-    "policy_reference": "INTUNE.Zero_Drift_V1",
-    "audit_hash": "sha256:REPLACE_WITH_SEALED_DIGEST",
-    "sealed_at": null
+  "lineage": {
+    "canonicalization": "All inputs are normalized before any model call to minimize drift risk.",
+    "hashing": "Each ritual stage emits SHA-256 digests of inputs and outputs.",
+    "merkle_root": "Ritual batches are folded into Merkle roots and anchored to the audit ledger.",
+    "receipts": "Capsule receipts include capsule_id, capsule_ref, hashes, and settlement attestors."
+  },
+  "governance": {
+    "rituals": ["intake", "ignition", "binding", "settlement"],
+    "council": "Two-person council must attest to neutrality and settlement readiness per batch.",
+    "fallback": "If neutrality is breached, halt ignition and rollback to last settled Merkle root."
+  },
+  "compliance": {
+    "ethics": "Neutral perturbation only; ZERO-DRIFT mandate enforced at pipeline level.",
+    "logging": "Full ledger emission with capsule_id references for downstream audit tooling.",
+    "security": "Data is processed in sandboxed workers with least-privilege credentials."
   }
 }

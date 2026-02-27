@@ -11,6 +11,8 @@ import threading
 
 from .config import QernelConfig
 from .capsules import CapsuleManifest, discover_capsule_manifests, map_capsules_by_id
+from .geodesic import GeodesicTerminalModel, build_geodesic_terminal
+from .psm import GaussianActionResult, PSMState, gaussian_action_synth, load_psm_state
 
 
 SCROLLSTREAM_CAPSULE_ID = "capsule.rehearsal.scrollstream.v1"
@@ -159,6 +161,26 @@ class CodexQernel:
                 continue
         return events
 
+    # PSM Gaussian action synthesis --------------------------------------
+    def synthesize_gaussian_action(
+        self, *, axqos_flow: str, state_id: str = "cfm.qf4"
+    ) -> Dict[str, object]:
+        """Run Gaussian action synthesis and persist the event payload."""
+
+        state: PSMState = load_psm_state(state_id)
+        result: GaussianActionResult = gaussian_action_synth(axqos_flow=axqos_flow, state=state)
+        self.record_event(
+            "codex.psm.gaussian_action_synthesized",
+            {
+                "state_id": state.state_id,
+                "predicted_action": result.predicted_action,
+                "divergence_score": result.divergence_score,
+                "confidence": result.confidence,
+                "flow_digest": result.flow_digest,
+            },
+        )
+        return result.to_dict()
+
     # Scrollstream rehearsal ----------------------------------------------
     def emit_scrollstream_rehearsal(
         self,
@@ -250,3 +272,36 @@ class CodexQernel:
             "last_refresh": refresh_at,
         }
         return status
+
+    # Geodesic terminal modeling ----------------------------------------
+    def model_geodesic_terminal(
+        self,
+        *,
+        bridge_name: str = "AxQxOS bridge terminal",
+        anchors: Optional[List[str]] = None,
+        span: float = 120.0,
+        tension: float = 0.82,
+    ) -> Dict[str, Any]:
+        """Create a geodesic terminal blueprint and record the event."""
+
+        anchor_list = anchors or ["origin", "terminus"]
+        model: GeodesicTerminalModel = build_geodesic_terminal(
+            bridge_name=bridge_name,
+            os_name=self.config.os_name,
+            anchors=anchor_list,
+            span=span,
+            tension=tension,
+        )
+
+        self.record_event(
+            "codex.bridge.geodesic.modeled",
+            {
+                "bridge_name": bridge_name,
+                "anchors": model.anchors,
+                "span": span,
+                "tension": tension,
+                "segments": len(model.segments),
+            },
+        )
+
+        return model.to_dict()

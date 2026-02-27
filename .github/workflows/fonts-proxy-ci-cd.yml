@@ -46,7 +46,9 @@ jobs:
           chmod +x scripts/emit_event.sh
 
       - name: Install API-diff and Spectral
-        run: npm install -g @stoplight/spectral-cli openapi-diff
+        run: |
+          npm install -g @stoplight/spectral-cli
+          npm install -g openapi-diff
 
       - name: Spectral lint (logged)
         shell: bash

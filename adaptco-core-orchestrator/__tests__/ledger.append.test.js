@@ -1,69 +1,120 @@
 // adaptco-core-orchestrator/__tests__/ledger.append.test.js
-'use strict';
+"use strict";
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const fsp = require('node:fs/promises');
+const path = require('node:path');
 
 const storageDir = path.join(__dirname, '..', 'storage');
 const ledgerPath = path.join(storageDir, 'ledger.jsonl');
 const anchorPath = `${ledgerPath}.anchor.json`;
 
-function cleanupLedgerArtifacts() {
-  fs.rmSync(ledgerPath, { force: true });
-  fs.rmSync(anchorPath, { force: true });
+async function cleanupLedgerFiles() {
+  await Promise.all([
+    fsp.rm(ledgerPath, { force: true }),
+    fsp.rm(anchorPath, { force: true })
+  ]);
 }
 
-describe('ledger append serialization', () => {
-  let appendEvent;
-  let ledgerFile;
-  let ZERO_HASH;
-
-  beforeEach(() => {
-    cleanupLedgerArtifacts();
-    jest.resetModules();
-    ({ appendEvent, ledgerFile, ZERO_HASH } = require('../src/ledger'));
-  });
-
-  afterEach(() => {
-    cleanupLedgerArtifacts();
+describe('ledger appendEvent serialization', () => {
+  beforeEach(async () => {
+    await cleanupLedgerFiles();
     jest.resetModules();
   });
 
-  it('serializes concurrent appends to preserve the hash chain', async () => {
-    const firstPromise = appendEvent('test.event', { index: 1 });
-    const secondPromise = appendEvent('test.event', { index: 2 });
+  afterEach(async () => {
+    await cleanupLedgerFiles();
+  });
 
-    const [first, second] = await Promise.all([firstPromise, secondPromise]);
+  it('serializes concurrent appends to preserve hash continuity', async () => {
+    const ledger = require('../src/ledger');
 
-    expect(first.prev_hash).toBe(ZERO_HASH);
+    const [first, second, third] = await Promise.all([
+      ledger.appendEvent('test.event', { index: 0 }),
+      ledger.appendEvent('test.event', { index: 1 }),
+      ledger.appendEvent('test.event', { index: 2 })
+    ]);
+
+    expect(first.prev_hash).toBe(ledger.ZERO_HASH);
     expect(second.prev_hash).toBe(first.hash);
+    expect(third.prev_hash).toBe(second.hash);
 
-    const ledgerContents = fs.readFileSync(ledgerFile, 'utf8').trim().split('\n');
-    expect(ledgerContents).toHaveLength(2);
+    const lines = fs.readFileSync(ledger.ledgerFile, 'utf8')
+      .trim()
+      .split('\n');
+    expect(lines).toHaveLength(4);
 
-    const parsedEntries = ledgerContents.map((line) => JSON.parse(line));
-    expect(parsedEntries[0].hash).toBe(first.hash);
-    expect(parsedEntries[1].hash).toBe(second.hash);
-    expect(parsedEntries[1].prev_hash).toBe(parsedEntries[0].hash);
+    const parsed = lines.map((line) => JSON.parse(line));
+    parsed.forEach((entry, index) => {
+      const previous = parsed[index - 1];
+      const expectedPrev = !previous || previous.type === 'file_genesis' ? ledger.ZERO_HASH : previous.hash;
+      expect(entry.prev_hash).toBe(index === 0 ? ledger.ZERO_HASH : expectedPrev);
+    });
   });
 
-  it('allows new appends after a failed write attempt', async () => {
-    const openSpy = jest.spyOn(fs.promises, 'open').mockRejectedValueOnce(new Error('disk full'));
+  it('updates the anchor file with the latest offset and hash', async () => {
+    const ledger = require('../src/ledger');
 
-    try {
-      await expect(appendEvent('test.event', { index: 1 })).rejects.toThrow('disk full');
-    } finally {
-      openSpy.mockRestore();
-    }
+    const entry = await ledger.appendEvent('test.anchor', { foo: 'bar' });
 
-    const result = await appendEvent('test.event', { index: 2 });
-    expect(result.prev_hash).toBe(ZERO_HASH);
+    const anchor = JSON.parse(fs.readFileSync(ledger.ledgerAnchorFile, 'utf8'));
+    expect(anchor.file).toBe(ledger.ledgerFile);
+    expect(anchor.last_hash).toBe(entry.hash);
+    expect(anchor.last_offset).toBeGreaterThan(0);
+    expect(new Date(anchor.updated_at).toString()).not.toBe('Invalid Date');
+  });
 
-    const ledgerContents = fs.readFileSync(ledgerFile, 'utf8').trim().split('\n');
-    expect(ledgerContents).toHaveLength(1);
+  it('recovers from a failed append and continues serial execution', async () => {
+    const ledger = require('../src/ledger');
 
-    const entry = JSON.parse(ledgerContents[0]);
-    expect(entry.hash).toBe(result.hash);
-    expect(entry.prev_hash).toBe(ZERO_HASH);
+    const openSpy = jest.spyOn(fs.promises, 'open').mockImplementationOnce(() => {
+      return Promise.reject(new Error('disk full'));
+    });
+
+    await expect(
+      ledger.appendEvent('test.failure', { index: -1 })
+    ).rejects.toThrow('disk full');
+
+    openSpy.mockRestore();
+
+    const entry = await ledger.appendEvent('test.event', { index: 0 });
+
+    const lines = fs
+      .readFileSync(ledger.ledgerFile, 'utf8')
+      .trim()
+      .split('\n');
+    expect(lines).toHaveLength(2);
+    expect(JSON.parse(lines[1]).hash).toBe(entry.hash);
+  });
+
+  it('waitForPendingAppends resolves once queued operations settle', async () => {
+    const ledger = require('../src/ledger');
+
+    const openSpy = jest.spyOn(fs.promises, 'open').mockImplementationOnce(() => {
+      return Promise.reject(new Error('disk full'));
+    });
+
+    const failed = ledger
+      .appendEvent('test.failure', { index: -1 })
+      .catch((error) => error);
+
+    const success = ledger.appendEvent('test.event', { index: 1 });
+
+    await ledger.waitForPendingAppends();
+    openSpy.mockRestore();
+
+    const failure = await failed;
+    expect(failure).toBeInstanceOf(Error);
+    expect(failure.message).toBe('disk full');
+
+    const entry = await success;
+    expect(entry.type).toBe('test.event');
+
+    const lines = fs
+      .readFileSync(ledger.ledgerFile, 'utf8')
+      .trim()
+      .split('\n');
+    expect(lines).toHaveLength(2);
+    expect(JSON.parse(lines[1]).hash).toBe(entry.hash);
   });
 });
