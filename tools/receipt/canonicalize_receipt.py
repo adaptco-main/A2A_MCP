@@ -37,7 +37,7 @@ def nfc(value: str) -> str:
     return unicodedata.normalize("NFC", value).replace("\r\n", "\n")
 
 
-def get_path(obj, dotted):
+def get_path(obj: dict, dotted: str) -> Any:
     cur = obj
     for part in dotted.split("."):
         if cur is None:
