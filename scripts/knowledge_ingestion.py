@@ -2,7 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+<<<<<<< HEAD
 from fastmcp import FastMCP
+=======
+try:
+    from fastmcp import FastMCP
+except ModuleNotFoundError:
+    from mcp.server.fastmcp import FastMCP
+>>>>>>> adaptco/chore/orchestration-agent-mcp-bus
 
 app_ingest = FastMCP("knowledge-ingestion")
 

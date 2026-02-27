@@ -5,5 +5,14 @@ pytest
 pytest-asyncio
 python-dotenv
 mcp[cli]
+<<<<<<< HEAD
 fastmcp
 requests
+=======
+fastapi
+uvicorn
+httpx
+fastmcp
+requests
+jsonschema
+>>>>>>> adaptco/chore/orchestration-agent-mcp-bus

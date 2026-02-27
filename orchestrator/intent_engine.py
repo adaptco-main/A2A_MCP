@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+<<<<<<< HEAD
 import uuid
+=======
+import logging
+import os
+>>>>>>> adaptco/chore/orchestration-agent-mcp-bus
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Dict, List
@@ -34,6 +39,8 @@ class PipelineResult:
 class IntentEngine:
     """Coordinates multi-agent execution across the full swarm."""
 
+    _logger = logging.getLogger("IntentEngine")
+
     def __init__(self) -> None:
         self.manager = ManagingAgent()
         self.orchestrator = OrchestrationAgent()
@@ -44,13 +51,54 @@ class IntentEngine:
         self.judge = get_judge_orchestrator()
         self.db = DBManager()
 
+<<<<<<< HEAD
+=======
+        # RBAC integration (optional, gracefully degrades)
+        self._rbac_enabled = os.getenv("RBAC_ENABLED", "true").lower() == "true"
+        self._rbac_client = None
+        if self._rbac_enabled:
+            try:
+                from rbac.client import RBACClient
+                rbac_url = os.getenv("RBAC_URL", "http://rbac-gateway:8001")
+                self._rbac_client = RBACClient(rbac_url)
+            except ImportError:
+                self._logger.warning("rbac package not installed — RBAC disabled.")
+
+    # ------------------------------------------------------------------
+    # Full 5-agent pipeline
+    # ------------------------------------------------------------------
+
+>>>>>>> adaptco/chore/orchestration-agent-mcp-bus
     async def run_full_pipeline(
         self,
         description: str,
         requester: str = "system",
         max_healing_retries: int = 3,
     ) -> PipelineResult:
+<<<<<<< HEAD
         """Run the full Managing -> Orchestrator -> Architect -> Coder -> Tester flow."""
+=======
+        """
+        End-to-end orchestration:
+
+        1. **ManagingAgent** — categorise *description* into PlanActions.
+        2. **OrchestrationAgent** — build a typed blueprint with delegation.
+        3. **ArchitectureAgent** — map system architecture + WorldModel.
+        4. **CoderAgent** — generate code artifacts for each action.
+        5. **TesterAgent** — validate artifacts; self-heal on failure.
+
+        Returns a ``PipelineResult`` with all intermediary artefacts.
+        """
+        # ── RBAC gate ───────────────────────────────────────────────
+        if self._rbac_client and self._rbac_enabled:
+            if not self._rbac_client.verify_permission(requester, action="run_pipeline"):
+                raise PermissionError(
+                    f"Agent '{requester}' is not permitted to run the pipeline. "
+                    f"Onboard the agent with role 'pipeline_operator' or 'admin' first."
+                )
+            self._logger.info("RBAC: '%s' authorized for run_pipeline.", requester)
+
+>>>>>>> adaptco/chore/orchestration-agent-mcp-bus
         result = PipelineResult(
             plan=ProjectPlan(
                 plan_id="pending",
@@ -93,6 +141,11 @@ class IntentEngine:
             )
             self.db.save_artifact(artifact)
 
+<<<<<<< HEAD
+=======
+
+            # Self-healing loop
+>>>>>>> adaptco/chore/orchestration-agent-mcp-bus
             healed = False
             for attempt in range(max_healing_retries):
                 report = await self.tester.validate(artifact.artifact_id)
@@ -130,6 +183,7 @@ class IntentEngine:
                 )
                 self.db.save_artifact(artifact)
 
+
             result.code_artifacts.append(artifact)
             action.status = "completed" if healed else "failed"
 
@@ -149,7 +203,13 @@ class IntentEngine:
                 parent_id=parent_id,
                 feedback=action.instruction,
             )
+<<<<<<< HEAD
             artifact_ids.append(code_artifact.artifact_id)
+=======
+            self.db.save_artifact(artifact)
+
+            artifact_ids.append(artifact.artifact_id)
+>>>>>>> adaptco/chore/orchestration-agent-mcp-bus
 
             # 2. Validate with Tester
             report = await self.tester.validate(code_artifact.artifact_id)
@@ -165,8 +225,14 @@ class IntentEngine:
                 type="test_report",
                 content=report.model_dump_json(),
             )
+<<<<<<< HEAD
             self.db.save_artifact(report_artifact)
             artifact_ids.append(test_artifact_id)
+=======
+            self.db.save_artifact(refined)
+
+            artifact_ids.append(refined.artifact_id)
+>>>>>>> adaptco/chore/orchestration-agent-mcp-bus
 
             # 4. Ingest into PINN (Vector Store)
             pinn_artifact_id = str(uuid.uuid4())
