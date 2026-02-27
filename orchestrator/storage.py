@@ -63,6 +63,7 @@ class DBManager:
             db.close()
 
 _db_manager = DBManager()
+SessionLocal = _db_manager.SessionLocal
 
 def save_plan_state(plan_id: str, snapshot: Dict[str, Any]) -> None:
     """Save FSM plan state snapshot."""

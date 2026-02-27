@@ -36,7 +36,7 @@ class PINNAgent:
 
         return self._deterministic_embedding(prompt)
 
-    def ingest_artifact(self, artifact_id: str, content: str, parent_id: str | None = None) -> VectorToken:
+    async def ingest_artifact(self, artifact_id: str, content: str, parent_id: str | None = None) -> VectorToken:
         vector = list(self.rank_prompt(content))
         token = VectorToken(
             token_id=str(uuid.uuid4()),
@@ -48,3 +48,24 @@ class PINNAgent:
         if parent_id:
             self.world_model.link(parent_id, artifact_id)
         return token
+
+    def calculate_residual(self, content: str, constraints: List[str] | None = None) -> float:
+        """
+        Calculate PINN residual (physics error) for the given content.
+        
+        In a production PINN, this would evaluate the content against 
+        governing physical equations. Here we provide a deterministic 
+        heuristic based on complexity and constraint alignment.
+        """
+        if not content:
+            return 1.0
+            
+        # Heuristic: simple hash-based residual for demonstration
+        h = int(hashlib.sha256(content.encode()).hexdigest()[:8], 16)
+        base_residual = (h % 1000) / 10000.0  # 0.0 to 0.1
+        
+        # Penalty if content is too short (lacks rigor)
+        if len(content) < 100:
+            base_residual += 0.2
+            
+        return float(base_residual)

@@ -81,6 +81,50 @@ class DiagnosticReportModel(Base):
         return f"<DiagnosticReport(id={self.report_id})>"
 
 
+class StructuralGapModel(Base):
+    """Stores detected structural gaps between components."""
+    __tablename__ = "structural_gaps"
+
+    gap_id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    source_component = Column(String, nullable=False)
+    target_component = Column(String, nullable=False)
+    artifact_type = Column(String, nullable=False)
+    expected_schema = Column(JSON, nullable=False)
+    actual_schema = Column(JSON, nullable=False)
+    missing_fields = Column(JSON, default=[], nullable=False)
+    extra_fields = Column(JSON, default=[], nullable=False)
+    expected_embedding = Column(JSON, nullable=True)
+    actual_embedding = Column(JSON, nullable=True)
+    semantic_distance = Column(Float, nullable=True)
+    related_dtc = Column(String, nullable=True)
+    severity = Column(String, default="medium", nullable=False)
+    report_id = Column(String, nullable=True)
+
+    def __repr__(self):
+        return f"<StructuralGap(id={self.gap_id}, {self.source_component}→{self.target_component})>"
+
+
+class TransformerDiffModel(Base):
+    """Tracks LLM output vs expected embeddings."""
+    __tablename__ = "transformer_diffs"
+
+    diff_id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    prompt_id = Column(String, nullable=False)
+    generation_id = Column(String, nullable=False)
+    prompt_embedding = Column(JSON, nullable=False)
+    generated_embedding = Column(JSON, nullable=False)
+    expected_embedding = Column(JSON, nullable=False)
+    prompt_to_generated_distance = Column(Float, nullable=False)
+    generated_to_expected_distance = Column(Float, nullable=False)
+    generated_artifact_id = Column(String, nullable=False)
+    status = Column(String, nullable=False)  # ALIGNED, DRIFTED, CRITICAL_MISS
+
+    def __repr__(self):
+        return f"<TransformerDiff(id={self.diff_id}, status={self.status})>"
+
+
 class DMNTokenModel(Base):
     """Tokens formatted for DMN decision model consumption."""
     __tablename__ = "dmn_tokens"

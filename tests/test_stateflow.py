@@ -16,6 +16,19 @@ def test_happy_path():
         return True
 
     sm.evaluate_apply_policy(policy_ok)
+    # With unified FSM, VERDICT_PASS -> PRIME_RENDERING
+    assert sm.current_state() == State.PRIME_RENDERING
+    
+    sm.trigger("PRIME_RENDER_COMPLETE")
+    assert sm.current_state() == State.PRIME_VALIDATING
+    
+    sm.trigger("PRIME_VALIDATION_PASS")
+    assert sm.current_state() == State.PRIME_EXPORTING
+    
+    sm.trigger("PRIME_EXPORT_COMPLETE")
+    assert sm.current_state() == State.PRIME_COMMITTING
+    
+    sm.trigger("PRIME_COMMIT_COMPLETE")
     assert sm.current_state() == State.TERMINATED_SUCCESS
 
 def test_retry_limit_exceeded():
