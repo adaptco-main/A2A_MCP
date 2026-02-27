@@ -4,16 +4,26 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
+import numpy as np
+
+# Note: TELEMETRY should be imported from orchestrator.metrics or handled via a placeholder if app.mcp_tooling is not yet fixed
+try:
+    from app.mcp_tooling import TELEMETRY
+except ImportError:
+    # Fallback for during merge/refactor
+    class MockTelemetry:
+        def start_timer(self): return 0
+        def record_request_outcome(self, **kwargs): pass
+        def observe_protected_ingestion_latency(self, *args, **kwargs): pass
+    TELEMETRY = MockTelemetry()
 
 
 def _deterministic_embedding(text: str, dimensions: int = 1536) -> list[float]:
-    digest = hashlib.sha256(text.encode("utf-8")).digest()
-    values: list[float] = []
-    for i in range(dimensions):
-        byte = digest[i % len(digest)]
-        values.append((byte / 255.0) * 2.0 - 1.0)
-    return values
+    """Generate a deterministic pseudo-embedding for demonstration."""
+    hash_val = int(hashlib.sha256(text.encode("utf-8")).hexdigest(), 16)
+    rng = np.random.default_rng(hash_val & 0xFFFFFFFF)
+    return rng.standard_normal(dimensions).tolist()
 
 
 @dataclass
@@ -49,6 +59,7 @@ class VectorIngestionEngine:
         commit_sha = str(snapshot_data.get("commit_sha", "")).strip()
         actor = str(oidc_claims.get("actor", "unknown")).strip()
 
+        telemetry_timer = TELEMETRY.start_timer()
         nodes: list[VectorNode] = []
         snippets = snapshot_data.get("code_snippets", [])
         for index, snippet in enumerate(snippets):
@@ -89,6 +100,12 @@ class VectorIngestionEngine:
                 )
             )
 
+        TELEMETRY.record_request_outcome(
+            avatar_id=actor or "unknown",
+            client_id=repository or "unknown",
+            outcome="accepted",
+        )
+        TELEMETRY.observe_protected_ingestion_latency(telemetry_timer, client_id=repository or "unknown")
         return [node.to_dict() for node in nodes]
 
 

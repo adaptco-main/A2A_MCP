@@ -13,3 +13,9 @@ def test_engine_halts_when_no_gates_provided():
     engine = PipelineEngine()
     ctx = PipelineContext(run_id="r2", payload={})
     assert engine.run(ctx) == PipelineState.HALTED
+
+
+def test_engine_advances_when_all_gates_pass():
+    engine = PipelineEngine()
+    ctx = PipelineContext(run_id="r3", payload={}, gate_results={"preflight": True, "lint": True})
+    assert engine.run(ctx) == PipelineState.PASSED

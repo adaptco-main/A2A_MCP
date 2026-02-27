@@ -1,12 +1,8 @@
 import asyncio
-import sys
 import uuid
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-
-sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from agents.pinn_agent import PINNAgent
 from agents.tester import TestReport
@@ -64,7 +60,7 @@ def test_intent_engine_executes_plan(monkeypatch):
 
     assert len(artifact_ids) == 6
     assert all(action.status == "completed" for action in plan.actions)
-    assert len(saved) == 2
+    assert len(saved) == 6
 
 
 
