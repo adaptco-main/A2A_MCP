@@ -9,19 +9,5 @@ class PipelineEngine:
     def __init__(self, context: PipelineContext) -> None:
         self.context = context
 
-    def __init__(self) -> None:
-        self.state = PipelineState.IDLE
-
-    def get_state(self) -> PipelineState:
-        return self.state
-
-    def run(self, ctx: PipelineContext) -> PipelineState:
-        self.state = PipelineState.RENDERING
-        self.state = PipelineState.VALIDATING
-        if not ctx.gate_results or not all(ctx.gate_results.values()):
-            self.state = PipelineState.HALTED
-            return self.state
-        self.state = PipelineState.EXPORTING
-        self.state = PipelineState.COMMITTING
-        self.state = PipelineState.PASSED
-        return self.state
+    def health(self) -> dict[str, str]:
+        return {"status": "ok", "run_id": self.context.run_id}
