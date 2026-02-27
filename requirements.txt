@@ -1,6 +1,7 @@
 sqlalchemy
 psycopg2-binary
 pydantic
+pydantic-settings
 pytest
 pytest-asyncio
 python-dotenv
@@ -12,5 +13,10 @@ fastmcp
 requests
 jsonschema
 PyJWT
-numpy
+numpy>=1.24
 scipy
+aiohttp
+pynacl
+google-generativeai
+pandas
+matplotlib
