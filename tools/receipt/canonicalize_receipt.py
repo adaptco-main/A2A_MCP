@@ -113,8 +113,8 @@ def normalize_origin_url(url: str) -> str:
 
 
 def gpg_detached_sign(input_path: Path, sig_out: Path) -> None:
-    cmd = ["gpg", "--armor", "--detach-sign", "--output", str(sig_out), str(input_path)]
-    subprocess.check_call(cmd)
+    result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    # You might want to log result.stdout or result.stderr if needed
 
 
 def main() -> int:
