@@ -17,6 +17,8 @@ import time
 import threading
 import json
 
+from schemas.runtime_event import EventPayload, RuntimeEvent
+
 
 class State(str, Enum):
     IDLE = "IDLE"
@@ -213,6 +215,38 @@ class StateMachine:
             except PartialVerdict:
                 return self.trigger("VERDICT_PARTIAL", **meta)
             return self.trigger("VERDICT_PASS" if ok else "VERDICT_FAIL", **meta)
+
+    def consume_runtime_event(self, event: RuntimeEvent) -> TransitionRecord:
+        """Consume normalized AGENT_RESPONSE events and map them to stateflow transitions."""
+        if event.event_type != "AGENT_RESPONSE":
+            raise ValueError(f"Unsupported runtime event type: {event.event_type}")
+        if not event.trace_id:
+            raise ValueError("Runtime event must include trace_id")
+
+        meta = {
+            "trace_id": event.trace_id,
+            "span_id": event.span_id,
+            "parent_span_id": event.parent_span_id,
+            "status": event.content.status,
+        }
+
+        if event.content.tool_request:
+            return self.trigger("AGENT_TOOL_REQUESTED", **meta)
+
+        status = (event.content.status or "success").lower()
+        if status in {"success", "ok", "completed"}:
+            return self.trigger("AGENT_RESPONSE_SUCCESS", **meta)
+        return self.trigger("AGENT_RESPONSE_FAILURE", **meta)
+
+    def build_next_hop_event(
+        self,
+        source_event: RuntimeEvent,
+        *,
+        event_type: str,
+        payload: EventPayload,
+    ) -> RuntimeEvent:
+        """Create a lineage-preserving event for downstream publication."""
+        return source_event.next_hop(event_type=event_type, content=payload)
 
     def override(self, to_state: State, reason: str = "manual_override", override_by: Optional[str] = None, forward_only: bool = True) -> TransitionRecord:
         with self._lock:

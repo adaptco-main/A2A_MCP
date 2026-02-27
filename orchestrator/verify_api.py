@@ -1,20 +1,17 @@
 from __future__ import annotations
 
+import os
+import importlib
+import os
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
+import os
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator
 
-from orchestrator.settlement import PostgresEventStore, verify_execution
+from fastapi import APIRouter, Depends, Header, HTTPException
 
-router = APIRouter()
-
-
-async def get_tenant_id() -> str:
-    raise NotImplementedError
-
-
-async def get_db_connection() -> Any:
-    raise NotImplementedError
 
 
 def get_event_store() -> PostgresEventStore:
@@ -28,8 +25,7 @@ async def verify(
     db: Any = Depends(get_db_connection),
     store: PostgresEventStore = Depends(get_event_store),
 ):
-    async with db as conn:
-        events = await store.get_execution(conn, tenant_id, execution_id)
+    events = await store.get_execution(db, tenant_id, execution_id)
 
     result = verify_execution(events)
     if not result.valid:

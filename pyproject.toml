@@ -24,6 +24,10 @@ dev = [
     "pytest-asyncio",
 ]
 
+dependencies = [
+    "PyJWT",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"

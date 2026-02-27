@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="A2A MCP Webhook")
 app.include_router(verify_router)
 
+ingress_router = APIRouter()
+
 # in-memory map
 PLAN_STATE_MACHINES = {}
 
@@ -50,11 +52,11 @@ async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):
     rec = sm.trigger("OBJECTIVE_INGRESS")
     return {"status": "scheduled", "plan_id": plan_id, "transition": rec.to_dict()}
 
-@app.post("/plans/ingress")
+@ingress_router.post("/plans/ingress")
 async def plan_ingress(payload: dict = Body(...)):
     return await _plan_ingress_impl(None, payload)
 
-@app.post("/plans/{plan_id}/ingress")
+@ingress_router.post("/plans/{plan_id}/ingress")
 async def plan_ingress_by_id(plan_id: str, payload: dict = Body(default={})):
     return await _plan_ingress_impl(plan_id, payload)
 
@@ -78,3 +80,5 @@ async def orchestrate(user_query: str):
 @app.get("/metrics")
 def metrics():
     return Response(content=generate_latest(REGISTRY), media_type="text/plain; version=0.0.4")
+
+app.include_router(ingress_router)

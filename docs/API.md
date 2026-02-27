@@ -84,6 +84,58 @@ curl -X 'POST' \
 
 ---
 
+### 2. MCP Compatibility Tool Call
+
+`POST /tools/call`
+
+Invokes an MCP tool through the HTTP compatibility surface.
+
+**Request Body:**
+```json
+{
+  "tool_name": "ingest_repository_data",
+  "arguments": {
+    "snapshot": {
+      "repository": "adaptco/A2A_MCP"
+    },
+    "authorization": "Bearer <token>"
+  }
+}
+```
+
+**Response Body:**
+```json
+{
+  "tool_name": "ingest_repository_data",
+  "ok": true,
+  "result": {
+    "ok": true,
+    "data": {
+      "repository": "adaptco/A2A_MCP",
+      "execution_hash": "<64-char-sha256>"
+    }
+  }
+}
+```
+
+Canonical operator walkthrough:
+- See `docs/REALTIME_AGENT_CONFIGURATION_RUNBOOK.md` for local + remote setup, validation, and troubleshooting.
+
+### 3. Native MCP Streamable HTTP
+
+`POST /mcp`
+
+Native FastMCP endpoint for streamable HTTP clients.
+
+### 4. Plan Ingress Endpoints
+
+- `POST /plans/ingress`
+- `POST /plans/{plan_id}/ingress`
+
+Schedules plan ingress for stateflow execution.
+
+---
+
 ## Artifact Schemas
 
 All data exchanged between agents follows the `MCPArtifact` Pydantic model:
