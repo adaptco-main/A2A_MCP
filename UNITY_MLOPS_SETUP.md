@@ -1,35 +1,69 @@
-# Unity MLOps Setup Guide
+# Unity Autonomous MLOps Setup
 
-This guide shows how to run autonomous Unity + ML-Agents training with `mlops_unity_pipeline.py`.
+This guide documents the complete autonomous Unity training factory built around `mlops_unity_pipeline.py`.
 
-## 1) Prerequisites
+## 🎯 What This Pipeline Automates
 
-- Unity installed and available on PATH (or pass explicit executable path).
-- Python 3.10+
-- ML-Agents package:
+1. Generate Unity C# behavior scripts from natural language.
+2. Build Unity environments in headless mode.
+3. Train ML-Agents policies continuously (offline-first + online fine-tuning).
+4. Register artifacts in Vertex AI.
+5. Schedule recurring jobs (hourly/nightly/continuous).
+
+```text
+User Prompt ("Create a patrol AI")
+        ↓
+LLM Unity C# Generation
+        ↓
+Headless Unity Build
+        ↓
+ML-Agents Training (GPU / Offline RL)
+        ↓
+Vertex AI Model Registry
+        ↓
+Game Deployment (ONNX/Barracuda)
+```
+
+## Core Components
+
+### `UnityAssetSpec`
+Defines the behavior/environment asset to generate.
+
+### `RLTrainingConfig`
+Defines algorithm and training hyperparameters (PPO defaults included).
+
+### `UnityMLOpsOrchestrator`
+Executes full job lifecycle:
+- `generate_unity_code`
+- `build_unity_environment`
+- `train_with_mlagents`
+- `register_in_vertex_ai`
+
+### `TrainingScheduler`
+Cron-style automation with concurrency control and webhook notifications.
+
+## 15-Minute Quick Start
+
+### 1) Install Dependencies
 
 ```bash
 pip install mlagents==1.0.0 pyyaml croniter
 ```
 
-Optional integrations:
+Optional:
 
-- `google-cloud-aiplatform` for Vertex AI model registration.
-- `aiohttp` for webhook notifications from scheduled runs.
+```bash
+pip install google-cloud-aiplatform aiohttp
+```
 
-## 2) Quick Start (single job)
+### 2) Single Job Smoke Test
 
 ```python
 import asyncio
-from mlops_unity_pipeline import (
-    UnityAssetSpec,
-    RLTrainingConfig,
-    TrainingJob,
-    UnityMLOpsOrchestrator,
-)
+from mlops_unity_pipeline import *
 
 
-async def main() -> None:
+async def main():
     orchestrator = UnityMLOpsOrchestrator(dry_run=True)
 
     asset = UnityAssetSpec(
@@ -41,62 +75,46 @@ async def main() -> None:
         action_space={"type": "continuous", "size": 2},
     )
 
-    config = RLTrainingConfig(
+    cfg = RLTrainingConfig(
         algorithm="PPO",
         max_steps=100_000,
         num_envs=8,
         time_scale=20.0,
     )
 
-    job = TrainingJob(
-        job_id="test-job",
-        asset_spec=asset,
-        rl_config=config,
-        unity_project_path="/path/to/unity/project",
-        output_dir="artifacts",
-    )
-
+    job = TrainingJob(job_id="test-job", asset_spec=asset, rl_config=cfg)
     result = await orchestrator.execute_training_job(job)
-    print(result)
+    print(f"✅ Complete! Model: {result.trained_model_path}")
 
 
 asyncio.run(main())
 ```
 
-> Set `dry_run=False` to execute real Unity builds and ML-Agents training.
+> Set `dry_run=False` for real Unity builds and ML-Agents training.
 
-## 3) 24/7 Scheduled Training
+### 3) 24/7 Scheduled Runs
 
 ```python
 import asyncio
-from mlops_unity_pipeline import (
-    UnityAssetSpec,
-    RLTrainingConfig,
-    TrainingSchedule,
-    TrainingScheduler,
-    UnityMLOpsOrchestrator,
-)
+from mlops_unity_pipeline import *
 
 
-async def run_forever() -> None:
+async def run_forever():
     orchestrator = UnityMLOpsOrchestrator(dry_run=True)
-    scheduler = TrainingScheduler(orchestrator, max_concurrency=2)
-
-    nightly_asset = UnityAssetSpec(
-        asset_id="patrol-001",
-        name="PatrolAgent",
-        asset_type="behavior",
-        description="Patrol between waypoints while avoiding obstacles.",
-    )
+    scheduler = TrainingScheduler(orchestrator)
 
     schedule = TrainingSchedule(
         schedule_id="nightly",
-        cron_expression="0 2 * * *",  # 2 AM UTC daily
-        asset_specs=[nightly_asset],
+        cron_expression="0 2 * * *",  # 2AM UTC daily
+        asset_specs=[
+            UnityAssetSpec(
+                asset_id="patrol-001",
+                name="PatrolAgent",
+                asset_type="behavior",
+                description="Patrol between waypoints while avoiding obstacles.",
+            )
+        ],
         rl_config=RLTrainingConfig(algorithm="PPO", max_steps=1_000_000),
-        unity_project_path="/path/to/unity/project",
-        output_dir="artifacts",
-        webhook_url="https://example.com/webhook/training",
     )
 
     scheduler.add_schedule(schedule)
@@ -106,35 +124,51 @@ async def run_forever() -> None:
 asyncio.run(run_forever())
 ```
 
-## 4) Offline RL Pattern
+## Offline RL Workflow (Simple)
 
-1. Collect demonstrations with ML-Agents tools.
-2. Store `.demo` assets per behavior.
-3. Enable offline-first config:
-   - `use_offline_demonstrations=True`
-   - `demonstration_path="/path/to/demo"`
-4. Run training job as usual; pipeline passes initialization hint to trainer.
+1. Record demonstrations once (`.demo` files).
+2. Train from demonstrations without running the game continuously.
+3. Optionally fine-tune online with live simulation.
 
-## 5) Vertex AI Registration
+Enable offline-first runs via `RLTrainingConfig`:
 
-Set these fields on `TrainingJob`:
+```python
+RLTrainingConfig(
+    use_offline_demonstrations=True,
+    demonstration_path="/path/to/recorded.demo",
+)
+```
 
-- `vertex_project`
-- `vertex_region` (defaults to `us-central1`)
-- Optional `vertex_model_display_name`
+## Integration with Existing A2A-MCP Bridge
 
-When configured, the pipeline uploads the trained artifact directory as a Vertex model.
+The Unity MLOps stage extends existing orchestration:
 
-## 6) Integration with Existing A2A-MCP Flow
+- Existing bridge handles intent → research → code planning.
+- Unity MLOps handles build → RL train → model registration.
 
-- Keep current bridge/orchestrator components for intent → code generation.
-- Use `UnityMLOpsOrchestrator` as the next stage for build/train/register.
-- Persist generated artifacts under `artifacts/<job_id>/` for traceability.
+This keeps responsibilities clean while enabling end-to-end autonomous game AI generation.
 
-## 7) Production Notes
+## Production Deployment Notes
 
-- Use a dedicated Unity build machine or container image.
-- Route training runs to GPU nodes.
-- Store `artifacts/` in cloud object storage.
-- Forward training logs to your observability stack.
-- Wrap scheduler in a process manager (systemd/Kubernetes CronJob/Deployment).
+- Run Unity build workers in dedicated headless environments.
+- Route ML-Agents jobs to GPU nodes.
+- Persist `artifacts/<job_id>/` in durable object storage.
+- Track experiments with TensorBoard.
+- Run scheduler as Kubernetes Deployment / CronJob.
+- Use webhook notifications for training status and failures.
+
+## Suggested Adoption Plan
+
+### Today
+- Run single job smoke test in `dry_run` mode.
+- Validate generated C# and output artifact folders.
+
+### This Week
+- Add real Unity build step (`dry_run=False`).
+- Collect demonstration data for at least one gameplay behavior.
+- Launch nightly schedule.
+
+### This Month
+- Enable Vertex AI model registration.
+- Deploy trained ONNX models to runtime (Barracuda).
+- Scale to multiple behaviors with concurrent schedules.

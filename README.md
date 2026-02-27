@@ -1,5 +1,20 @@
 # A2A_MCP — Multi-Agent Orchestrator
 
+
+## Unity Autonomous MLOps (New)
+
+This repository includes an end-to-end Unity RL orchestration pipeline:
+
+- `mlops_unity_pipeline.py` — orchestration classes for generation, build, training, registration, and scheduling.
+- `UNITY_MLOPS_SETUP.md` — implementation and production setup guide.
+
+Quick start:
+
+```bash
+pip install mlagents==1.0.0 pyyaml croniter
+python -c "import asyncio; from mlops_unity_pipeline import UnityMLOpsOrchestrator; print(UnityMLOpsOrchestrator)"
+```
+
 A production-grade multi-agent pipeline with MCP (Model Context Protocol) tooling, a finite-state-machine orchestrator, and self-healing code generation.
 
 ## Architecture
