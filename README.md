@@ -106,6 +106,15 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+
+### Release Runtime Environment
+```bash
+cp .env.release.example .env.release
+docker compose --env-file .env.release -f docker-compose.release.yml up -d --build
+```
+
+Detailed release runtime instructions: `docs/release/MIDDLEWARE_RUNTIME_ENV.md`.
+
 ### Run MCP Server
 ```bash
 python mcp_server.py
