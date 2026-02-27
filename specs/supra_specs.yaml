@@ -1,21 +1,12 @@
-# Supra A90 (2020+) Domain Specification Contract
-# This spec locks vehicle physics, performance, and constraints.
-# All agents, judges, and simulators must respect these parameters.
-# Version: 1.0.0
-# Last Updated: 2026-02-12
-
+---
 metadata:
   model: "Toyota GR Supra A90"
   year: 2024
   verified: true
   source_database: "Toyota Official + EPA"
-  audit_status: "CORRECTED - see SPECS_AUDIT.md"
-  corrections_applied:
-    - "Engine: Single-turbo B58B30M1 (was twin-turbo)"
-    - "Redline: 6500 rpm (was 7000)"
-    - "0-60: 3.9 EPA seconds (was 3.8)"
-    - "Removed unverified fields: fuel_consumption_rate, response_time_ms, battery_soc_min"
-    - "Fixed YAML structure (duplicate performance keys)"
+  audit_status: "CORRECTED"
+  version: "1.0.0"
+  last_updated: "2026-02-12"
 
 supra:
   model: "Toyota GR Supra A90"
@@ -46,17 +37,11 @@ powertrain:
     fuel_grade: "Premium Unleaded (91+ octane recommended)"
     turbocharged: true
     turbo_type: "Single turbo (NOT twin-turbo)"
-    idle_rpm: 650
 
   transmission:
     type_a: "6-Speed Manual (Aisin)"
     type_b: "8-Speed Automatic (ZF 8HP)"
     epa_tested_variant: "8-speed automatic"
-    # Acceleration profile (0-60 mph times)
-    acceleration:
-      seconds_0_60: 3.9
-      seconds_0_100: 9.1
-      seconds_60_100: 5.2
 
   drivetrain: "RWD Only"
 
@@ -74,10 +59,6 @@ performance:
 
   vmax_kmh: 249
 
-  # Acceleration limits (for physics cap)
-  max_acceleration_g: 1.1  # Lateral grip in turns
-  max_deceleration_g: 1.2  # Braking deceleration
-
 dimensions:
   length_in: 172.3
   length_mm: 4380
@@ -92,12 +73,6 @@ dimensions:
     curb_weight_lb: 3397
     curb_weight_kg: 1540
     gvwr_lbs: 3682
-
-  # Bounding box for collision detection (meters, scaled)
-  collision_box:
-    length_m: 4.38
-    width_m: 1.94
-    height_m: 1.31
 
 steering:
   turning_radius_ft: 37.4
@@ -141,8 +116,6 @@ handling_characteristics:
 
   ground_clearance_in: 4.8
   ground_clearance_note: "estimated"
-  approach_angle_deg: 13.0
-  departure_angle_deg: 20.0
 
 safety_systems:
   abs_type: "4-channel ABS system"
@@ -153,20 +126,12 @@ safety_systems:
   esc_intervention_threshold_g: 1.08
   esc_note: "Based on estimated skid pad limit"
 
-  aeb_enabled: true
-  min_obstacle_distance_m: 0.5  # Hard minimum
-  min_safe_distance_m: 2.0     # Recommended safe margin
-
 constraints:
   max_speed_in_zone: null
   max_speed_limiter_mph: 155
   max_acceleration_gs: 1.1
-  max_deceleration_gs: 1.2
+  max_deceleration_gs: 1.1
   speed_limiter_mph: 155
-
-  # Maintenance windows
-  service_interval_miles: 5000
-  tire_wear_rate: 0.01  # % per hour of driving
 
 telemetry:
   recorded_metrics:
@@ -184,34 +149,24 @@ telemetry:
     - collision_count
 
 ui_config:
-  # Visual representation
   display_name: "GR Supra"
   color_primary: "Toyota Red"
   color_secondary: "Carbon Black"
   icon_emoji: "🏎️"
-
-  # Cockpit UI elements
   gauges:
     - speedometer_mph: { min: 0, max: 200 }
     - tachometer_rpm: { min: 0, max: 7500 }
     - fuel_gauge_gal: { min: 0, max: 13.2 }
     - coolant_temperature_c: { min: 70, max: 110 }
 
-degradation:
-  # Simulate wear over time
-  tire_degradation_per_hour: 0.001
-  brake_wear_per_stop: 0.0001
-  fuel_efficiency_degradation_per_mile: 0.00001
-
 behaviors:
-  # Agent-specific behavior profiles
   profiles:
     "aggressive":
-      target_speed_percent: 0.95  # 95% of vmax
+      target_speed_percent: 0.95
       acceleration_aggression: 0.9
       braking_sensitivity: 1.2
     "eco":
-      target_speed_percent: 0.60  # 60% of vmax
+      target_speed_percent: 0.60
       acceleration_aggression: 0.3
       braking_sensitivity: 0.8
     "balanced":
@@ -226,22 +181,3 @@ notes:
   - "Single-turbo (NOT twin-turbo) BMW B58B30M1 engine configuration"
   - "ESC active safety threshold is 1.08g (skid pad limit)"
   - "EPA testing uses 8-speed automatic transmission variant"
-  - "Unverified fields marked with UNVERIFIED and confidence level"
-  - "Three fields removed: fuel_consumption_rate, response_time_ms, battery_soc_min (no verified source)"
-
-removed_fields:
-  fuel_consumption_rate:
-    reason: "Completely generated with no source verification"
-    was_value: "0.05 gal/min at full throttle"
-
-  response_time_ms:
-    reason: "Generic estimate not specific to Supra"
-    was_value: "50 ms"
-
-  battery_soc_min:
-    reason: "Not applicable - 2024 Supra is internal combustion engine only, no hybrid"
-    was_value: "0.05"
-
-  aeb_min_distance_m:
-    reason: "Generic setting, not Supra-specific"
-    was_value: "5.0 m"

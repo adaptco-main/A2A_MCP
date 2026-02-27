@@ -3,6 +3,8 @@
 Provides judge evaluation of agent actions and avatar personality integration.
 """
 
+from __future__ import annotations
+
 from typing import Dict, Any, List, Optional
 from judge.decision import JudgmentModel, ActionScore
 from avatars.registry import get_avatar_registry, AvatarRegistry
@@ -35,14 +37,7 @@ class JudgeOrchestrator:
 
     def get_avatar_for_agent(self, agent_name: str) -> Optional[Avatar]:
         """Get avatar bound to a specific agent."""
-        if hasattr(self.avatar_registry, "get_avatar_for_agent"):
-            return self.avatar_registry.get_avatar_for_agent(agent_name)
-
-        # Backward-compatible fallback for older registry API.
-        for avatar in self.avatar_registry.list_avatars().values():
-            if avatar.profile.bound_agent == agent_name:
-                return avatar
-        return None
+        return self.avatar_registry.get_avatar_for_agent(agent_name)
 
     def judge_action(
         self,
@@ -126,8 +121,6 @@ class JudgeOrchestrator:
     def list_avatars(self) -> List[Dict[str, Any]]:
         """List all registered avatars with their bindings."""
         avatars = self.avatar_registry.list_avatars()
-        if isinstance(avatars, dict):
-            avatars = list(avatars.values())
         return [
             {
                 "avatar_id": a.profile.avatar_id,

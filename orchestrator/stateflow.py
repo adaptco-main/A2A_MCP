@@ -16,7 +16,6 @@ from typing import Callable, Dict, List, Optional, Any
 import time
 import threading
 import json
-import sys
 
 try:
     from schemas.runtime_event import EventPayload, RuntimeEvent
@@ -34,6 +33,10 @@ class State(str, Enum):
     TOOL_INVOKE = "TOOL_INVOKE"
     RETRY = "RETRY"
     REPAIR = "REPAIR"
+    PRIME_RENDERING = "PRIME_RENDERING"
+    PRIME_VALIDATING = "PRIME_VALIDATING"
+    PRIME_EXPORTING = "PRIME_EXPORTING"
+    PRIME_COMMITTING = "PRIME_COMMITTING"
     TERMINATED_SUCCESS = "TERMINATED_SUCCESS"
     TERMINATED_FAIL = "TERMINATED_FAIL"
 
@@ -99,7 +102,12 @@ class StateMachine:
         "RUN_DISPATCHED": ([State.SCHEDULED], State.EXECUTING),
         "EXECUTION_COMPLETE": ([State.EXECUTING], State.EVALUATING),
         "EXECUTION_ERROR": ([State.EXECUTING], State.REPAIR),
-        "VERDICT_PASS": ([State.EVALUATING], State.TERMINATED_SUCCESS),
+        "VERDICT_PASS": ([State.EVALUATING], State.PRIME_RENDERING),
+        "PRIME_RENDER_COMPLETE": ([State.PRIME_RENDERING], State.PRIME_VALIDATING),
+        "PRIME_VALIDATION_PASS": ([State.PRIME_VALIDATING], State.PRIME_EXPORTING),
+        "PRIME_VALIDATION_FAIL": ([State.PRIME_VALIDATING], State.REPAIR),
+        "PRIME_EXPORT_COMPLETE": ([State.PRIME_EXPORTING], State.PRIME_COMMITTING),
+        "PRIME_COMMIT_COMPLETE": ([State.PRIME_COMMITTING], State.TERMINATED_SUCCESS),
         "VERDICT_PARTIAL": ([State.EVALUATING], State.RETRY),
         "VERDICT_FAIL": ([State.EVALUATING], State.TERMINATED_FAIL),
         "AGENT_TOOL_REQUESTED": ([State.EVALUATING], State.TOOL_INVOKE),
@@ -121,6 +129,10 @@ class StateMachine:
         State.REPAIR,
         State.RETRY,
         State.SCHEDULED,
+        State.PRIME_RENDERING,
+        State.PRIME_VALIDATING,
+        State.PRIME_EXPORTING,
+        State.PRIME_COMMITTING,
     }
 
     def register_callback(self, state: State, fn: Callable[[TransitionRecord], None]) -> None:
@@ -140,8 +152,8 @@ class StateMachine:
         if self._persistence_callback and callable(self._persistence_callback):
             try:
                 self._persistence_callback(plan_id, snapshot)
-            except Exception as e:
-                print(f"Stateflow persistence error: {e}", file=sys.stderr)
+            except Exception:
+                pass
 
     def _run_post_transition(self, rec: TransitionRecord, callbacks: List[Callable[[TransitionRecord], None]], snapshot: Dict[str, Any], plan_id: Optional[str], seq: int) -> None:
         with self._persist_cond:
@@ -157,8 +169,8 @@ class StateMachine:
         for cb in callbacks:
             try:
                 cb(rec)
-            except Exception as e:
-                print(f"Stateflow callback error: {e}", file=sys.stderr)
+            except Exception:
+                pass
 
     def trigger(self, event: str, **meta) -> TransitionRecord:
         with self._lock:

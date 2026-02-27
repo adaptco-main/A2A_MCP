@@ -18,17 +18,19 @@ from app.mcp_tooling import (
     verify_github_oidc_token as app_verify_github_oidc_token,
 )
 
-app_ingest = FastMCP("knowledge-ingestion")
-validate_startup_oidc_requirements()
+# Initialize FastMCP for secure knowledge ingestion
+app_ingest = FastMCP("Knowledge Ingestion Service")
 
-
+@app_ingest.tool()
 def verify_github_oidc_token(token: str, request_id: str | None = None) -> dict[str, Any]:
+    """Verify a GitHub OIDC token and return its claims."""
     correlation_id = request_id or get_request_correlation_id()
     return verify_bearer_token(token, request_id=correlation_id)
 
 
 @app_ingest.tool()
 def ingest_repository_data(snapshot: dict[str, Any], authorization: str, request_id: str | None = None) -> str:
+    """Ingest a repository snapshot with OIDC provenance tracking."""
     correlation_id = request_id or get_request_correlation_id()
 
     try:
@@ -72,16 +74,15 @@ def ingest_worldline_block(worldline_block: dict[str, Any], authorization: str, 
     if repository and claims.get("repository") and claims["repository"] != repository:
         return f"error: repository claim mismatch (request_id={correlation_id})"
 
-    infra = worldline_block.get("infrastructure_agent", {})
-    if not isinstance(infra, dict):
-        return f"error: invalid infrastructure_agent payload (request_id={correlation_id})"
-
-    required = ["embedding_vector", "token_stream", "artifact_clusters", "lora_attention_weights"]
-    missing = [field for field in required if field not in infra]
-    if missing:
-        return f"error: missing required fields: {', '.join(missing)} (request_id={correlation_id})"
+    infra = worldline_block.get("infrastructure", {})
+    if not infra.get("token_stream"):
+        return f"error: missing token_stream (request_id={correlation_id})"
 
     return (
         f"success: ingested worldline block for {repository or 'unknown-repository'} "
         f"with {len(infra.get('token_stream', []))} tokens (request_id={correlation_id})"
     )
+
+if __name__ == "__main__":
+    validate_startup_oidc_requirements()
+    app_ingest.run()

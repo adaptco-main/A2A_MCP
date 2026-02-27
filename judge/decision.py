@@ -81,7 +81,7 @@ class JudgmentModel:
             DecisionCriteria(
                 criteria_type=CriteriaType.SAFETY,
                 weight=1.0,
-                description="Vehicle and environment safety constraints",
+                description="Vehicle and environment safety constraints (collisions, bounds, token caps)",
                 scorer=self._scorer_safety,
             ),
             DecisionCriteria(
@@ -107,9 +107,9 @@ class JudgmentModel:
         for criterion in defaults:
             self._criteria[criterion.criteria_type] = criterion
 
-    def register_criterion(self, criterion: DecisionCriteria) -> None:
+    def register_criterion(self, criteria: DecisionCriteria) -> None:
         """Register a custom decision criterion."""
-        self._criteria[criterion.criteria_type] = criterion
+        self._criteria[criteria.criteria_type] = criteria
 
     def judge_actions(
         self,
@@ -162,28 +162,33 @@ class JudgmentModel:
 
     @staticmethod
     def _scorer_safety(context: Dict[str, Any]) -> float:
-        """Safety criterion: check bounds, collisions, distance."""
+        """Safety criterion: check bounds, collisions, obstacles."""
         if "nearest_obstacle_distance_m" in context:
             dist = context["nearest_obstacle_distance_m"]
             return 1.0 if dist > 5 else 0.6 if dist > 2 else 0.0
-        return 1.0 if context.get("safe", True) else 0.0
+        
+        safe = context.get("safe", True)
+        return 1.0 if safe else 0.0
 
     @staticmethod
     def _scorer_spec(context: Dict[str, Any]) -> float:
         """Spec alignment: adherence to vehicle/game specs."""
-        return 1.0 if context.get("spec_compliant", True) else 0.0
+        spec_compliant = context.get("spec_compliant", True)
+        return 1.0 if spec_compliant else 0.0
 
     @staticmethod
     def _scorer_intent(context: Dict[str, Any]) -> float:
         """Player intent: alignment with user goal."""
-        return max(0.0, min(1.0, context.get("intent_match", 0.85)))
+        intent_match = context.get("intent_match", 0.85)
+        return max(0.0, min(1.0, intent_match))
 
     @staticmethod
     def _scorer_latency(context: Dict[str, Any]) -> float:
         """Latency: execution within time budget."""
-        elapsed = context.get("elapsed_ms", 0)
-        budget = context.get("budget_ms", 100)
-        return max(0.0, 1.0 - (elapsed / budget)) if budget > 0 else 1.0
+        elapsed_ms = context.get("elapsed_ms", 0)
+        budget_ms = context.get("budget_ms", 100)
+        if budget_ms <= 0: return 1.0
+        return max(0.0, 1.0 - (elapsed_ms / budget_ms))
 
     def __repr__(self) -> str:
         criteria_info = ", ".join(

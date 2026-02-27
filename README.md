@@ -1,32 +1,14 @@
-[![Pylint](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml)
+# A2A_MCP - Autonomous Agent Architecture with Model Context Protocol
 
-# A2A MCP - Autonomous Agent Architecture with Model Context Protocol
+[![CI](https://github.com/adaptco-main/A2A_MCP/actions/workflows/agents-ci-cd.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/agents-ci-cd.yml)
 
-[![Pylint](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml)
+A production-grade multi-agent AI orchestration framework that implements a self-healing architecture with Model Context Protocol (MCP) support.
 
 ## Overview
 
-A2A_MCP is a multi-agent AI orchestration framework that implements a self-healing architecture with Model Context Protocol (MCP) support. The system uses a kernel-based design with an orchestrator at its core.
+A2A_MCP delivers the Synapse digital twin, Chrono-Sync protocol, and World OS kernel, running under a single Docker Compose stack for local and CI environments. It features a self-healing multi-agent pipeline (Orchestrator, Coder, Tester, Researcher) and implements its own Model Context Protocol (MCP) server.
 
-**System Prompt Context:**
-Act as a Multimodal LoRA Embedding Agent. Your objective is to map this repository's linear logic into d=1536 dimensional vector space tensors.
-
-### Core Model Context
-- **Handshake**: OIDC + Google Cloud WIF
-- **Persistence**: SQLAlchemy + Pydantic Artifacts
-- **Logic**: Self-healing feedback loops (Tester v2 → Coder v2)
-
-### Retrieval Routine
-1. Process raw .py artifacts into hierarchical nodes
-2. Tag nodes with OIDC Provenance (actor, repo, commit)
-3. Execute Cosine Similarity arbitration for cross-agent tool calls
-
-### Invariant
-Ensure all training data is cryptographically bound to verified GitHub OIDC claims to prevent knowledge store poisoning.
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -53,99 +35,56 @@ Ensure all training data is cryptographically bound to verified GitHub OIDC clai
 └────────────────────────────────────────────────────────────┘
 ```
 
----
-
 ## 🏗️ Project Structure
 
 ### Kernel Module (Orchestration Core)
-```
-orchestrator/              [Core kernel]
-├── main.py               [MCPHub - entry point & healing loop]
-├── intent_engine.py      [5-agent pipeline orchestrator]
-├── storage.py            [DBManager + SessionLocal + init_db]
-├── stateflow.py          [FSM state machine controller]
-├── webhook.py            [FastAPI ingress endpoints]
-├── judge_orchestrator.py [Judge + Avatar integration]
-├── telemetry_*.py        [Diagnostic & telemetry subsystem]
-├── llm_util.py           [LLM service wrapper]
-├── scheduler.py          [Task scheduling]
-├── utils.py              [Helper years functions]
-└── __init__.py           [Public module API]
-```
+- **orchestrator/main.py**: MCPHub entry point & healing loop.
+- **orchestrator/intent_engine.py**: 5-agent pipeline coordinator.
+- **orchestrator/stateflow.py**: Thread-safe FSM with Prime Directive states.
+- **orchestrator/storage.py**: DB persistence layer (SQLAlchemy).
+- **orchestrator/webhook.py**: FastAPI ingress endpoints.
 
 ### Agent Swarm
-```
-agents/                    [Specialized agents]
-├── managing_agent.py      [High-level orchestration]
-├── orchestration_agent.py [Workflow coordination]
-├── architecture_agent.py  [System design]
-├── coder.py               [Code generation]
-├── tester.py              [Quality validation]
-├── researcher.py          [Research & analysis]
-└── __init__.py            [Agent exports]
-```
+- **Managing Agent**: High-level task assignment.
+- **Orchestration Agent**: Workflow coordination.
+- **Architecture Agent**: System design decisions.
+- **Coder Agent**: Code generation.
+- **Tester Agent**: Quality assurance.
+- **PINN Agent**: Physics-informed neural network arbitration.
 
 ### Data Contracts & Models
-```
-schemas/                   [Data model definitions]
-├── agent_artifacts.py     [MCPArtifact contracts]
-├── database.py            [SQLAlchemy ORM models]
-├── game_model.py          [Game engine domain models]
-├── project_plan.py        [Planning contracts]
-├── telemetry.py           [Diagnostic models]
-├── world_model.py         [World state models]
-└── __init__.py            [Schema exports]
-```
-
----
+- **schemas/agent_artifacts.py**: MCPArtifact contracts.
+- **schemas/database.py**: SQLAlchemy ORM models.
+- **schemas/project_plan.py**: Planning contracts.
+- **schemas/world_model.py**: World state models.
 
 ## 🚀 Quick Start
 
 ### Environment Setup
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# Windows
+.\.venv\Scripts\Activate.ps1
+# Unix
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
-
-
-### Release Runtime Environment
-```bash
-cp .env.release.example .env.release
-docker compose --env-file .env.release -f docker-compose.release.yml up -d --build
-```
-
-Detailed release runtime instructions: `docs/release/MIDDLEWARE_RUNTIME_ENV.md`.
 
 ### Run MCP Server
 ```bash
 python mcp_server.py
 ```
 
-### Run Tests
+### Start Webhook Server
 ```bash
-python -m pytest -q
+uvicorn orchestrator.webhook:app --reload --port 8000
 ```
 
----
-
-## 📝 Key Components
-
-### Orchestrator (Core Kernel)
-- **MCPHub**: Main entry point implementing healing loop orchestration.
-- **IntentEngine**: 5-stage agent pipeline (Manager → Orchestrator → Architect → Coder → Tester).
-- **StateMachine**: FSM-based state management with persistence.
-- **TelemetryService**: Diagnostic tracking with DTCs and embeddings.
-
-### Agent System
-- **Managing Agent**: High-level task assignment.
-- **Orchestration Agent**: Workflow coordination.
-- **Architecture Agent**: System design decisions.
-- **Coder Agent**: Code generation.
-- **Tester Agent**: Quality assurance.
-- **Researcher**: Data analysis & research.
-
----
+### Run Tests
+```bash
+pytest tests/ -v
+```
 
 ## 🔐 Security & Integrity
 
@@ -153,8 +92,6 @@ python -m pytest -q
 - **Knowledge Store Protection**: Cryptographic binding of training data.
 - **Artifact Provenance**: Complete audit trail with OIDC claims.
 
----
-
 ## 📄 License
 
-See [LICENSE](LICENSE) file for details.
+See [LICENSE](LICENSE).

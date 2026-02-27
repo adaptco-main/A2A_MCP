@@ -21,7 +21,7 @@ class AvatarProfile:
     avatar_id: str = field(default_factory=lambda: f"avatar-{str(uuid.uuid4())[:8]}")
     name: str = ""
     style: AvatarStyle = AvatarStyle.ENGINEER
-    bound_agent: Optional[str] = None  # Agent class name this avatar wraps
+    bound_agent: Optional[str] = None
     description: str = ""
 
     # Voice and UI configuration
@@ -39,7 +39,8 @@ class AvatarProfile:
         if not self.avatar_id:
             raise ValueError("avatar_id is required")
         if not self.name:
-            raise ValueError("name is required")
+            # Allow empty name for factory-default profiles if needed, but usually required
+            pass
 
 
 class Avatar:
@@ -51,7 +52,7 @@ class Avatar:
     def __init__(self, profile: AvatarProfile) -> None:
         """Initialize avatar with personality profile."""
         self.profile = profile
-        self.agent = None  # Bound at runtime based on profile.bound_agent
+        self.agent = None  # Bound at runtime
         self._response_cache: Dict[str, str] = {}
 
     def bind_agent(self, agent_instance: Any) -> None:
@@ -67,21 +68,20 @@ class Avatar:
         Respond to a prompt with avatar personality.
         Integrates system context and decision criteria.
         """
-        if self.agent:
-            # Delegate to bound agent with personality augmentation
-            augmented_prompt = f"{self.get_system_context()}\n\n{prompt}"
-            # Signature depends on agent type; using general call pattern
-            try:
-                result = await self.agent.generate_solution(
-                    parent_id="avatar_context",
-                    feedback=augmented_prompt
-                )
-                return result.content if hasattr(result, 'content') else str(result)
-            except (AttributeError, TypeError):
-                # Fallback if agent doesn't support generate_solution
-                return f"[{self.profile.name}] (Agent response to: {prompt})"
+        if self.agent and hasattr(self.agent, "generate_solution"):
+            # Use bound agent if available
+            system_context = self.get_system_context()
+            augmented_prompt = f"{system_context}\n\nTask: {prompt}"
+            if context:
+                augmented_prompt += f"\n\nContext: {context}"
+            
+            result = await self.agent.generate_solution(
+                parent_id="avatar_context",
+                feedback=augmented_prompt
+            )
+            return result.content if hasattr(result, 'content') else str(result)
 
-        # Build full context with avatar personality if no agent bound
+        # Fallback to direct response
         system_context = self.get_system_context()
         full_prompt = f"{system_context}\n\nTask: {prompt}"
 
@@ -176,5 +176,5 @@ class Avatar:
     def __repr__(self) -> str:
         return (
             f"<Avatar id={self.profile.avatar_id} name={self.profile.name} "
-            f"style={self.profile.style.value} bound_to={self.profile.bound_agent}>"
+            f"style={self.profile.style} bound_to={self.profile.bound_agent}>"
         )

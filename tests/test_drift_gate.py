@@ -1,18 +1,18 @@
 import numpy as np
 
-from src.drift_suite.gate import gate_drift
+from drift_suite.gate import gate_drift
 
 
 def test_gate_passes_for_similar_distributions():
     baseline = np.linspace(0.0, 1.0, 200)
-    candidate = baseline + 1e-6
+    candidate = baseline + 1e-6  # tiny shift
     result = gate_drift(baseline, candidate, pvalue_threshold=0.10)
     assert result.passed, result.reason
 
 
 def test_gate_fails_for_shifted_distributions():
     baseline = np.linspace(0.0, 1.0, 200)
-    candidate = np.linspace(1.0, 2.0, 200)
+    candidate = np.linspace(1.0, 2.0, 200)  # clearly shifted
     result = gate_drift(baseline, candidate, pvalue_threshold=0.10)
     assert not result.passed, "Expected drift gate to fail for shifted distributions."
 
