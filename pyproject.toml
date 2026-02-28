@@ -38,3 +38,6 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 pythonpath = ["src", "."]
 addopts = "-q --doctest-modules"
+
+[project.scripts]
+mcp-adk = "mcp_adk.cli:main"
