@@ -31,7 +31,7 @@ class SystemsArchitect:
         
         # 3. Generate Gate Policy
         policy = {
-            "$schema": "https://adk.io/schemas/v0/gate_policy.schema.json",
+            "$schema": "../adk/schemas/gate_policy.schema.json",
             "gate_id": str(uuid4()),
             "allowed_roles": ["coder", "architect", "manager"],
             "required_proofs": [

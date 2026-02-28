@@ -15,6 +15,9 @@
             "assembly_actuator": "adk://schemas/assembly_actuator.schema.json",
             "structural_integrity_expert": "adk://schemas/structural_integrity_expert.schema.json",
             "weight_adapter": "adk://schemas/weight_adapter.schema.json"
+        },
+        "services": {
+            "node_6_valuation": "http://localhost:8080/valuation"
         }
     }
 }

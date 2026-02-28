@@ -1,4 +1,4 @@
-#include "agents/Boss.hpp"
+#include "../../include/agents/Boss.hpp"
 #include <cmath>
 
 namespace agents {

@@ -21,6 +21,7 @@ public:
   const std::vector<Tile> &GetTiles() const;
   Vector2 GetSpawnPoint() const;
   int GetCurrentLevel() const;
+  void SpawnPlane(Vector2 origin, float width, float height);
 
 private:
   int currentLevel_ = 0;

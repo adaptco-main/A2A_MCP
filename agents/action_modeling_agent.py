@@ -1,58 +1,102 @@
 import os
 import re
-import json
+from pathlib import Path
+from typing import Dict, List, Optional
+from orchestrator.llm_util import LLMService
 
 class ActionModelingAgent:
     """
-    Agent that consumes task.md and generates GitHub-ready modeling actions.
+    Sub-function of the Orchestration Model.
+    Automates the task list by modeling 'task.md' items as GitHub workspace-ready Actions.
+    Synchronizes file-based intent with agentic execution state.
     """
-    def __init__(self, task_path="brain/task.md"):
-        # Resolve path relative to project root or use provided absolute path
-        self.task_path = task_path
-        self.actions_dir = ".github/actions/modeling"
 
-    def sync_tasks_to_actions(self):
-        """
-        Reads task.md and identifies pending tasks to model.
-        """
-        if not os.path.exists(self.task_path):
-            return f"Error: {self.task_path} not found."
+    AGENT_NAME = "ActionModelingAgent-GitHub"
+    VERSION = "0.1.0"
 
-        with open(self.task_path, 'r') as f:
+    def __init__(self, task_file_path: str = "task.md"):
+        # Use brain directory task.md if it exists, otherwise fallback
+        # In this workspace, let's default to a provided path or look for the first brain dir
+        self.task_file_path = Path(task_file_path)
+        self.llm = LLMService()
+
+    def set_task_file(self, path: str):
+        self.task_file_path = Path(path)
+
+    async def automate_next_task(self) -> Dict[str, str]:
+        """
+        Reads the task.md file, finds the first uncompleted task,
+        and 'models' it into an executable Action.
+        """
+        if not self.task_file_path.exists():
+            return {"status": "ERROR", "message": f"Task file {self.task_file_path} not found."}
+
+        with open(self.task_file_path, "r") as f:
             content = f.read()
 
-        # Find pending tasks (e.g., - [ ] Task name <!-- id: 123 -->)
-        pending_tasks = re.findall(r'- \[ \] (.*?) <!-- id: (\d+) -->', content)
+        # Regex to find tasks: - [ ] Task name <!-- id: 1 -->
+        tasks = re.findall(r"- \[( )\] (.*?) <!-- id: (.*?) -->", content)
         
-        if not pending_tasks:
-            print("ActionModelingAgent: No pending tasks found for modeling.")
+        if not tasks:
+            return {"status": "IDLE", "message": "No pending tasks found."}
+
+        # Take the first uncompleted task
+        _, task_name, task_id = tasks[0]
+        
+        # 'Model' the task as an Action
+        prompt = (
+            f"SYSTEM: You are the GitHub Actions Modeling Coding Agent.\n"
+            f"Transform the following task into a structured 'Working Model Action'.\n\n"
+            f"Task: {task_name}\n"
+            f"Task ID: {task_id}\n\n"
+            f"Output JSON with: 'action_type' (e.g., file_edit, git_commit, docker_build), "
+            f"'modeling_logic', and 'github_action_yaml_stub'."
+        )
+
+        try:
+            modeling_result = self.llm.call_llm(prompt)
+            return {
+                "status": "ACTION_PENDING",
+                "task_id": task_id,
+                "task_name": task_name,
+                "modeling": modeling_result
+            }
+        except Exception as e:
+            return {"status": "ERROR", "message": f"Modeling failed: {str(e)}"}
+
+    def mark_task_complete(self, task_id: str):
+        """Standardizes the 'Action' feedback loop by updating the source task file."""
+        if not self.task_file_path.exists():
             return
 
-        os.makedirs(self.actions_dir, exist_ok=True)
-        
-        for task_name, task_id in pending_tasks:
-            self._create_modeling_action(task_name, task_id)
+        with open(self.task_file_path, "r") as f:
+            lines = f.readlines()
 
-    def _create_modeling_action(self, name, task_id):
-        action_name = name.lower().replace(" ", "_")
-        action_path = os.path.join(self.actions_dir, f"{action_name}_v{task_id}.json")
-        
-        action_schema = {
-            "action_id": task_id,
-            "name": name,
-            "type": "modeling_task",
-            "trigger": "manual",
-            "capabilities_required": ["static_analysis", "logic_modeling"],
-            "output_target": f"modeling_results/{action_name}.md"
-        }
-        
-        with open(action_path, 'w') as f:
-            json.dump(action_schema, f, indent=2)
-        print(f"ActionModelingAgent: Modeled action '{name}' -> {action_path}")
+        new_lines = []
+        for line in lines:
+            if f"<!-- id: {task_id} -->" in line:
+                line = line.replace("[ ]", "[x]")
+            new_lines.append(line)
+
+        with open(self.task_file_path, "w") as f:
+            f.writelines(new_lines)
 
 if __name__ == "__main__":
-    # Attempt to find the task file in standard brain directories
-    # For now, we mock a path or assume execution from a context where bit is known
-    agent = ActionModelingAgent() 
-    # Note: In production, path would be passed as arg
-    print("ActionModelingAgent: Initialized.")
+    # Test script
+    import asyncio
+    
+    async def test():
+        # Point to the current project's brain task.md as a test
+        agent = ActionModelingAgent()
+        # For demo, we'll try to find the brain dir task.md
+        # C:\Users\eqhsp\.gemini\antigravity\brain\e87adcde-776c-498f-a0da-d106168504b7\task.md
+        brain_task = Path(r"C:\Users\eqhsp\.gemini\antigravity\brain\e87adcde-776c-498f-a0da-d106168504b7\task.md")
+        if brain_task.exists():
+            agent.set_task_file(str(brain_task))
+            print(f"Automating tasks from: {brain_task}")
+            result = await agent.automate_next_task()
+            print(f"Action Result: {result}")
+        else:
+            print("No task.md found for testing.")
+
+    asyncio.run(test())

@@ -1,46 +1,49 @@
 """
-Spoke Adapter Base Class
-Defines the interface for all Field Game Spokes.
-"""
+SpokeAdapter - Abstract Base Class for Field Games.
 
+Any environment ("Spoke") that wants to dock with the Agency Hub
+must implement this interface.
+"""
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
+from typing import Dict, Any
+
 
 class SpokeAdapter(ABC):
-    """
-    Abstract Base Class for integrating external environments (Spokes)
-    into the Agency Docking Shell.
-    """
+    """Abstract interface for Field Game environments."""
     
     @abstractmethod
     def observe(self) -> Dict[str, Any]:
         """
-        Return current environmental state as a JSON-serializable dictionary.
-        This raw state will be normalized by the TensorField.
+        Return current environmental state.
+        
+        Returns:
+            Dictionary containing observable state (positions, tiles, etc.)
         """
         pass
-        
+    
     @abstractmethod
     def act(self, token: Dict[str, Any]) -> bool:
         """
-        Execute an action token.
+        Execute an action token in the environment.
         
         Args:
-            token: A dictionary containing 'action' and 'params'.
+            token: Action dictionary with "action" and "params" keys
             
         Returns:
-            bool: True if action was successfully executed.
+            True if action executed successfully, False otherwise
         """
         pass
-        
+    
     @abstractmethod
-    def get_state_schema(self) -> Dict[str, str]:
+    def get_state_schema(self) -> Dict[str, Any]:
         """
-        Return a schema defining the expected structure of the state.
-        Mapping of key -> type (e.g., 'position': 'vector3').
+        Return schema describing the state structure.
+        
+        Returns:
+            Dictionary describing expected state keys and types
         """
         pass
-
-    def teardown(self):
-        """Optional cleanup method."""
-        pass
+    
+    def get_name(self) -> str:
+        """Return human-readable name of this spoke."""
+        return self.__class__.__name__
