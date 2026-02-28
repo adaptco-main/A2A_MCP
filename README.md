@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/adaptco-main/A2A_MCP/actions/workflows/agents-ci-cd.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/agents-ci-cd.yml)
 [![Pylint](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml)
+[![World OS CI](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml)
 
 A production-grade multi-agent AI orchestration framework that implements a self-healing architecture with Model Context Protocol (MCP) support.
 
