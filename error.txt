@@ -1,10 +1,1 @@
-C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\src\engine\Sandbox.cpp(10,7): error C2614: 'engine::Sandbox': illegal member initialization: 'renderer_' is not a base or member [C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\ghost-void_engine.vcxproj]
-C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\src\engine\Sandbox.cpp(40,5): error C2065: 'renderer_': undeclared identifier [C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\ghost-void_engine.vcxproj]
-C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\src\engine\Sandbox.cpp(54,5): error C2065: 'renderer_': undeclared identifier [C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\ghost-void_engine.vcxproj]
-C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\src\engine\Sandbox.cpp(58,3): error C2065: 'renderer_': undeclared identifier [C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\ghost-void_engine.vcxproj]
-  hello_world.vcxproj -> C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\Release\hello_world.exe
-  Sandbox.cpp
-C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\src\engine\Sandbox.cpp(10,7): error C2614: 'engine::Sandbox': illegal member initialization: 'renderer_' is not a base or member [C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\jurassic_pixels_test.vcxproj]
-C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\src\engine\Sandbox.cpp(40,5): error C2065: 'renderer_': undeclared identifier [C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\jurassic_pixels_test.vcxproj]
-C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\src\engine\Sandbox.cpp(54,5): error C2065: 'renderer_': undeclared identifier [C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\jurassic_pixels_test.vcxproj]
-C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\src\engine\Sandbox.cpp(58,3): error C2065: 'renderer_': undeclared identifier [C:\Users\eqhsp\.antigravity\A2A_MCP\A2A_MCP\build\jurassic_pixels_test.vcxproj]
+No error found in log.txt

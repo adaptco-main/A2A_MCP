@@ -34,7 +34,6 @@ class PlanStateModel(Base):
     def __repr__(self):
         return f"<PlanState(plan_id={self.plan_id})>"
 
-
 class EventModel(Base):
     __tablename__ = "events"
 
@@ -49,3 +48,4 @@ class EventModel(Base):
 
     def __repr__(self):
         return f"<Event(pipeline={self.pipeline}, state={self.state}, execution={self.execution_id})>"
+

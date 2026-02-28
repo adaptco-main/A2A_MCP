@@ -1,10 +1,10 @@
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, ANY
 from agency_hub.genie_bridge import GenieBridge
 from middleware.genie_adapter import GenieAdapter
 from middleware.runtime import AgenticRuntime
-from schemas.model_artifact import ModelArtifact
+from schemas.model_artifact import ModelArtifact, AgentLifecycleState
 
 @pytest.fixture
 def mock_spoke():
@@ -31,7 +31,7 @@ async def test_genie_interactive_loop(mock_spoke, mock_runtime):
     
     # 1. Start Session
     await adapter.start_interactive_session()
-    mock_runtime.emit_event.assert_called_with(pytest.any_arg)
+    mock_runtime.emit_event.assert_called_with(ANY)
     
     # 2. Process WASD Input ('w' for up)
     payload = {"intent": "w"}
@@ -50,7 +50,7 @@ async def test_genie_interactive_loop(mock_spoke, mock_runtime):
     assert mock_runtime.emit_event.call_count == 2
     last_call_artifact = mock_runtime.emit_event.call_args[0][0]
     assert "genie-act-w" in last_call_artifact.artifact_id
-    assert last_call_artifact.state == "EXPLORING"
+    assert last_call_artifact.state == AgentLifecycleState.INIT
 
 @pytest.mark.asyncio
 async def test_genie_unsupported_intent(mock_spoke, mock_runtime):

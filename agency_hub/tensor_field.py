@@ -81,7 +81,7 @@ class TensorField:
                 for i, item in enumerate(v):
                     if isinstance(item, (dict, list)):
                          # simplified, ignore complex nested lists for now
-                         pass
+                         raise NotImplementedError("Nested lists or dicts within lists are not supported.")
                     else:
                         items.append((f"{new_key}_{i}", item))
             else:

@@ -1,149 +1,18 @@
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "PowerShell Launch Current File",
-            "type": "PowerShell",
-            "request": "launch",
-            "script": "${file}",
-            "cwd": "${cwd}"
-        },
-        {
-            "name": "PowerShell Attach to Host Process",
-            "type": "PowerShell",
-            "request": "attach"
-        },
-        {
-            "name": "Attach",
-            "port": 9229,
-            "request": "attach",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "node"
-        },
-        {
-            "name": "Python Debugger: Current File with Arguments",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": "${command:pickArgs}"
-        },
-        {
-            "type": "cmake",
-            "request": "launch",
-            "name": "CMake: Script debugging",
-            "cmakeDebugType": "script",
-            "scriptPath": "${workspaceFolder}/scripts/setup.cmake"
-        },
-        {
-            "name": "Python: Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Python: FastAPI",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "main:app",
-                "--reload"
-            ],
-            "jinja": true,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Python: Run CI/CD Pipeline Tests",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "pytest",
-            "args": [
-                "tests/test_cicd_pipeline.py"
-            ],
-            "console": "integratedTerminal",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Python: Run RAG Pipeline Tests",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "pytest",
-            "args": [
-                "tests/test_rag_pipeline.py"
-            ],
-            "console": "integratedTerminal",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Python: Run State Space Tests",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "pytest",
-            "args": [
-                "tests/test_state_space.py"
-            ],
-            "console": "integratedTerminal",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "Jurassic Pixels: Training",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/jurassic_pixels/parker_train.py",
-            "args": [
-                "--episodes",
-                "10",
-                "--export"
-            ],
-            "console": "integratedTerminal",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            }
-        },
-        {
-            "name": "C++: Launch Engine (Windows)",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/bin/ghost-void_engine.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "console": "externalTerminal"
-        },
-        {
-            "name": "Web: Chrome",
-            "type": "chrome",
-            "request": "launch",
-            "url": "http://localhost:5173",
-            "webRoot": "${workspaceFolder}/server/react-client"
-        },
-        {
-            "name": "Web: Edge",
-            "type": "msedge",
-            "request": "launch",
-            "url": "http://localhost:5173",
-            "webRoot": "${workspaceFolder}/server/react-client"
-        },
-        {
-            "name": "PowerShell: Current File",
-            "type": "PowerShell",
-            "request": "launch",
-            "script": "${file}",
-            "cwd": "${fileDirname}"
-        }
-    ]
-}
+import os
+
+def get_file_path(directory, filename): """
+    Constructs a full file path from a directory and a filename.
+    """
+    return os.path.join(directory, filename)
+
+def main():
+    directory_name = "data"
+    file_name = "results.txt"
+    
+    # Generate the full path
+    full_path = get_file_path(directory_name, file_name)
+    
+    print(f"The generated path is: {full_path}")
+
+if __name__ == "__main__":
+    main()

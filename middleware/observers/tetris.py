@@ -36,15 +36,7 @@ class TetrisScoreAggregator:
         details = {}
         if hasattr(event, "metadata") and event.metadata:
             details = event.metadata
-        elif hasattr(event, "meta_data") and event.meta_data:
-             try:
-                 if isinstance(event.meta_data, str):
-                    details = json.loads(event.meta_data)
-                 else:
-                    details = event.meta_data
-             except:
-                 pass
-
+        
         async with self._lock:
             self.buffer.append({
                 "pipeline": details.get("pipeline_id") or getattr(event, 'pipeline', 'unknown'),

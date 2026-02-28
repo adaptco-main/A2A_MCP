@@ -58,7 +58,7 @@ class GenieAdapter:
             model_id="genie-foundation-v1",
             weights_hash="hash_pending",
             embedding_dim=64,
-            state="EXPLORING",
+            state=AgentLifecycleState.INIT,
             content=f"Agent executed intent: {intent}",
             metadata={"projection": projection, "success": success}
         )
