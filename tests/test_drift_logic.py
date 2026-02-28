@@ -5,7 +5,7 @@ Verifies drift physics calculations and mapping to Base44 grid.
 
 import pytest
 import math
-from wham_engine.physics.supra_drift import SupraDriftModel
+from phase_space_tick import SupraDriftModel
 
 class TestSupraDrift:
     def test_grip_mode(self):

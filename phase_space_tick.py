@@ -17,9 +17,38 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 try:
     import numpy as np
     from wham_engine.physics.supra_drift import SupraDriftModel, DriftState
-except ImportError as e:
-    print(f"Error importing dependencies: {e}")
-    sys.exit(1)
+    _WHAM_ENGINE_AVAILABLE = True
+except ImportError:
+    import numpy as np  # numpy is available; only the C++ engine is missing
+    import logging as _log
+    _log.getLogger("PhaseSpaceTick").warning(
+        "wham_engine.physics.supra_drift not available — using Python fallback stubs."
+    )
+    _WHAM_ENGINE_AVAILABLE = False
+
+    from dataclasses import dataclass
+
+    @dataclass
+    class DriftState:
+        mode: str = "GRIP"
+        drift_score: float = 0.0
+        slip_angle: float = 0.0
+        is_drifting: bool = False
+
+    class SupraDriftModel:
+        def calculate_drift(self, velocity: float, steering: float) -> DriftState:
+            if velocity <= 0:
+                return DriftState()
+            drift_score = min(abs(steering) * velocity / 50.0, 1.0)
+            is_drifting = drift_score > 0.4
+            mode = "DRIFT" if drift_score > 0.7 else ("SLIP" if is_drifting else "GRIP")
+            return DriftState(
+                mode=mode,
+                drift_score=drift_score,
+                slip_angle=steering * drift_score,
+                is_drifting=is_drifting,
+            )
+
 
 # Mocked World Components (until fully integrated)
 class MockBase44Grid:

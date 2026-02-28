@@ -12,6 +12,8 @@ from agents.tester import TesterAgent
 from agents.researcher import ResearcherAgent
 from agents.pinn_agent import PINNAgent
 from agents.notification_agent import NotificationAgent
+from agents.gating_agent import GatingAgent
+from agents.action_modeling_agent import ActionModelingAgent
 
 __all__ = [
     'ManagingAgent',
@@ -22,4 +24,6 @@ __all__ = [
     'ResearcherAgent',
     'PINNAgent',
     'NotificationAgent',
+    'GatingAgent',
+    'ActionModelingAgent',
 ]

@@ -22,8 +22,9 @@ def bootstrap_paths() -> Path:
 
     if root_str not in sys.path:
         sys.path.insert(0, root_str)
-    if parent_str not in sys.path:
-        sys.path.insert(0, parent_str)
+    else:
+        sys.path.remove(root_str)
+        sys.path.insert(0, root_str)
 
     os.environ.setdefault("A2A_MCP_ROOT", root_str)
     return project_root

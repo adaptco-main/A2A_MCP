@@ -15,6 +15,9 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from middleware import AgenticRuntime, WhatsAppEventObserver
 from schemas.model_artifact import ModelArtifact, AgentLifecycleState
+from llm.gemini_client import GeminiClient
+from llm.decision_engine import DecisionEngine
+from llm.decision_schema import ParkerDecision
 
 import websockets
 
@@ -30,10 +33,8 @@ FAIL_CLOSED_ACTION = {"type": "move", "direction": "idle"}
 
 PARKER_PROMPT_TEMPLATE = (
     "You are Parker, an autonomous game agent.\n"
-    "Choose exactly ONE action for the next tick.\n"
-    "Allowed directions: left, right, jump, idle.\n"
-    "Reply with JSON ONLY — no explanation, no markdown, no extra text.\n"
-    "Schema: {{\"type\":\"move\",\"direction\":\"<direction>\"}}\n\n"
+    "Choose the next action.\n"
+    "Allowed directions for 'move' type: left, right, jump, idle.\n"
     "Current observation:\n{observation}"
 )
 
@@ -50,38 +51,32 @@ def validate_action(raw: Dict[str, Any]) -> Dict[str, Any]:
     return {"type": "move", "direction": direction}
 
 
-def decide_action(model: Any, observation: Dict[str, Any]) -> Dict[str, Any]:
+def decide_action(engine: DecisionEngine, observation: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Call Gemini to produce the next Parker action.
-    Fail-closed to idle on any error (invalid JSON, schema violation, API failure).
+    Call Gemini via the DecisionEngine to produce the next Parker action.
+    Returns a mapped dictionary for fail-closed WebSocket compliance.
     """
-    prompt = PARKER_PROMPT_TEMPLATE.format(
+    user_prompt = PARKER_PROMPT_TEMPLATE.format(
         observation=json.dumps(observation, sort_keys=True, separators=(",", ":"))
     )
     try:
-        response = model.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
+        decision = engine.decide(
+            system="You are Parker's training controller. Decide the next action. Output JSON that matches ParkerDecision.",
+            user=f"Context:\nEnvironment observation.\n\nState:\n{user_prompt}\n\nGoal:\nNavigate without crashing."
         )
-        raw_text = response.text.strip()
-
-        # Strip markdown fences if model wraps in ```json ... ```
-        if raw_text.startswith("```"):
-            lines = raw_text.splitlines()
-            raw_text = "\n".join(
-                line for line in lines
-                if not line.startswith("```")
-            ).strip()
-
-        action = json.loads(raw_text)
-        validated = validate_action(action)
-        logger.debug("Parker action: %s", validated)
-        return validated
-
-    except json.JSONDecodeError as e:
-        logger.warning("E_ACTION_JSON_DECODE: %s | raw=%r", e, locals().get("raw_text", ""))
-    except ValueError as e:
-        logger.warning("E_ACTION_VALIDATION: %s", e)
+        
+        logger.debug("Parker decided: %s (confidence: %f)", decision.action, decision.confidence)
+        
+        # Map ParkerDecision back to legacy move dictionary for WebSockets
+        if decision.action in ["drive", "continue"]:
+             # If mapping drive to ws schema...
+             # We'll use the direction equivalent
+             return {"type": "move", "direction": "idle"}
+        elif decision.action in ["left", "right", "jump", "idle"]:
+             return {"type": "move", "direction": decision.action}
+        else:
+             return {"type": "move", "direction": "idle"}
+             
     except Exception as e:
         logger.warning("E_MODEL_CALL_FAILED: %s", e)
 
@@ -93,7 +88,7 @@ def decide_action(model: Any, observation: Dict[str, Any]) -> Dict[str, Any]:
 # Gemini client initialisation
 # ---------------------------------------------------------------------------
 
-def init_gemini() -> Optional[Any]:
+def init_gemini() -> Optional[DecisionEngine]:
     """
     Initialise the Gemini client from GEMINI_API_KEY env var.
     Returns None if credentials are unavailable — agent will not run in intelligent mode.
@@ -105,13 +100,15 @@ def init_gemini() -> Optional[Any]:
             "Parker will not run in intelligent mode."
         )
         return None
+        
     try:
-        from google import genai  # type: ignore[import]
-        client = genai.Client(api_key=api_key)
-        logger.info("Gemini client initialised (gemini-2.0-flash)")
-        return client
-    except ImportError:
-        logger.error("E_MISSING_DEPENDENCY: google-genai not installed. Run: pip install google-genai")
+        model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+        client = GeminiClient(api_key=api_key, model=model_name)
+        engine = DecisionEngine(client)
+        logger.info(f"Gemini client and Decision Engine initialised ({model_name})")
+        return engine
+    except Exception as e:
+        logger.error(f"E_GEMINI_INIT_FAILED: {e}")
         return None
 
 
@@ -134,7 +131,7 @@ async def agent_loop():
                 message = await websocket.recv()
                 observation = json.loads(message)
 
-                # Gemini decides the action
+                # Gemini decides the action via DecisionEngine
                 action = decide_action(client, observation)
                 await websocket.send(json.dumps(action))
 
