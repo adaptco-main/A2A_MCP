@@ -33,3 +33,6 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 pythonpath = ["src", "."]
 addopts = "-q --doctest-modules"
+
+[project.scripts]
+mcp-adk = "mcp_adk.cli:main"
