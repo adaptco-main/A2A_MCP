@@ -1,5 +1,6 @@
 # tests/test_stateflow.py
 import pytest
+import time
 from orchestrator.stateflow import StateMachine, State, PartialVerdict
 
 def test_happy_path():
@@ -34,10 +35,14 @@ def test_retry_limit_exceeded():
     # dispatch retry
     sm.trigger("RETRY_DISPATCHED")
     assert sm.current_state() == State.EXECUTING
+    
+    # Simulate a small delay to ensure timestamp progression
+    time.sleep(0.01)
+    
     # execution completes again
     sm.trigger("EXECUTION_COMPLETE")
-    # second partial -> now max_retries is 2 => should lead to TERMINATED_FAIL
-    sm.evaluate_apply_policy(policy_partial)
+    # second partial -> now max_retries is 2 => should lead to TERMINATED_FAIL (since attempts=2 >= max_retries=2)
+    sm.evaluate_apply_policy(policy_partial) 
     assert sm.current_state() == State.TERMINATED_FAIL
 
 def test_override_forward_only():

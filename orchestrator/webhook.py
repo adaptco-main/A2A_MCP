@@ -19,7 +19,96 @@ app = FastAPI(title="A2A MCP Webhook")
 
 # in-memory map (replace with DB-backed persistence or plan state store in prod)
 PLAN_STATE_MACHINES = {}
+RELEASE_JOBS = {}
+CI_CD_MONITOR = None
+WEBHOOK_SHARED_SECRET = ""
+GITHUB_WEBHOOK_SECRET = ""
 
+import asyncio
+import hmac
+import hashlib
+from fastapi import Request
+
+@app.post("/webhooks/github/actions")
+async def github_actions_webhook(
+    request: Request,
+    x_github_event: str = Header(default=""),
+    x_hub_signature_256: str = Header(default=""),
+    x_webhook_token: str = Header(default="")
+):
+    if WEBHOOK_SHARED_SECRET and x_webhook_token != WEBHOOK_SHARED_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    body = await request.body()
+    
+    if GITHUB_WEBHOOK_SECRET:
+        if not x_hub_signature_256:
+            raise HTTPException(status_code=401, detail="Missing signature")
+        
+        expected_mac = hmac.new(
+            GITHUB_WEBHOOK_SECRET.encode("utf-8"),
+            msg=body,
+            digestmod=hashlib.sha256
+        ).hexdigest()
+        
+        provided_mac = x_hub_signature_256.split("=")[-1]
+        if not hmac.compare_digest(expected_mac, provided_mac):
+            raise HTTPException(status_code=401, detail="Invalid signature")
+
+    payload = await request.json()
+    snapshot = {}
+    if CI_CD_MONITOR:
+        snapshot = CI_CD_MONITOR.ingest_github_workflow_event(payload)
+    
+    return {"status": "ingested", "snapshot": snapshot}
+
+
+@app.get("/cicd/status/{sha}")
+async def get_cicd_status(sha: str):
+    if CI_CD_MONITOR:
+        status = CI_CD_MONITOR.get_commit_status(sha)
+        return status
+    return {"ready_for_release": False}
+
+
+async def _run_release_job(release_id: str, payload: dict, provider: str, event_type: str):
+    try:
+        engine = _get_engine()
+        result = await engine.run_release_workflow_from_webhook(payload, provider, event_type)
+        RELEASE_JOBS[release_id] = {"status": "completed", "result": result}
+    except Exception as exc:
+        RELEASE_JOBS[release_id] = {"status": "failed", "error": str(exc)}
+
+
+@app.post("/webhooks/release")
+async def release_webhook(
+    request: Request,
+    x_webhook_provider: str = Header(default="github"),
+    x_webhook_event: str = Header(default="release"),
+    x_webhook_token: str = Header(default="")
+):
+    if WEBHOOK_SHARED_SECRET and x_webhook_token != WEBHOOK_SHARED_SECRET:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    payload = await request.json()
+    release_id = f"rel-{uuid.uuid4().hex[:8]}"
+    RELEASE_JOBS[release_id] = {"status": "running"}
+    
+    # Run the job in background
+    asyncio.create_task(_run_release_job(release_id, payload, x_webhook_provider, x_webhook_event))
+    
+    return {"status": "accepted", "release_id": release_id}
+
+
+@app.get("/webhooks/release/{release_id}")
+async def get_release_job_status(release_id: str):
+    if release_id not in RELEASE_JOBS:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return RELEASE_JOBS[release_id]
+
+def _get_engine():
+    # Helper to get the intent engine, intended to be mocked in tests
+    return IntentEngine()
 
 def persistence_callback(plan_id: str, state_dict: dict) -> None:
     """Callback to persist FSM state to database."""
@@ -67,6 +156,11 @@ async def _plan_ingress_impl(path_plan_id: str | None, payload: dict):
 
 @app.post("/plans/ingress")
 async def plan_ingress(payload: dict = Body(...)):
+    return await _plan_ingress_impl(None, payload)
+
+
+@app.post("/ingress")
+async def plan_ingress_compat(payload: dict = Body(...)):
     return await _plan_ingress_impl(None, payload)
 
 
@@ -137,7 +231,7 @@ async def orchestrate(user_query: str):
     Triggers the full A2A pipeline (Managing->Orchestration->Architecture->Coder->Tester).
     Matches the contract expected by mcp_server.py.
     """
-    engine = IntentEngine()
+    engine = _get_engine()
 
     try:
         result = await engine.run_full_pipeline(
@@ -161,3 +255,6 @@ async def orchestrate(user_query: str):
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+

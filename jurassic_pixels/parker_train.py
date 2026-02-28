@@ -144,51 +144,142 @@ async def agent_loop():
 
 
 # ---------------------------------------------------------------------------
-# Training loop (RL stub — separate from intelligent agent loop)
+# Training loop (LoRA Adaptation)
 # ---------------------------------------------------------------------------
 
 async def train(episodes: int, export: bool):
-    print(f"Starting training for {episodes} episodes...")
-    for i in range(episodes):
-        print(f"Episode {i+1}/{episodes}: Reward={(i+1)*10}")
-        time.sleep(0.1)  # Simulate computation
+    try:
+        from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
+        from peft import get_peft_model, LoraConfig, TaskType
+        from datasets import Dataset
+    except ImportError:
+        logger.error("Missing required ML/LoRA dependencies (transformers, peft, datasets). Cannot train.")
+        return
+
+    print(f"Starting LoRA adaptation for {episodes} steps...")
+    
+    # 1. Load Base Model
+    model_id = "gpt2" # Using a lightweight model for this architecture out of the box
+    logger.info(f"Loading base model {model_id}...")
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(model_id)
+
+    # 2. Configure LoRA
+    # Mapping our schema concept to actual PEFT config
+    lora_config = LoraConfig(
+        r=8, 
+        lora_alpha=16,
+        target_modules=["c_attn"], # gpt2 specific attention blocks
+        lora_dropout=0.05,
+        bias="none",
+        task_type=TaskType.CAUSAL_LM
+    )
+    
+    model = get_peft_model(model, lora_config)
+    model.print_trainable_parameters()
+
+    # 3. Generate dynamic training data using DecisionEngine
+    client = init_gemini()
+    training_texts = []
+    
+    if client:
+        print("Gathering dynamic observations from DecisionEngine...")
+        # Simulate phase space states
+        simulated_states = [
+            {"player": {"x": 10, "y": 5}, "enemy": {"x": 12, "y": 5}},
+            {"player": {"x": 10, "y": 5}, "enemy": {"x": 10, "y": 6}},
+            {"player": {"x": 20, "y": 2}, "enemy": {"x": 15, "y": 2}},
+        ] * (episodes // 3 + 1)
+        simulated_states = simulated_states[:episodes]
+        
+        for state in simulated_states:
+            action = decide_action(client, state)
+            obs_str = json.dumps(state, sort_keys=True, separators=(",", ":"))
+            dir_str = action.get("direction", "idle")
+            training_texts.append(f"Observation: {obs_str}. Action: {dir_str}")
+    else:
+        print("Falling back to simulated logs (Gemini unavailable)...")
+        training_texts = [
+            "Observation: player at (10, 5), enemy at (12, 5). Action: jump",
+            "Observation: player at (10, 5), enemy at (10, 6). Action: left",
+        ] * (episodes // 2 + 1)
+        training_texts = training_texts[:episodes]
+
+    dataset = Dataset.from_dict({"text": training_texts})
+    
+    def tokenize_function(examples):
+        return tokenizer(examples["text"], padding="max_length", truncation=True, max_length=64)
+        
+    tokenized_datasets = dataset.map(tokenize_function, batched=True)
+
+    # 4. Train
+    training_args = TrainingArguments(
+        output_dir="./parker_lora_outputs",
+        learning_rate=2e-4,
+        per_device_train_batch_size=2,
+        num_train_epochs=1,
+        max_steps=episodes,
+        logging_steps=max(1, episodes // 10),
+        save_strategy="no" # Keep it lightweight for this script
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=tokenized_datasets,
+    )
+
+    trainer.train()
 
     if export:
-        print("Exporting model to 'parker_model.zip'...")
-        with open("parker_model.zip", "w") as f:
-            f.write("mock_model_data")
+        export_path = "parker_model_lora"
+        print(f"Exporting LoRA adapters to '{export_path}'...")
+        model.save_pretrained(export_path)
 
-        print("📢 Notifying MLOps Ticker...")
+        print("📢 Notifying Event Store via AgenticRuntime...")
         try:
+            from schemas.model_artifact import LoRAConfig as ArtifactLoRAConfig
+            observers = []
+            
+            # Use WhatsApp if credentials exist
             api_token = os.getenv("WHATSAPP_API_TOKEN")
             phone_id = os.getenv("WHATSAPP_PHONE_ID")
             channel_id = os.getenv("WHATSAPP_CHANNEL_ID")
-
-            observers = []
             if api_token and phone_id and channel_id:
                 observers.append(WhatsAppEventObserver(api_token, phone_id, channel_id))
             else:
-                print("⚠️  WhatsApp credentials not found. Skipping notification.")
+                print("⚠️  WhatsApp credentials not found. Local event store only.")
 
-            if observers:
-                runtime = AgenticRuntime(observers=observers)
-                artifact = ModelArtifact(
-                    artifact_id=f"parker-rl-{str(uuid.uuid4())[:8]}",
-                    model_id="parker-rl-v1",
-                    weights_hash=str(uuid.uuid4()),
-                    embedding_dim=128,
-                    state=AgentLifecycleState.CONVERGED,
-                    content="RL training completed",
-                    metadata={
-                        "pipeline": "parker-rl-training",
-                        "episodes": episodes,
-                        "reward_mean": episodes * 10,
-                    },
-                )
-                await runtime.emit_event(artifact)
-                print("✅ CONVERGED event emitted via AgenticRuntime.")
+            runtime = AgenticRuntime(observers=observers)
+            
+            # Map the config into the artifact
+            recorded_lora = ArtifactLoRAConfig(
+                rank=lora_config.r,
+                alpha=lora_config.lora_alpha,
+                target_modules=list(lora_config.target_modules) if isinstance(lora_config.target_modules, (list, set)) else [],
+                training_samples=len(dataset)
+            )
+            
+            artifact = ModelArtifact(
+                artifact_id=f"parker-lora-{str(uuid.uuid4())[:8]}",
+                model_id=model_id,
+                weights_hash=str(uuid.uuid4()), # In prod this would be the actual directory hash
+                embedding_dim=model.config.hidden_size if hasattr(model.config, 'hidden_size') else 128,
+                state=AgentLifecycleState.CONVERGED,
+                content="LoRA adaptation completed securely",
+                lora_config=recorded_lora,
+                metadata={
+                    "pipeline": "parker-lora-training",
+                    "steps": episodes,
+                },
+            )
+            
+            # Fire and forget emission
+            await runtime.emit_event(artifact)
+            print("✅ CONVERGED event emitted via AgenticRuntime.")
         except Exception as e:
-            print(f"❌ Failed to notify ticker: {e}")
+            print(f"❌ Failed to notify runtime: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -204,8 +295,8 @@ def interactive():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train / Run Parker Agent")
-    parser.add_argument("--episodes", type=int, default=10, help="Number of training episodes")
-    parser.add_argument("--export", action="store_true", help="Export the trained model")
+    parser.add_argument("--episodes", type=int, default=10, help="Number of training steps")
+    parser.add_argument("--export", action="store_true", help="Export the trained model adapters")
     parser.add_argument("--interactive", action="store_true", help="Run in intelligent agent mode (Gemini)")
 
     args = parser.parse_args()
