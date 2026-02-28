@@ -4,6 +4,7 @@ Unit tests for agency_hub/spokes/ghost_void_spoke.py
 
 import pytest
 import os
+import subprocess
 from unittest.mock import MagicMock, patch
 
 from agency_hub.spokes.ghost_void_spoke import GhostVoidSpoke
@@ -55,7 +56,7 @@ class TestGhostVoidSpokeSimulationMode:
     def test_act_reset_resets_state(self, sim_spoke):
         """Test that the 'reset' action reverts the state to its initial values."""
         # First, change the state
-        sim_spoke.act({"action": "drive", "params": {"velocity": 1.0, "steering": 0.5, "prompt": "test drive"}})
+        sim_spoke.act({"action": "drive", "params": {"velocity": 30.0, "steering": 0.5, "prompt": "test drift"}})
         assert sim_spoke.observe()["grid_pos"] != (5, 5)
 
         # Now, reset it
