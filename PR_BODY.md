@@ -1,70 +1,49 @@
 ## Title
-`feat(cicd): wire production CI monitor with signed webhooks and GKE release deployment`
+`feat(release): add milestone autopublish, release gates, and XML->MEL manifold schema contract`
 
-## Summary
-This PR introduces a production CI/CD monitoring path from GitHub Actions into MCP, then uses those signals to compute release readiness by commit SHA.
+## Why this exists
+This PR packages release automation and the manifold language contract in one place so developers can validate and merge safely with a single review path.
 
-## Why
-- CI and release readiness were spread across separate workflows with no unified runtime status endpoint.
-- Existing workflow ingestion had route drift (`/ingress` vs `/plans/ingress`) and one broken workflow YAML.
-- Production webhooks needed stronger integrity checks.
+## What changed
+- Added milestone autopublish + draft monitoring workflow:
+  - `.github/workflows/milestone_autopublish.yml`
+- Updated core workflow paths and integration lanes:
+  - `.github/workflows/daily_ingress.yml`
+  - `.github/workflows/integration_test.yml`
+  - `.github/workflows/main.yml`
+- Added release milestone gate spec:
+  - `specs/release_milestones.yaml`
+- Added XML normalization map + manifold language schema:
+  - `specs/xml_normalization_map.yaml`
+  - `schemas/manifold_action_language.schema.json`
+- Included supporting runtime/spec/test updates (see `HANDOFF.md` for full list).
 
-## What Changed
-- Added CI monitor agent:
-  - `agents/cicd_monitor_agent.py`
-  - `agents/__init__.py`
-- Extended webhook API for CI/CD status ingestion and queries:
-  - `orchestrator/webhook.py`
-  - New endpoints:
-    - `POST /webhooks/github/actions`
-    - `GET /cicd/status/{head_sha}`
-    - `GET /cicd/run/{run_id}`
-    - Backward-compatible `POST /ingress`
-- Refactored workflows for end-to-end wiring:
-  - `.github/workflows/cicd-monitor.yml` (new `workflow_run` hook)
-  - `.github/workflows/agents-ci-cd.yml` (monitor notification job)
-  - `.github/workflows/main.yml` (corrected ingress path)
-  - `.github/workflows/integration_test.yml` (rebuilt valid workflow)
-  - `.github/workflows/release-gke-deploy.yml` (manual/tag release deploy with MCP readiness gate and post-deploy webhook)
-- Added tests and workflow assertions:
-  - `tests/test_webhook_cicd_monitor.py`
-  - `tests/test_workflow_actions.py`
+## What this enables
+- Automatic release milestone bundle artifacts on push/PR/schedule.
+- Automatic draft PR observability and status comment updates.
+- A concrete, versioned XML-to-MEL normalization and validation contract for manifold action generation.
 
-## Security
-- Added strict GitHub signature validation in webhook ingestion when `GITHUB_WEBHOOK_SECRET` is configured.
-- Workflow hooks emit `X-Hub-Signature-256` when `MCP_WEBHOOK_SECRET` is configured.
-- Token fallback remains supported via `Authorization: Bearer`/`X-Webhook-Token` for non-signature environments.
+## What developers need to do next
+1. Run local validation commands in `HANDOFF.md`.
+2. Verify the three workflows complete successfully in PR checks.
+3. Confirm milestone and draft monitor artifacts are present.
+4. Confirm draft-monitor PR comment appears/updates correctly.
 
-## Suggested Tags
-- `release`
-- `ci/cd`
-- `orchestrator`
-- `security`
-- `onboarding`
-- `production-ready`
+## What can wait
+- Broad cleanup of local temp artifacts (`tmpclaude-*`) can be done in a follow-up hygiene PR.
+- Optional extension of MEL-1 fields can be deferred until first production payloads are observed.
 
-## Release Notes
-See:
-- `docs/release/CI_CD_MONITOR_RELEASE_NOTES.md`
-- `docs/release/AGENT_WORKFLOW_TASKS.md`
-- `docs/PHASE_RELEASE_FINAL.md`
-
-## GKE Release Onboarding
-- Configure `GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_SERVICE_ACCOUNT`, `GKE_CLUSTER_NAME`, `GKE_CLUSTER_LOCATION`, and `GKE_IMAGE_REPOSITORY`.
-- Set `MCP_ENDPOINT`, `MCP_TOKEN`, and optionally `MCP_WEBHOOK_SECRET` for deployment notifications.
-- Run `Release GKE Deploy` via `workflow_dispatch` (with `image_tag`) or push a `v*` tag.
-- The preflight gate checks MCP readiness at `/cicd/status/{sha}` before deployment.
-
-## Validation Run
+## Validation
 ```powershell
-python -m py_compile agents\cicd_monitor_agent.py orchestrator\webhook.py
-python -m pytest -q -o addopts="" tests/test_webhook_cicd_monitor.py
-python -m pytest -q -o addopts="" tests/test_workflow_actions.py
+python -m pip install -r requirements.txt
+python -m pytest -q tests/test_mcp_agents.py
+python -m pytest -q tests/test_avatar_integration.py tests/test_intent_engine.py
+python -c "import json, pathlib, yaml; yaml.safe_load(pathlib.Path('specs/xml_normalization_map.yaml').read_text(encoding='utf-8')); json.loads(pathlib.Path('schemas/manifold_action_language.schema.json').read_text(encoding='utf-8')); print('ok')"
 ```
 
-## Reviewer Checklist
-- [ ] `MCP_ENDPOINT` and `MCP_TOKEN` secrets are set for workflow hooks
-- [ ] If signature mode is required, set `MCP_WEBHOOK_SECRET` in GitHub and `GITHUB_WEBHOOK_SECRET` in MCP runtime
-- [ ] `cicd-monitor.yml` is enabled and receives workflow_run events
-- [ ] `/cicd/status/{sha}` returns expected readiness for a recent commit
+## Checklist
+- [ ] Tests passed
+- [ ] Workflow triggers verified
+- [ ] Milestone artifacts generated
+- [ ] Reviewer sign-off
 

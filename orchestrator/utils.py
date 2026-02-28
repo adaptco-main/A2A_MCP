@@ -2,7 +2,7 @@ import os
 import re
 from typing import Optional
 
-_PLAN_ID_RE = re.compile(r"[A-Za-z0-9_\-.]+")
+_PLAN_ID_RE = re.compile(r"[A-Za-z0-9_\-\.]+")
 
 
 def extract_plan_id_from_path(path: str) -> Optional[str]:
@@ -25,4 +25,5 @@ def extract_plan_id_from_path(path: str) -> Optional[str]:
     if m:
         return m.group(0)
 
-    return re.sub(r"[^A-Za-z0-9_\-.]", "-", name)
+    safe = re.sub(r"[^A-Za-z0-9_\-\.]", "-", name)
+    return safe

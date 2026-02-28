@@ -1,29 +1,22 @@
-# A2A_MCP/orchestrator/intent_engine.py
-"""
-IntentEngine — Core pipeline coordinator.
+"""Core pipeline coordinator for multi-agent orchestration."""
 
-Provides two execution modes:
-
-1. ``execute_plan(plan)`` — legacy action-level Coder→Tester loop.
-2. ``run_full_pipeline(description)`` — full 5-agent end-to-end pipeline:
-      ManagingAgent → OrchestrationAgent → ArchitectureAgent
-                                          → CoderAgent → TesterAgent
-"""
 from __future__ import annotations
 
-import json
-import logging
-import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
 from agents.architecture_agent import ArchitectureAgent
 from agents.coder import CoderAgent
 from agents.managing_agent import ManagingAgent
 from agents.orchestration_agent import OrchestrationAgent
 from agents.tester import TesterAgent
+from orchestrator.judge_orchestrator import get_judge_orchestrator
+from orchestrator.notifier import (
+    WhatsAppNotifier,
+    send_pipeline_completion_notification,
+)
 from orchestrator.storage import DBManager
+from orchestrator.vector_gate import VectorGate, VectorGateDecision
 from schemas.agent_artifacts import MCPArtifact
 from schemas.project_plan import ProjectPlan
 
@@ -40,162 +33,19 @@ class PipelineResult:
     success: bool = False
 
 
-@dataclass
-class ReleaseWebhookRequest:
-    """Normalized release webhook payload across providers."""
-
-    provider: str
-    event_type: str
-    repository: str
-    release_tag: str
-    release_name: str
-    commit_sha: str
-    triggered_by: str
-
-
 class IntentEngine:
     """Coordinates multi-agent execution across the full swarm."""
 
     def __init__(self) -> None:
-        self.logger = logging.getLogger(__name__)
         self.manager = ManagingAgent()
         self.orchestrator = OrchestrationAgent()
         self.architect = ArchitectureAgent()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
+        self.judge = get_judge_orchestrator()
+        self.whatsapp_notifier = WhatsAppNotifier.from_env()
+        self.vector_gate = VectorGate()
         self.db = DBManager()
-
-    def normalize_release_webhook(
-        self,
-        payload: Dict[str, Any],
-        provider: str = "generic",
-        event_type: str = "release",
-    ) -> ReleaseWebhookRequest:
-        """Map provider-specific payload fields into a stable release request."""
-        repository = (
-            payload.get("repository", {}).get("full_name")
-            if isinstance(payload.get("repository"), dict)
-            else payload.get("repository")
-        ) or "unknown-repository"
-
-        release_tag = (
-            payload.get("release", {}).get("tag_name")
-            if isinstance(payload.get("release"), dict)
-            else None
-        ) or payload.get("tag")
-        if not release_tag and isinstance(payload.get("ref"), str):
-            release_tag = payload["ref"].replace("refs/tags/", "")
-        release_tag = release_tag or "untagged"
-
-        release_name = (
-            payload.get("release", {}).get("name")
-            if isinstance(payload.get("release"), dict)
-            else None
-        ) or payload.get("name") or release_tag
-
-        commit_sha = payload.get("after")
-        if not commit_sha and isinstance(payload.get("head_commit"), dict):
-            commit_sha = payload.get("head_commit", {}).get("id")
-        if not commit_sha and isinstance(payload.get("release"), dict):
-            commit_sha = payload.get("release", {}).get("target_commitish")
-        commit_sha = commit_sha or ""
-
-        triggered_by = (
-            payload.get("sender", {}).get("login")
-            if isinstance(payload.get("sender"), dict)
-            else None
-        ) or (
-            payload.get("pusher", {}).get("name")
-            if isinstance(payload.get("pusher"), dict)
-            else None
-        ) or "webhook"
-
-        return ReleaseWebhookRequest(
-            provider=provider,
-            event_type=event_type,
-            repository=repository,
-            release_tag=release_tag,
-            release_name=release_name,
-            commit_sha=commit_sha,
-            triggered_by=triggered_by,
-        )
-
-    def _persist_release_summary(
-        self,
-        summary: Dict[str, Any],
-        webhook_payload: Dict[str, Any],
-    ) -> None:
-        """Best-effort persistence of release execution metadata."""
-        payload_preview = {
-            "repository": summary.get("repository"),
-            "release_tag": summary.get("release_tag"),
-            "event_type": summary.get("event_type"),
-            "provider": summary.get("provider"),
-        }
-        artifact = MCPArtifact(
-            artifact_id=f"release-report-{uuid.uuid4()}",
-            type="release_report",
-            content=json.dumps(summary, sort_keys=True),
-            metadata={
-                "payload_preview": payload_preview,
-                "webhook_keys": sorted(webhook_payload.keys()),
-            },
-        )
-        try:
-            self.db.save_artifact(artifact)
-        except Exception as exc:  # pragma: no cover - should not fail release path
-            self.logger.warning("Failed to persist release summary artifact: %s", exc)
-
-    async def run_release_workflow_from_webhook(
-        self,
-        payload: Dict[str, Any],
-        provider: str = "generic",
-        event_type: str = "release",
-        max_healing_retries: int = 3,
-    ) -> Dict[str, Any]:
-        """
-        Execute the full release pipeline from a webhook payload.
-
-        Returns a compact, serializable summary suitable for webhook job status APIs.
-        """
-        req = self.normalize_release_webhook(
-            payload=payload,
-            provider=provider,
-            event_type=event_type,
-        )
-        description = (
-            f"Release {req.release_tag} ({req.release_name}) for {req.repository}. "
-            f"Event={req.event_type}. Commit={req.commit_sha or 'unknown'}."
-        )
-        pipeline_result = await self.run_full_pipeline(
-            description=description,
-            requester=f"webhook:{req.triggered_by}",
-            max_healing_retries=max_healing_retries,
-        )
-        completed_actions = sum(
-            1 for action in pipeline_result.blueprint.actions if action.status == "completed"
-        )
-        summary = {
-            "provider": req.provider,
-            "event_type": req.event_type,
-            "repository": req.repository,
-            "release_tag": req.release_tag,
-            "release_name": req.release_name,
-            "commit_sha": req.commit_sha,
-            "triggered_by": req.triggered_by,
-            "success": pipeline_result.success,
-            "plan_id": pipeline_result.plan.plan_id,
-            "blueprint_id": pipeline_result.blueprint.plan_id,
-            "actions_total": len(pipeline_result.blueprint.actions),
-            "actions_completed": completed_actions,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-        self._persist_release_summary(summary=summary, webhook_payload=payload)
-        return summary
-
-    # ------------------------------------------------------------------
-    # Full 5-agent pipeline
-    # ------------------------------------------------------------------
 
     async def run_full_pipeline(
         self,
@@ -203,17 +53,7 @@ class IntentEngine:
         requester: str = "system",
         max_healing_retries: int = 3,
     ) -> PipelineResult:
-        """
-        End-to-end orchestration:
-
-        1. **ManagingAgent** — categorise *description* into PlanActions.
-        2. **OrchestrationAgent** — build a typed blueprint with delegation.
-        3. **ArchitectureAgent** — map system architecture + WorldModel.
-        4. **CoderAgent** — generate code artifacts for each action.
-        5. **TesterAgent** — validate artifacts; self-heal on failure.
-
-        Returns a ``PipelineResult`` with all intermediary artefacts.
-        """
+        """Run the full Managing -> Orchestrator -> Architect -> Coder -> Tester flow."""
         result = PipelineResult(
             plan=ProjectPlan(
                 plan_id="pending",
@@ -227,11 +67,9 @@ class IntentEngine:
             ),
         )
 
-        # ── Stage 1: ManagingAgent ──────────────────────────────────
         plan = await self.manager.categorize_project(description, requester)
         result.plan = plan
 
-        # ── Stage 2: OrchestrationAgent ─────────────────────────────
         task_descriptions = [a.instruction for a in plan.actions]
         blueprint = await self.orchestrator.build_blueprint(
             project_name=plan.project_name,
@@ -240,81 +78,223 @@ class IntentEngine:
         )
         result.blueprint = blueprint
 
-        # ── Stage 3: ArchitectureAgent ──────────────────────────────
         arch_artifacts = await self.architect.map_system(blueprint)
         result.architecture_artifacts = arch_artifacts
 
-        # ── Stage 4 + 5: CoderAgent → TesterAgent (self-healing) ────
         for action in blueprint.actions:
             action.status = "in_progress"
 
-            artifact = await self.coder.generate_solution(
-                parent_id=blueprint.plan_id,
-                feedback=action.instruction,
+            coder_context = self.judge.get_agent_system_context("CoderAgent")
+            coder_gate = self.vector_gate.evaluate(
+                node="coder_input",
+                query=f"{action.title}\n{action.instruction}",
+                world_model=self.architect.pinn.world_model,
             )
+            coder_vector_context = self.vector_gate.format_prompt_context(coder_gate)
+            coding_task = (
+                f"{coder_context}\n\n"
+                f"{coder_vector_context}\n\n"
+                "Implement this task with tests and safety checks:\n"
+                f"{action.instruction}"
+            )
+            artifact = await self._generate_with_gate(
+                parent_id=blueprint.plan_id,
+                feedback=coding_task,
+                context_tokens=coder_gate.matches,
+            )
+            self._attach_gate_metadata(artifact, coder_gate)
             self.db.save_artifact(artifact)
 
-            # Self-healing loop
             healed = False
             for attempt in range(max_healing_retries):
-                report = await self.tester.validate(artifact.artifact_id)
+                tester_gate = self.vector_gate.evaluate(
+                    node="tester_input",
+                    query=f"{action.instruction}\n{getattr(artifact, 'content', '')}",
+                    world_model=self.architect.pinn.world_model,
+                )
+                tester_context = self.vector_gate.format_prompt_context(tester_gate)
+                report = await self._validate_with_gate(
+                    artifact_id=artifact.artifact_id,
+                    supplemental_context=tester_context,
+                    context_tokens=tester_gate.matches,
+                )
+                judgment = self.judge.judge_action(
+                    action=(
+                        f"TesterAgent verdict for {artifact.artifact_id}: "
+                        f"{report.status}"
+                    ),
+                    context={
+                        "attempt": attempt + 1,
+                        "max_retries": max_healing_retries,
+                        "artifact_id": artifact.artifact_id,
+                    },
+                    agent_name="TesterAgent",
+                )
                 result.test_verdicts.append(
-                    {"artifact": artifact.artifact_id, "status": report.status}
+                    {
+                        "artifact": artifact.artifact_id,
+                        "status": report.status,
+                        "vector_gate": "open" if tester_gate.is_open else "closed",
+                        "judge_score": f"{judgment.overall_score:.3f}",
+                    }
                 )
 
                 if report.status == "PASS":
                     healed = True
                     break
 
-                # Re-generate with tester feedback
-                artifact = await self.coder.generate_solution(
-                    parent_id=artifact.artifact_id,
-                    feedback=report.critique,
+                refine_context = self.judge.get_agent_system_context("CoderAgent")
+                healing_gate = self.vector_gate.evaluate(
+                    node="healing_input",
+                    query=f"{action.instruction}\n{report.critique}",
+                    world_model=self.architect.pinn.world_model,
                 )
+                healing_vector_context = self.vector_gate.format_prompt_context(healing_gate)
+                artifact = await self._generate_with_gate(
+                    parent_id=artifact.artifact_id,
+                    feedback=(
+                        f"{refine_context}\n\n"
+                        f"{healing_vector_context}\n\n"
+                        f"Tester feedback:\n{report.critique}"
+                    ),
+                    context_tokens=healing_gate.matches,
+                )
+                self._attach_gate_metadata(artifact, healing_gate)
                 self.db.save_artifact(artifact)
 
             result.code_artifacts.append(artifact)
             action.status = "completed" if healed else "failed"
 
-        result.success = all(
-            a.status == "completed" for a in blueprint.actions
+        result.success = all(a.status == "completed" for a in blueprint.actions)
+        completed_actions = sum(1 for action in blueprint.actions if action.status == "completed")
+        failed_actions = sum(1 for action in blueprint.actions if action.status == "failed")
+        self._notify_completion(
+            project_name=blueprint.project_name,
+            success=result.success,
+            completed_actions=completed_actions,
+            failed_actions=failed_actions,
         )
         return result
 
-    # ------------------------------------------------------------------
-    # Legacy action-level loop (backward compat)
-    # ------------------------------------------------------------------
-
     async def execute_plan(self, plan: ProjectPlan) -> List[str]:
-        """
-        Walk through every action in the plan, invoking the coder and tester
-        for each one, and return a list of all artifact IDs produced.
-        """
+        """Legacy action-level coder->tester loop for backward compatibility."""
         artifact_ids: List[str] = []
 
         for action in plan.actions:
             action.status = "in_progress"
 
-            # Generate code solution
-            artifact = await self.coder.generate_solution(
-                parent_id=plan.plan_id,
-                feedback=action.instruction,
+            coder_gate = self.vector_gate.evaluate(
+                node="legacy_coder_input",
+                query=f"{action.title}\n{action.instruction}",
+                world_model=self.architect.pinn.world_model,
             )
+            coder_vector_context = self.vector_gate.format_prompt_context(coder_gate)
+            artifact = await self._generate_with_gate(
+                parent_id=plan.plan_id,
+                feedback=f"{coder_vector_context}\n\n{action.instruction}",
+                context_tokens=coder_gate.matches,
+            )
+            self._attach_gate_metadata(artifact, coder_gate)
             self.db.save_artifact(artifact)
             artifact_ids.append(artifact.artifact_id)
 
-            # Validate the artifact
-            report = await self.tester.validate(artifact.artifact_id)
+            tester_gate = self.vector_gate.evaluate(
+                node="legacy_tester_input",
+                query=f"{action.instruction}\n{getattr(artifact, 'content', '')}",
+                world_model=self.architect.pinn.world_model,
+            )
+            tester_context = self.vector_gate.format_prompt_context(tester_gate)
+            report = await self._validate_with_gate(
+                artifact_id=artifact.artifact_id,
+                supplemental_context=tester_context,
+                context_tokens=tester_gate.matches,
+            )
             artifact_ids.append(report.status)
 
-            # Produce a refinement pass
-            refined = await self.coder.generate_solution(
-                parent_id=artifact.artifact_id,
-                feedback=report.critique,
+            healing_gate = self.vector_gate.evaluate(
+                node="legacy_healing_input",
+                query=f"{action.instruction}\n{report.critique}",
+                world_model=self.architect.pinn.world_model,
             )
+            healing_vector_context = self.vector_gate.format_prompt_context(healing_gate)
+            refined = await self._generate_with_gate(
+                parent_id=artifact.artifact_id,
+                feedback=f"{healing_vector_context}\n\n{report.critique}",
+                context_tokens=healing_gate.matches,
+            )
+            self._attach_gate_metadata(refined, healing_gate)
             self.db.save_artifact(refined)
             artifact_ids.append(refined.artifact_id)
 
             action.status = "completed"
 
+        self._notify_completion(
+            project_name=plan.project_name,
+            success=True,
+            completed_actions=len(plan.actions),
+            failed_actions=0,
+        )
         return artifact_ids
+
+    def _notify_completion(
+        self,
+        *,
+        project_name: str,
+        success: bool,
+        completed_actions: int,
+        failed_actions: int,
+    ) -> None:
+        """Send best-effort completion notification without breaking execution."""
+        try:
+            send_pipeline_completion_notification(
+                self.whatsapp_notifier,
+                project_name=project_name,
+                success=success,
+                completed_actions=completed_actions,
+                failed_actions=failed_actions,
+            )
+        except Exception:
+            # Notifications are out-of-band and must never break task execution.
+            pass
+
+    async def _validate_with_gate(
+        self,
+        artifact_id: str,
+        supplemental_context: str,
+        context_tokens,
+    ):
+        """
+        Validate artifacts with vector context.
+        """
+        return await self.tester.validate(
+            artifact_id,
+            supplemental_context=supplemental_context,
+            context_tokens=context_tokens,
+        )
+
+    async def _generate_with_gate(self, parent_id: str, feedback: str, context_tokens: Optional[List[Any]]):
+        """
+        Generate artifacts with token context.
+        """
+        return await self.coder.generate_solution(
+            parent_id=parent_id,
+            feedback=feedback,
+            context_tokens=context_tokens,
+        )
+
+    @staticmethod
+    def _attach_gate_metadata(artifact: object, decision: VectorGateDecision) -> None:
+        """Attach gate provenance to artifacts that expose a metadata attribute."""
+        if not hasattr(artifact, "metadata"):
+            return
+
+        metadata = getattr(artifact, "metadata") or {}
+        metadata["vector_gate"] = {
+            "node": decision.node,
+            "is_open": decision.is_open,
+            "threshold": decision.threshold,
+            "top_score": decision.top_score,
+            "match_count": len(decision.matches),
+            "matched_token_ids": [m.token_id for m in decision.matches],
+        }
+        setattr(artifact, "metadata", metadata)

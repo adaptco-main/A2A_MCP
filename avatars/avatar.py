@@ -1,74 +1,84 @@
-import asyncio
-import json
-import websockets
+"""Avatar personality wrapper for agents."""
+
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Optional, Dict, Any
+import uuid
+
+
+class AvatarStyle(str, Enum):
+    """Avatar personality styles."""
+    ENGINEER = "engineer"      # Precise, safety-first
+    DESIGNER = "designer"      # Visual, metaphor-friendly
+    DRIVER = "driver"          # Game-facing, conversational
+
+
+@dataclass
+class AvatarProfile:
+    """Avatar personality and deployment configuration."""
+    avatar_id: str = field(default_factory=lambda: f"avatar-{str(uuid.uuid4())[:8]}")
+    name: str = ""
+    description: str = ""
+    style: AvatarStyle = AvatarStyle.ENGINEER
+    bound_agent: Optional[str] = None  # Agent class name this avatar wraps
+    voice_config: Dict[str, Any] = field(default_factory=dict)  # voice, pitch, speed, etc.
+    ui_config: Dict[str, Any] = field(default_factory=dict)    # color, icon, theme, etc.
+    system_prompt: str = ""  # Personality-specific instructions
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
 
 class Avatar:
-    def __init__(self, uri="ws://localhost:8080"):
-        self.uri = uri
-        self.websocket = None
-        self.is_connected = False
-        self.state = {}
+    """Thin wrapper over an agent, binding personality and UI."""
 
-    async def connect(self):
-        """Establishes a WebSocket connection to the game engine."""
-        try:
-            self.websocket = await websockets.connect(self.uri)
-            self.is_connected = True
-            print(f"[Avatar] Connected to {self.uri}")
-            # Start the background task to listen for state updates
-            asyncio.create_task(self._listen())
-        except Exception as e:
-            print(f"[Avatar] Connection failed: {e}")
-            self.is_connected = False
+    def __init__(self, profile: AvatarProfile):
+        self.profile = profile
+        self.agent = None  # Bound at runtime based on profile.bound_agent
 
-    async def disconnect(self):
-        """Closes the WebSocket connection."""
-        if self.websocket:
-            await self.websocket.close()
-            self.is_connected = False
-            print("[Avatar] Disconnected.")
+    def bind_agent(self, agent_instance: Any) -> None:
+        """Bind a concrete agent instance to this avatar."""
+        self.agent = agent_instance
 
-    async def _listen(self):
-        """Background loop to receive and parse engine state updates."""
-        try:
-            async for message in self.websocket:
-                try:
-                    self.state = json.loads(message)
-                except json.JSONDecodeError:
-                    # Engine stdout might not always be JSON
-                    pass
-        except websockets.exceptions.ConnectionClosed:
-            self.is_connected = False
-            print("[Avatar] Connection closed by server.")
+    def get_system_context(self) -> str:
+        """Return personality-modified system prompt for agent execution."""
+        style_name = self.profile.style.value.capitalize()
+        base = self.profile.system_prompt or f"You are a {style_name} assistant."
+        return base
 
-    async def send_command(self, action, payload=None):
-        """Sends a JSON-formatted command to the engine."""
-        if not self.is_connected:
-            print("[Avatar] Warning: Not connected. Command ignored.")
-            return
+    def get_voice_params(self) -> Dict[str, Any]:
+        """Return voice configuration for TTS/speech synthesis."""
+        return self.profile.voice_config
 
-        command = {"action": action}
-        if payload:
-            command.update(payload)
-        
-        await self.websocket.send(json.dumps(command))
+    def get_ui_params(self) -> Dict[str, Any]:
+        """Return UI configuration for avatar rendering."""
+        return self.profile.ui_config
 
-    async def move(self, direction: float):
-        """Moves the avatar: 1.0 for right, -1.0 for left, 0.0 for stop."""
-        await self.send_command("move", {"direction": direction})
+    async def respond(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Invoke bound agent with personality wrapping.
 
-    async def jump(self):
-        """Triggers a jump action."""
-        await self.send_command("jump")
+        Args:
+            prompt: User or game-world prompt
+            context: Optional contextual information (game state, previous turns, etc.)
 
-    async def shoot(self):
-        """Triggers a shoot action."""
-        await self.send_command("shoot")
+        Returns:
+            Agent response (optionally post-processed with personality filters)
+        """
+        if not self.agent:
+            if context:
+                ctx = ", ".join(f"{k}={v}" for k, v in context.items())
+                return f"[{self.profile.name}] {prompt} | context: {ctx}"
+            return f"[{self.profile.name}] {prompt}"
 
-    def get_position(self):
-        """Returns the last known position from engine state."""
-        return self.state.get("position", {"x": 0, "y": 0})
+        # Modify prompt with avatar personality
+        augmented_prompt = f"{self.get_system_context()}\n\n{prompt}"
 
-    def get_state(self):
-        """Returns the full state dictionary."""
-        return self.state
+        # Delegate to agent (signature depends on agent type)
+        # This is a placeholder; actual delegation varies by agent
+        result = await self.agent.generate_solution(
+            parent_id="avatar_context",
+            feedback=augmented_prompt
+        )
+        return result.content if hasattr(result, 'content') else str(result)
+
+    def __repr__(self) -> str:
+        return f"<Avatar id={self.profile.avatar_id} name={self.profile.name} style={self.profile.style.value}>"
