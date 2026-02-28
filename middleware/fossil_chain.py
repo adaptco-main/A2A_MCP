@@ -21,27 +21,33 @@ class FossilChain:
 
     def __init__(self, db_path: str = "fossil_chain.db"):
         self.db_path = db_path
+        self.conn = sqlite3.connect(self.db_path)
         self._init_db()
+
+    def close(self):
+        """Closes the database connection."""
+        if self.conn:
+            self.conn.close()
+            self.conn = None
 
     # ------------------------------------------------------------------
     # Internal DB setup
     # ------------------------------------------------------------------
 
     def _init_db(self):
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS fossil_events (
-                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp       TEXT    NOT NULL,
-                    event_type      TEXT    NOT NULL,
-                    artifact_id     TEXT,
-                    state           TEXT,
-                    data            TEXT    NOT NULL,
-                    previous_hash   TEXT,
-                    hash            TEXT    NOT NULL
-                )
-            """)
-            conn.commit()
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS fossil_events (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp       TEXT    NOT NULL,
+                event_type      TEXT    NOT NULL,
+                artifact_id     TEXT,
+                state           TEXT,
+                data            TEXT    NOT NULL,
+                previous_hash   TEXT,
+                hash            TEXT    NOT NULL
+            )
+        """)
+        self.conn.commit()
 
     # ------------------------------------------------------------------
     # Core API
@@ -58,19 +64,18 @@ class FossilChain:
         data_json = json.dumps(data, sort_keys=True, default=str)
         timestamp = datetime.utcnow().isoformat()
 
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT hash FROM fossil_events ORDER BY id DESC LIMIT 1")
-            row = cursor.fetchone()
-            previous_hash = row[0] if row else None
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT hash FROM fossil_events ORDER BY id DESC LIMIT 1")
+        row = cursor.fetchone()
+        previous_hash = row[0] if row else None
 
-            event_hash = self._calculate_hash(event_type, data_json, previous_hash)
+        event_hash = self._calculate_hash(event_type, data_json, previous_hash)
 
-            cursor.execute("""
-                INSERT INTO fossil_events (timestamp, event_type, artifact_id, state, data, previous_hash, hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (timestamp, event_type, artifact_id, state, data_json, previous_hash, event_hash))
-            conn.commit()
+        cursor.execute("""
+            INSERT INTO fossil_events (timestamp, event_type, artifact_id, state, data, previous_hash, hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (timestamp, event_type, artifact_id, state, data_json, previous_hash, event_hash))
+        self.conn.commit()
 
         logger.debug(f"FossilChain: Appended [{event_type}] hash={event_hash[:10]}...")
         return event_hash
@@ -80,12 +85,11 @@ class FossilChain:
         Walk the entire chain and verify SHA-256 integrity.
         Returns True only if no tampering is detected.
         """
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT event_type, data, previous_hash, hash FROM fossil_events ORDER BY id ASC"
-            )
-            rows = cursor.fetchall()
+        cursor = self.conn.cursor()
+        cursor.execute(
+            "SELECT event_type, data, previous_hash, hash FROM fossil_events ORDER BY id ASC"
+        )
+        rows = cursor.fetchall()
 
         expected_previous_hash = None
         for event_type, data, previous_hash, stored_hash in rows:
@@ -102,8 +106,7 @@ class FossilChain:
 
     def get_history(self) -> List[Dict[str, Any]]:
         """Return all events in chronological order."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM fossil_events ORDER BY id ASC")
-            return [dict(row) for row in cursor.fetchall()]
+        self.conn.row_factory = sqlite3.Row
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT * FROM fossil_events ORDER BY id ASC")
+        return [dict(row) for row in cursor.fetchall()]

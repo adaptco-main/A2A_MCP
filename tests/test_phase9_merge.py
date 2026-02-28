@@ -25,6 +25,7 @@ class TestFossilChain:
         self.chain = FossilChain(db_path=self.DB_PATH)
 
     def teardown_method(self):
+        self.chain.close()
         if os.path.exists(self.DB_PATH):
             os.remove(self.DB_PATH)
 
@@ -34,11 +35,9 @@ class TestFossilChain:
         assert self.chain.verify_chain() is True
 
     def test_tamper_detection(self):
-        import sqlite3
         self.chain.append_event("TASK_START", "a1", "INIT", {"msg": "original"})
-        with sqlite3.connect(self.DB_PATH) as conn:
-            conn.execute("UPDATE fossil_events SET data = 'corrupted' WHERE id = 1")
-            conn.commit()
+        self.chain.conn.execute("UPDATE fossil_events SET data = 'corrupted' WHERE id = 1")
+        self.chain.conn.commit()
         assert self.chain.verify_chain() is False
 
     def test_history_order(self):
@@ -110,6 +109,7 @@ class TestSovereignAgents:
         agent = AuditorAgent()
         result = await agent.execute("reconcile", {"fossil_chain": chain})
         assert result["reconciled"] is True
+        chain.close()
         os.remove("test_auditor.db")
 
 
