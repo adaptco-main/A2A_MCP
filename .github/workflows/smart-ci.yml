@@ -2,6 +2,8 @@
 # Skips runs on draft PRs, specific branches, etc.
 
 name: Smart CI (Conditional)
+permissions:
+  contents: read
 
 on:
   push:
