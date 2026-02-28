@@ -4,7 +4,7 @@
 
 # Core Orchestrator
 
-[![CI](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml)
+[![CI](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/smart-ci.yml/badge.svg)](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/smart-ci.yml)
 
 **Purpose**  
 The Core Orchestrator is a sovereign, deterministic runtime for multi‑agent systems. It provides a secure handshake surface, an append‑only witness layer, deterministic canonicalization and hashing, Merkle anchoring, and CI enforcement to guarantee replay‑court admissibility and tamper evidence.
