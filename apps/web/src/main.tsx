@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import Home from "./pages/Home";
 import SyncPage from "./pages/Sync";
 import CasePage from "./pages/Case";
+import JurassicPixels from "./pages/JurassicPixels";
 import "./index.css";
 
 const App = () => (
@@ -15,12 +16,14 @@ const App = () => (
           <Link to="/">Game</Link>
           <Link to="/sync">Sync</Link>
           <Link to="/case">Case</Link>
+          <Link to="/jurassic-pixels">Jurassic Pixels</Link>
         </nav>
       </header>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/sync" element={<SyncPage />} />
         <Route path="/case" element={<CasePage />} />
+        <Route path="/jurassic-pixels" element={<JurassicPixels />} />
       </Routes>
     </div>
   </BrowserRouter>

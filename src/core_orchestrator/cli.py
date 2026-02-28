@@ -12,6 +12,7 @@ from .databases import OrganizeSentinel
 from .parsers.discord import DiscordParser
 from .router import Router
 from .sinks import GoogleCalendarSink, NotionSink, ShopifySink
+from .world_model import WorldModelIngress
 
 _LOG_FORMAT = "%(levelname)s | %(name)s | %(message)s"
 
@@ -97,6 +98,17 @@ def _build_argument_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip writing SSOT snapshots",
     )
+    parser.add_argument(
+        "--disable-world-model-ingress",
+        action="store_true",
+        help="Disable world-model ingress embedding and gating",
+    )
+    parser.add_argument(
+        "--world-model-threshold",
+        type=float,
+        default=0.45,
+        help="Normalized dot-product threshold used by ingress gating",
+    )
     return parser
 
 
@@ -145,7 +157,19 @@ def _build_router(args: argparse.Namespace) -> Router:
         if repo_path:
             sentinel = OrganizeSentinel(repo_path=repo_path, relative_path=database_path)
 
-    router = Router([parser], sinks, sentinel=sentinel)
+    ingress = None
+    if not args.disable_world_model_ingress:
+        ingress = WorldModelIngress(
+            {
+                "agent-planner": [1.0] + [0.0] * 15,
+                "agent-executor": [0.0, 1.0] + [0.0] * 14,
+                "agent-observer": [0.0, 0.0, 1.0] + [0.0] * 13,
+            },
+            threshold=args.world_model_threshold,
+            dimensions=16,
+        )
+
+    router = Router([parser], sinks, sentinel=sentinel, ingress=ingress)
     return router
 
 

@@ -6,6 +6,7 @@ from .config import QernelConfig
 from .geodesic import GeodesicTerminalModel, GeodesicSegment, build_geodesic_terminal
 from .psm import GaussianActionResult, PSMState, gaussian_action_synth, load_psm_state
 from .runtime import CodexQernel, QernelEvent
+from .gemini_wrapper import generate_content_with_gemini
 
 __all__ = [
     "CodexQernel",

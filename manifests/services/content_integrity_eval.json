@@ -14,9 +14,28 @@
   "operational_directives": {
     "allowed_modules": [
       "synthetic.noise.injector.v1",
-      "synthetic.contradiction.synth.v1",
-      "functional.block.embedding.v1"
+      "synthetic.contradiction.synth.v1"
     ],
+    "neutral_perturbation_models": [
+      "synthetic.noise.injector.v1",
+      "synthetic.contradiction.synth.v1"
+    ],
+    "module_policy": {
+      "retired": [
+        "CNE",
+        "FSV",
+        "content_noise_enricher",
+        "feature_shift_validator",
+        "fact_stream_validator"
+      ],
+      "replacement_map": {
+        "CNE": "synthetic.noise.injector.v1",
+        "FSV": "synthetic.noise.injector.v1",
+        "content_noise_enricher": "synthetic.noise.injector.v1",
+        "feature_shift_validator": "synthetic.noise.injector.v1",
+        "fact_stream_validator": "synthetic.contradiction.synth.v1"
+      }
+    },
     "ingress": {
       "artifact_only": true,
       "requires_council_attestation": true,
@@ -27,6 +46,26 @@
       "aggregate_metrics_only": true,
       "ledger_append_only": true,
       "no_per_agent_traces": true
+    },
+    "module_policy": {
+      "retired_modules": [
+        "CNE",
+        "FSV",
+        "content_noise_enricher",
+        "feature_shift_validator",
+        "fact_stream_validator"
+      ],
+      "replacement_map": {
+        "CNE": "synthetic.noise.injector.v1",
+        "FSV": "synthetic.noise.injector.v1",
+        "content_noise_enricher": "synthetic.noise.injector.v1",
+        "feature_shift_validator": "synthetic.noise.injector.v1",
+        "fact_stream_validator": "synthetic.contradiction.synth.v1"
+      },
+      "neutral_perturbation_models": [
+        "synthetic.noise.injector.v1",
+        "synthetic.contradiction.synth.v1"
+      ]
     }
   },
   "modules": [
@@ -76,32 +115,6 @@
       "validation": {
         "semantic_symmetry_check": true,
         "hash_chain_enforced": true
-      }
-    },
-    {
-      "id": "functional.block.embedding.v1",
-      "role": "block_tracking",
-      "description": "Generates deterministic functional embeddings for block-level assets (CID-bound) to enable integrity tracking without mutating payloads.",
-      "inputs": {
-        "cid": "string",
-        "codec": "string",
-        "multihash": "string",
-        "hash_digest": "string",
-        "hash_algorithm": "string",
-        "hash_bits": "uint32"
-      },
-      "outputs": {
-        "embedding_ref": "uri",
-        "embedding_hash": "sha256"
-      },
-      "controls": {
-        "embedding_mode": "read_only",
-        "neutrality_floor": 0.97,
-        "drift_monitor": "zero_drift.monitor.v1"
-      },
-      "validation": {
-        "hash_chain_enforced": true,
-        "deterministic_key_schedule": true
       }
     }
   ],

@@ -45,7 +45,17 @@
             "json": [
                 "synthetic.noise.injector.v1",
                 "synthetic.contradiction.synth.v1"
-            ]
+            ],
+            "by_format": {
+                "text": [
+                    "synthetic.noise.injector.v1",
+                    "synthetic.contradiction.synth.v1"
+                ],
+                "json": [
+                    "synthetic.noise.injector.v1",
+                    "synthetic.contradiction.synth.v1"
+                ]
+            }
         },
         "perturbation_defaults": {
             "synthetic.noise.injector.v1": {
@@ -88,6 +98,13 @@
             "constraints": {
                 "noise_request_module": "synthetic.noise.injector.v1",
                 "contradiction_request_module": "synthetic.contradiction.synth.v1",
+                "disallowed_modules": [
+                    "CNE",
+                    "FSV",
+                    "content_noise_enricher",
+                    "feature_shift_validator",
+                    "fact_stream_validator"
+                ],
                 "source_registry_allowlist": [
                     "ssot://registry/truthful_inputs",
                     "ssot://registry/trusted_uris"
@@ -212,8 +229,7 @@
     "operationalDirectives": {
         "allowed_modules": [
             "synthetic.noise.injector.v1",
-            "synthetic.contradiction.synth.v1",
-            "functional.block.embedding.v1"
+            "synthetic.contradiction.synth.v1"
         ],
         "neutral_perturbation_models": [
             "synthetic.noise.injector.v1",
@@ -400,74 +416,6 @@
                     "metricId": "citation_traceability",
                     "unit": "percentage",
                     "description": "Share of assertions linked to verified sources."
-                }
-            ]
-        },
-        {
-            "moduleId": "functional.block.embedding.v1",
-            "moduleAcronym": "FBE",
-            "moduleDisplayName": "Functional Block Embedding",
-            "moduleDescription": "Records a deterministic functional embedding for content blocks (e.g., CID-bound assets) to enable traceable integrity tracking without altering payloads.",
-            "neutralityControls": {
-                "drift_lock": true,
-                "embedding_mode": "read_only",
-                "miap_compliant": true
-            },
-            "inputSchema": {
-                "type": "object",
-                "required": [
-                    "cid",
-                    "codec",
-                    "multihash",
-                    "hash_digest"
-                ],
-                "properties": {
-                    "cid": {
-                        "type": "string",
-                        "description": "CIDv1 identifier for the tracked block."
-                    },
-                    "base": {
-                        "type": "string",
-                        "description": "CID base encoding (e.g., base32)."
-                    },
-                    "version": {
-                        "type": "string",
-                        "description": "CID version (e.g., cidv1)."
-                    },
-                    "codec": {
-                        "type": "string",
-                        "description": "Content codec label (e.g., eth-block)."
-                    },
-                    "multihash": {
-                        "type": "string",
-                        "description": "Full multihash string for the block."
-                    },
-                    "hash_digest": {
-                        "type": "string",
-                        "description": "Hex digest extracted from the multihash."
-                    },
-                    "hash_algorithm": {
-                        "type": "string",
-                        "description": "Hash algorithm name (e.g., keccak-256)."
-                    },
-                    "hash_bits": {
-                        "type": "integer",
-                        "description": "Hash size in bits.",
-                        "minimum": 1
-                    }
-                },
-                "additionalProperties": false
-            },
-            "outputMetrics": [
-                {
-                    "metricId": "functional_embedding_ref",
-                    "unit": "uri",
-                    "description": "Pointer to the generated embedding vector or registry entry."
-                },
-                {
-                    "metricId": "embedding_hash",
-                    "unit": "sha256",
-                    "description": "Digest of the embedding payload for deterministic tracking."
                 }
             ]
         }

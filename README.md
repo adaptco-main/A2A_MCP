@@ -1,67 +1,68 @@
-# world-os-codex
+For this repo, your README is already strong, but you can round it out by making it more GitHub‑friendly, contributor‑friendly, and CI‑aware. [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
 
-Monorepo delivering the Synapse digital twin, Chrono-Sync protocol, Asset Forge, and World OS kernel. Everything runs with one Docker compose stack.
+## Immediate improvements
 
-## Commands
-- `pnpm i`
-- `docker compose up --build`
-- `pnpm test`
-- `pnpm dev`
-- `pnpm chain:up`
-- `pnpm contracts:deploy`
+- Replace HTML `<br>` with normal Markdown headings, paragraphs, and lists so it renders cleanly on GitHub (each sentence/line can just be its own paragraph or list item). [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
+- Add a short “elevator pitch” paragraph under the title explaining **what** World OS/Core Orchestrator is, who it is for (e.g., AI DevOps / game twin infra), and its current maturity level (alpha/beta, internal). [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
+- Add your CI badge for the main workflow at the top under the title so PR health is visible at a glance. [perplexity](https://www.perplexity.ai/search/e810e5d5-cc97-4423-9261-d3a9037b4ef5)
 
-## Structure
-- `packages/kernel`: deterministic SSOT, schemas, reducer, replay helpers.
-- `packages/contracts`: TimekeepersTFT ERC-721 + tests + deploy script.
-- `packages/sdk`: shared types and API client.
-- `apps/api`: Fastify API serving game/chrono/forge endpoints.
-- `apps/web`: React + Vite SPA with game, sync, and case views.
-- `apps/worker`: BullMQ Forge processor.
+Example top section:
 
-## Local stack
-- Web: http://localhost:5173
-- API: http://localhost:3001
-- Anvil: http://localhost:8545
+```md
+# World OS Codex
 
-### Data flow
-- Game actions are validated against JSON Schemas and reduced through the kernel.
-- Chrono-Sync issues signed challenges before minting TFTs on the local chain.
-- Asset Forge requests enqueue jobs persisted to Postgres with Redis cache via BullMQ.
+[![CI](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml)
 
-### Setup
-1. Copy `.env.example` to `.env` if you need overrides.
-2. Install: `pnpm i`
-3. Bring up services: `docker compose up --build`
-4. Run tests: `pnpm test`
-5. Seed the initial state: `pnpm --filter @world-os/api seed`
-6. Deploy contracts to anvil: `pnpm chain:up` (in another terminal) then `pnpm contracts:deploy`
+Monorepo delivering the Synapse digital twin, Chrono-Sync protocol, Asset Forge, and World OS kernel, running under a single Docker Compose stack for local and CI environments.
+```
 
-### Notes
-- Reducer is pure/deterministic; state hashes use stable JSON stringification.
-- Chat text never mutates state; only canonical JSON actions do.
-- Chrono-Key registry is hashed in-memory to avoid leaking secrets in logs.
+## Sections to add or refine
 
-- Response: Modeling “Agent Threading a Needle” as a GitHub-processed workflow action
-Below is a grounded, repo-aligned way to model the “agent threading a needle” action as a workflow operation without drifting into speculative physics. I’m tying this to the existing ArcState schema and the CI workflow you already have.
+- Overview: Brief description of Synapse digital twin, Chrono‑Sync, Asset Forge, and how the “World OS kernel” ties them together. [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
+- Architecture: Turn the current “Structure” and “Data flow” bullets into a small, narrative architecture section plus the bullets (kernel, contracts, SDK, API, web, worker). [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
+- Getting started: You already have Commands, Local stack, and Setup; regroup them into “Prerequisites” (Docker, pnpm, Node, Anvil/Foundry), “Quick start” (copy `.env`, `pnpm i`, `docker compose up --build`, open localhost URLs), and “Developer workflows” (tests, seeding, deploy contracts). [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
+- Configuration: Explain `.env` and any important env vars (ports, chain ID, secrets, API keys) and how they relate to Chrono‑Sync and Asset Forge. [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
+- Testing and determinism: Call out that kernel reductions are CI‑gated for determinism and schema compliance, and briefly state how to run tests locally and what the determinism guarantees mean. [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
+- Runtime memory strategy: Keep your existing table and bullets but add one or two sentences framing it as how agents should integrate (kernel‑first, visual overlay second, etc.). [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
 
-1) Represent the action as a deterministic ArcState payload
-Treat the “threading a needle” action as one concrete ArcState record that must satisfy the ArcState schema constraints (fixed curvature, bounded voxel coordinates, and a 3×3 rotation kernel). This keeps the action computationally coherent and schema-valid before any processing. The ArcState schema already enforces the invariant structure you need to prevent out‑of‑bounds or “hallucinated” trajectories.
+## Collaboration and ops details
 
-Interpretation (repo-aligned):
+- Contributing: Add a short section covering branch model (e.g., feature branches into main), coding standards (TypeScript/TSConfig, linting, formatting), and how to run only a subset (e.g., just `apps/api`). [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
+- CI/CD notes: Document what the main workflow does (lint, test, build, maybe Docker build), and any conditions for merging (CI must pass, schema changes require updated tests, etc.). [perplexity](https://www.perplexity.ai/search/17473ef1-5d15-4f3f-8182-33bcf476dbd3)
+- Troubleshooting: Add a short list for common issues (Docker not starting, Anvil not running on 8545, migrations failing, seeds failing) with one‑line fixes. [github](https://github.com/Q-Enterprises/core-orchestrator/blob/8fc14b1291835478c6aaad9e94ec78afd21719c4/README.md?plain=1)
 
-geodesic_manifold → the deterministic “path” of the agent action.
+## Minimal template you can adapt
 
-lattice_state.voxel_coords → the discrete lattice position in a 3×3 space (needle “alignment cell”).
+You can refactor the existing content into a structure like:
 
-rotation_kernel → a constrained rotation matrix representing orientation during the threading step.
+```md
+# World OS Codex
 
-invariant_status → simple state gate (e.g., VALIDATED).
+[![CI](...badge url...)](...workflow url...)
 
-2) Use the existing validator as the “action gate”
-Once you encode the action in ArcState format, the validator script is the gate that ensures the action is admissible. This makes “threading the needle” a validated action rather than a speculative or symbolic one. The script already validates a sample payload and exits with a non‑zero status on failure, which is CI‑friendly and deterministic.
+## Overview
+1–2 paragraphs on what this repo does and who it is for.
 
-3) Enforce this in CI as a GitHub workflow action
-The GitHub Actions workflow already runs the ArcState validator on every push and PR. That effectively turns “threading the needle” into a workflow‑processible event: you submit a payload (e.g., in a test fixture or artifact), and CI verifies it against the schema, failing the workflow if the action is invalid.
+## Architecture
+High-level explanation + existing Structure bullets.
 
-Summary (direct answer)
-If you want GitHub to “process” an agent threading a needle, model it as a schema‑valid ArcState (deterministic path + bounded lattice state + rotation kernel) and route it through the existing ArcState validator that runs in the Lattice Integration Audit workflow. This keeps the action computationally meaningful, auditable, and enforced by CI gates rather than metaphorical interpretation.
+## Getting started
+Prereqs, quick start commands, local URLs.
+
+## Developer workflows
+How to run tests, seed state, deploy contracts, run only specific apps.
+
+## Configuration
+Docs for .env and key env vars.
+
+## Runtime memory strategy
+Your existing table + bullets, with 1–2 sentences of framing.
+
+## Contributing
+Branching, coding style, CI expectations, how to open issues/PRs.
+
+## License
+License name and link if applicable.
+```
+
+If you paste your CI workflow filenames and what they currently do, I can give you a README snippet that describes each pipeline and drops in the exact badges.

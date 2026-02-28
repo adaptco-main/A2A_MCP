@@ -3,89 +3,129 @@
 'use strict';
 
 const path = require('path');
-const { loadWrapperCapsule, loadRuntimeRegistry, createAnchorBindings } = require('../wrapper');
+const { emitScrollstreamRehearsal, CAPSULE_ID } = require('../rehearsal');
+const { createScrollstreamWriter } = require('../scrollstream-ledger');
 
-function parseArgs(argv) {
-  const args = { wrapperPath: null, registryPath: null };
-  for (let i = 2; i < argv.length; i += 1) {
-    const token = argv[i];
-    const next = argv[i + 1];
-    if (token === '--wrapper' && next) {
-      args.wrapperPath = path.resolve(next);
-      i += 1;
-    } else if (token === '--registry' && next) {
-      args.registryPath = path.resolve(next);
-      i += 1;
-    } else if (token === '--help' || token === '-h') {
-      args.help = true;
-    }
-  }
-  return args;
+function printUsage(stream = process.stdout) {
+  stream.write(
+    [
+      'Usage: rehearsal [options]',
+      '',
+      'Options:',
+      '  --ledger <path>        Override scrollstream ledger output path',
+      '  --format <json|text>   Output format (default: json)',
+      '  --help                 Show this help message'
+    ].join('\n') + '\n'
+  );
 }
 
-function printHelp() {
-  const message = `Usage: node src/bin/rehearsal.js [--wrapper <path>] [--registry <path>]\n\n` +
-    `Performs a rehearsal readiness check by inspecting wrapper anchors that are\n` +
-    `tagged with status "REHEARSAL" in the runtime registry. Exits non-zero when\n` +
-    `rehearsal anchors are missing or bound to non-rehearsal entries.`;
-  console.log(message);
+function parseArgs(argv) {
+  const options = {
+    format: 'json'
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    switch (arg) {
+      case '--ledger':
+        if (index + 1 >= argv.length) {
+          throw new Error('--ledger requires a value');
+        }
+        options.ledger = argv[++index];
+        break;
+      case '--format':
+        if (index + 1 >= argv.length) {
+          throw new Error('--format requires a value');
+        }
+        options.format = argv[++index];
+        break;
+      case '--help':
+      case '-h':
+        options.help = true;
+        break;
+      default:
+        if (arg.startsWith('-')) {
+          throw new Error(`Unknown argument: ${arg}`);
+        }
+        break;
+    }
+  }
+
+  return options;
+}
+
+function formatAsText(result) {
+  const lines = [];
+  lines.push(`Capsule: ${result.capsule_id}`);
+  lines.push(`Cycle: ${result.cycle}`);
+  lines.push(`Total Events: ${result.total_events}`);
+  lines.push(`HUD Status: ${result.hud_status}`);
+  lines.push('');
+  lines.push('Sequence:');
+
+  for (const event of result.events) {
+    const agentSummary = `${event.agent.name} (${event.agent.role})`;
+    lines.push(`- [${event.ts}] ${event.event} — ${agentSummary}`);
+    if (event.output?.payload?.emotion) {
+      lines.push(
+        `  Emotion: ${event.output.payload.emotion} (resonance ${event.output.payload.resonance})`
+      );
+    }
+    if (event.output?.hud?.shimmer) {
+      lines.push(`  HUD shimmer: ${event.output.hud.shimmer}`);
+    }
+    if (event.output?.replay?.glyph) {
+      lines.push(`  Replay glyph: ${event.output.replay.glyph}`);
+    }
+  }
+
+  return lines.join('\n');
 }
 
 async function main() {
-  const args = parseArgs(process.argv);
-  if (args.help) {
-    printHelp();
-    process.exit(0);
-  }
+  try {
+    const options = parseArgs(process.argv.slice(2));
 
-  const [wrapper, registry] = await Promise.all([
-    loadWrapperCapsule({ wrapperPath: args.wrapperPath }),
-    loadRuntimeRegistry({ registryPath: args.registryPath })
-  ]);
+    if (options.help) {
+      printUsage();
+      return;
+    }
 
-  const bindings = createAnchorBindings(wrapper, registry);
-  const rehearsalBindings = bindings.filter((binding) => binding.status === 'REHEARSAL');
-  const missingAnchors = bindings.filter((binding) => binding.binding !== 'bound');
-  const nonRehearsal = bindings.filter(
-    (binding) => binding.binding === 'bound' && binding.status && binding.status !== 'REHEARSAL'
-  );
+    let appendEvent;
+    if (options.ledger) {
+      const ledgerPath = path.resolve(process.cwd(), options.ledger);
+      appendEvent = createScrollstreamWriter(ledgerPath);
+    }
 
-  const issues = [];
-  if (rehearsalBindings.length === 0) {
-    issues.push('no rehearsal anchors declared in registry');
-  }
-  if (missingAnchors.length > 0) {
-    issues.push(`unbound anchors: ${missingAnchors.map((a) => a.capsule_id).join(', ')}`);
-  }
-  if (nonRehearsal.length > 0) {
-    issues.push(
-      `anchors bound outside rehearsal: ${nonRehearsal
-        .map((a) => `${a.capsule_id}:${a.status || 'unknown'}`)
-        .join(', ')}`
-    );
-  }
+    const result = await emitScrollstreamRehearsal({ appendEvent });
 
-  const summary = {
-    wrapper: {
-      capsule_id: wrapper.capsule_id,
-      version: wrapper.version
-    },
-    rehearsal: {
-      count: rehearsalBindings.length,
-      anchors: rehearsalBindings
-    },
-    anchors: bindings,
-    issues
-  };
+    if (options.format === 'text') {
+      process.stdout.write(`${formatAsText(result)}\n`);
+      return;
+    }
 
-  console.log(JSON.stringify(summary, null, 2));
+    if (options.format && options.format !== 'json') {
+      throw new Error(`Unsupported format: ${options.format}`);
+    }
 
-  if (issues.length > 0) {
+    process.stdout.write(`${JSON.stringify(result)}\n`);
+  } catch (error) {
+    if (error.message) {
+      process.stderr.write(`${error.message}\n`);
+    } else {
+      process.stderr.write('An unexpected error occurred.\n');
+    }
     process.exitCode = 1;
   }
 }
 
-main().catch((error) => {
-  console.error(`Rehearsal check failed: ${error.message}`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  CAPSULE_ID,
+  parseArgs,
+  printUsage,
+  formatAsText
+};

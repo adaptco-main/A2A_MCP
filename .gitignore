@@ -104,3 +104,4 @@ fixtures/*.json
 
 # CIE smoke artifacts
 runtime/cie_v1_smoke.log.jsonl
+*.egg-info/
