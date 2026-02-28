@@ -94,6 +94,28 @@ async def run_forever() -> None:
 asyncio.run(run_forever())
 ```
 
+
+## Offline RL Mode
+
+`RLTrainingConfig` supports three modes:
+
+- `online` (default): standard environment-interaction training.
+- `offline`: trains from a pre-collected dataset path.
+- `hybrid`: starts from offline data and can be extended to online fine-tuning.
+
+Example configuration for offline training:
+
+```python
+config = RLTrainingConfig(
+    algorithm="PPO",
+    training_mode="offline",
+    offline_dataset_path="data/demos/navigation_demo.jsonl",
+    max_steps=1_000_000,
+)
+```
+
+When using `offline` or `hybrid`, `offline_dataset_path` must exist on disk.
+
 ## Notes
 
 - The current implementation includes **safe local placeholders** for Unity build and RL training to keep the pipeline runnable in non-Unity environments.
