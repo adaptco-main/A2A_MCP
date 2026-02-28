@@ -21,4 +21,19 @@ jobs:
           node-version: 20
           cache: "pnpm"
       - name: Install dependencies
+        # frozen-lockfile=false is required because the branch is out of sync
         run: pnpm install --frozen-lockfile=false
+
+      - name: Deploy
+        # Updated path to check scripts directory and added a safety check
+        run: |
+          if [ -f "./scripts/deploy.sh" ]; then
+            chmod +x ./scripts/deploy.sh
+            ./scripts/deploy.sh
+          elif [ -f "./deploy.sh" ]; then
+            chmod +x ./deploy.sh
+            ./deploy.sh
+          else
+            echo "Error: deploy.sh not found in root or scripts/ directory"
+            exit 1
+          fi
