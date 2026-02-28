@@ -1,98 +1,16 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "https://docling-pipeline.local/schemas/chunk.embedding.v1.schema.json",
-    "title": "Chunk Embedding v1",
-    "description": "Schema for document chunks with PyTorch embedding vectors",
-    "type": "object",
-    "required": [
-        "event",
-        "bundle_id",
-        "doc_id",
-        "chunk_id",
-        "chunk_index",
-        "embedder_model_id",
-        "weights_hash",
-        "chunker_version",
-        "embedding_dim",
-        "vector_l2_norm"
-    ],
-    "properties": {
-        "event": {
-            "type": "string",
-            "const": "chunk.embedding.v1"
-        },
-        "bundle_id": {
-            "type": "string",
-            "description": "Unique bundle identifier"
-        },
-        "doc_id": {
-            "type": "string",
-            "pattern": "^sha256:[a-f0-9]{64}$",
-            "description": "SHA-256 hash of source document"
-        },
-        "chunk_id": {
-            "type": "string",
-            "pattern": "^sha256:[a-f0-9]{64}$",
-            "description": "SHA-256 hash of chunk content"
-        },
-        "chunk_index": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Zero-based index of chunk within document"
-        },
-        "embedder_model_id": {
-            "type": "string",
-            "description": "Hugging Face model identifier"
-        },
-        "weights_hash": {
-            "type": "string",
-            "pattern": "^sha256:[a-f0-9]{64}$",
-            "description": "SHA-256 hash of model weights for reproducibility"
-        },
-        "chunker_version": {
-            "type": "string",
-            "description": "Version of chunking algorithm"
-        },
-        "embedding_dim": {
-            "type": "integer",
-            "description": "Dimensionality of embedding vector"
-        },
-        "vector_l2_norm": {
-            "type": "number",
-            "description": "L2 norm of embedding vector (should be 1.0 for normalized vectors)"
-        },
-        "source_block_refs": {
-            "type": "array",
-            "items": {
-                "type": "string"
-            },
-            "description": "References to source blocks for traceability"
-        },
-        "ledger_timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "ISO 8601 timestamp when record was written to ledger"
-        },
-        "integrity": {
-            "type": "object",
-            "required": [
-                "sha256_canonical"
-            ],
-            "properties": {
-                "sha256_canonical": {
-                    "type": "string",
-                    "pattern": "^[a-f0-9]{64}$",
-                    "description": "SHA-256 hash of canonical record (excluding integrity field)"
-                },
-                "prev_ledger_hash": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "pattern": "^[a-f0-9]{64}$",
-                    "description": "Hash of previous ledger record for chain verification"
-                }
-            }
-        }
-    }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Chunk Embedding",
+  "type": "object",
+  "properties": {
+    "chunk_id": { "type": "string" },
+    "doc_id": { "type": "string" },
+    "text_content": { "type": "string" },
+    "embedding": {
+      "type": "array",
+      "items": { "type": "number" }
+    },
+    "integrity_hash": { "type": "string" }
+  },
+  "required": ["chunk_id", "doc_id", "text_content", "embedding", "integrity_hash"]
 }

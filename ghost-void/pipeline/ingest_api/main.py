@@ -1,130 +1,137 @@
 """
-FastAPI Ingest API for Docling Pipeline.
-Accepts documents and enqueues them for processing.
+FastAPI Ingest Service
+Handles file uploads and enqueues parsing tasks.
 """
-import os
+
 import uuid
-from datetime import datetime, timezone
+import redis
+import json
+from pathlib import Path
 from typing import Optional
-
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from pydantic import BaseModel
-from redis import Redis
-from rq import Queue
+import sys
 
-app = FastAPI(
-    title="Docling Ingest API",
-    description="Document ingestion endpoint for the Docling pipeline",
-    version="0.1.0"
-)
+# Add parent directory to path for lib imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from lib.canonical import hash_canonical_without_integrity
+
+app = FastAPI(title="Docling Ingest API")
 
 # Redis connection
-redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-redis_conn = Redis.from_url(redis_url)
-parse_queue = Queue("parse_queue", connection=redis_conn)
+redis_client = redis.Redis(
+    host='redis',
+    port=6379,
+    db=0,
+    decode_responses=True
+)
+
+PARSE_QUEUE = "parse_queue"
 
 
 class IngestResponse(BaseModel):
-    """Response model for document ingestion."""
     bundle_id: str
     status: str
-    queued_at: str
     message: str
 
 
-class HealthResponse(BaseModel):
-    """Health check response."""
-    status: str
-    redis: str
-    timestamp: str
-
-
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    redis_status = "connected"
     try:
-        redis_conn.ping()
-    except Exception:
-        redis_status = "disconnected"
-    
-    return HealthResponse(
-        status="healthy" if redis_status == "connected" else "degraded",
-        redis=redis_status,
-        timestamp=datetime.now(timezone.utc).isoformat()
-    )
+        redis_client.ping()
+        return {"status": "healthy", "redis": "connected"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Redis unavailable: {str(e)}")
 
 
 @app.post("/ingest", response_model=IngestResponse)
 async def ingest_document(
     file: UploadFile = File(...),
-    source_uri: Optional[str] = Form(None),
+    pipeline_version: str = Form("v1.0.0"),
     metadata: Optional[str] = Form(None)
 ):
     """
     Ingest a document for processing.
     
     Args:
-        file: The document file to process
-        source_uri: Optional source URI override
-        metadata: Optional JSON metadata string
+        file: Uploaded file
+        pipeline_version: Pipeline version identifier
+        metadata: Optional JSON metadata
     
     Returns:
-        IngestResponse with bundle_id for tracking
+        IngestResponse with bundle_id
     """
-    # Generate bundle ID
-    bundle_id = f"bundle_{uuid.uuid4().hex[:12]}"
-    
-    # Read file content
-    content = await file.read()
-    
-    if len(content) == 0:
-        raise HTTPException(status_code=400, detail="Empty file uploaded")
-    
-    # Determine source URI
-    if source_uri is None:
-        source_uri = f"upload://{file.filename}"
-    
-    # Create job payload
-    job_payload = {
-        "bundle_id": bundle_id,
-        "filename": file.filename,
-        "content_type": file.content_type or "application/octet-stream",
-        "source_uri": source_uri,
-        "content": content.hex(),  # Hex-encode for JSON serialization
-        "received_at": datetime.now(timezone.utc).isoformat(),
-        "metadata": metadata
-    }
-    
-    # Enqueue for parsing
     try:
-        job = parse_queue.enqueue(
-            "tasks.parse_document",
-            job_payload,
-            job_id=bundle_id
+        # Generate bundle ID
+        bundle_id = str(uuid.uuid4())
+        
+        # Parse metadata if provided
+        meta_dict = {}
+        if metadata:
+            try:
+                meta_dict = json.loads(metadata)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=400, detail="Invalid JSON metadata")
+        
+        # Read file content
+        content = await file.read()
+        
+        # Create task payload
+        task_payload = {
+            "bundle_id": bundle_id,
+            "filename": file.filename,
+            "content_size": len(content),
+            "pipeline_version": pipeline_version,
+            "metadata": meta_dict
+        }
+        
+        # Compute integrity hash
+        hash_canonical_without_integrity(task_payload)
+        
+        # Store file temporarily (in production, use object storage)
+        temp_dir = Path("/tmp/docling_uploads")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        file_path = temp_dir / f"{bundle_id}_{file.filename}"
+        
+        with open(file_path, "wb") as f:
+            f.write(content)
+        
+        # Add file path to payload
+        task_payload["file_path"] = str(file_path)
+        
+        # Enqueue to Redis
+        redis_client.rpush(PARSE_QUEUE, json.dumps(task_payload))
+        
+        return IngestResponse(
+            bundle_id=bundle_id,
+            status="queued",
+            message=f"Document queued for processing with bundle_id: {bundle_id}"
         )
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to enqueue job: {str(e)}")
-    
-    return IngestResponse(
-        bundle_id=bundle_id,
-        status="queued",
-        queued_at=datetime.now(timezone.utc).isoformat(),
-        message=f"Document '{file.filename}' queued for processing"
-    )
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
 
 
 @app.get("/status/{bundle_id}")
 async def get_status(bundle_id: str):
-    """Get the processing status of a bundle."""
-    job = parse_queue.fetch_job(bundle_id)
+    """
+    Get processing status for a bundle.
     
-    if job is None:
-        raise HTTPException(status_code=404, detail="Bundle not found")
+    Args:
+        bundle_id: Bundle identifier
     
+    Returns:
+        Status information
+    """
+    # In production, query a status database
     return {
         "bundle_id": bundle_id,
-        "status": job.get_status(),
-        "result": job.result if job.is_finished else None,
-        "error": str(job.exc_info) if job.is_failed else None
+        "status": "processing",
+        "message": "Status tracking not yet implemented"
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

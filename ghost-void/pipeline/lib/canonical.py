@@ -1,82 +1,110 @@
-import hashlib
+"""
+Canonical JSON hashing and ledger management.
+Implements RFC8785-style JSON canonicalization for deterministic hashing.
+"""
+
 import json
-import os
+import hashlib
+import math
+from pathlib import Path
 from typing import Any, Dict
+
+
+def _normalize_numbers(value: Any) -> Any:
+    """Normalize numbers so JSON serialization is stable across runtimes."""
+    if isinstance(value, bool) or value is None:
+        return value
+
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("NaN or infinite values are not allowed in canonical JSON")
+        if value.is_integer():
+            return int(value)
+        return value
+
+    if isinstance(value, list):
+        return [_normalize_numbers(item) for item in value]
+
+    if isinstance(value, dict):
+        return {key: _normalize_numbers(item) for key, item in value.items()}
+
+    return value
+
 
 def jcs_canonical_bytes(obj: Any) -> bytes:
     """
     RFC8785-style JSON canonicalization.
-    Ensures deterministic serialization for hashing.
+    Returns canonical JSON bytes for deterministic hashing.
     """
-    return json.dumps(
-        obj,
+    # Python's json.dumps with separators and sort_keys approximates JCS
+    normalized_obj = _normalize_numbers(obj)
+    canonical_str = json.dumps(
+        normalized_obj,
+        ensure_ascii=False,
         sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False
-    ).encode("utf-8")
+        separators=(',', ':'),
+        allow_nan=False,
+    )
+    return canonical_str.encode('utf-8')
+
 
 def sha256_hex(b: bytes) -> str:
-    """SHA256 hex digest."""
+    """
+    Compute SHA256 hex digest of bytes.
+    """
     return hashlib.sha256(b).hexdigest()
+
 
 def hash_canonical_without_integrity(payload: Dict[str, Any]) -> str:
     """
-    Strips 'integrity' field if present, hashes the canonical form,
-    and returns the hex string.
-    """
-    data = payload.copy()
-    data.pop("integrity", None)
-    return sha256_hex(jcs_canonical_bytes(data))
-
-def append_to_ledger(record: Dict[str, Any], ledger_path: str) -> str:
-    """
-    Appends a record to a JSONL ledger with a previous hash chain.
-    Returns the new ledger hash.
-    """
-    prev_hash = "0" * 64
+    Hash a payload after stripping the 'integrity_hash' field.
+    Re-injects the hash after computation.
     
-    if os.path.exists(ledger_path) and os.path.getsize(ledger_path) > 0:
-        with open(ledger_path, "rb") as f:
-            # Simple way to get last line hash
-            f.seek(0, os.SEEK_END)
-            pos = f.tell()
-            while pos > 0:
-                pos -= 1
-                f.seek(pos)
-                if f.read(1) == b"\n" and pos != os.path.getsize(ledger_path) - 1:
-                    line = f.readline()
-                    try:
-                        last_record = json.loads(line)
-                        prev_hash = last_record.get("ledger_hash", prev_hash)
-                        break
-                    except:
-                        pass
-            else:
-                f.seek(0)
-                line = f.readline()
-                try:
-                    last_record = json.loads(line)
-                    prev_hash = last_record.get("ledger_hash", prev_hash)
-                except:
-                    pass
-
-    record["prev_ledger_hash"] = prev_hash
-    # Hashing the record itself as part of the chain
-    record["ledger_hash"] = sha256_hex(jcs_canonical_bytes(record))
+    Args:
+        payload: Dictionary to hash (will be modified in-place)
     
-    with open(ledger_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
-        
-    return record["ledger_hash"]
-def compute_doc_id(content: bytes) -> str:
-    """Compute deterministic document ID from content."""
-    return f"sha256:{sha256_hex(content)}"
+    Returns:
+        SHA256 hex digest
+    """
+    # Remove integrity_hash if present
+    payload.pop('integrity_hash', None)
+    
+    # Compute hash
+    canonical = jcs_canonical_bytes(payload)
+    hash_value = sha256_hex(canonical)
+    
+    # Re-inject hash
+    payload['integrity_hash'] = hash_value
+    
+    return hash_value
 
-def compute_chunk_id(doc_id: str, chunk_index: int, chunk_text: str) -> str:
-    """Compute deterministic chunk ID from doc_id, index, and text."""
-    payload = {
-        "doc_id": doc_id,
-        "chunk_index": chunk_index,
-        "chunk_text": chunk_text
-    }
-    return f"sha256:{sha256_hex(jcs_canonical_bytes(payload))}"
+
+def append_to_ledger(record: Dict[str, Any], ledger_path: Path) -> None:
+    """
+    Append a record to the ledger with hash chaining.
+    
+    Args:
+        record: Record to append
+        ledger_path: Path to the ledger file (JSONL format)
+    """
+    # Ensure ledger directory exists
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Read last hash if ledger exists
+    prev_hash = "0" * 64  # Genesis hash
+    if ledger_path.exists():
+        with open(ledger_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            if lines:
+                last_record = json.loads(lines[-1])
+                prev_hash = last_record.get('integrity_hash', prev_hash)
+    
+    # Add previous hash to record
+    record['prev_ledger_hash'] = prev_hash
+    
+    # Compute integrity hash
+    hash_canonical_without_integrity(record)
+    
+    # Append to ledger
+    with open(ledger_path, 'a', encoding='utf-8') as f:
+        f.write(json.dumps(record, ensure_ascii=False) + '\n')

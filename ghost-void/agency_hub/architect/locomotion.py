@@ -69,6 +69,7 @@ class LocomotionController:
         # Create a telemetry artifact for the runtime
         # Each kinematic tick is an 'EMBEDDING' or 'HEALING' state update in the agent's memory
         telemetry = ModelArtifact(
+        artifact_id=f"kinematic-{__import__('uuid').uuid4()}",
             model_id="locomotion-v1",
             weights_hash="kinematic-trace",
             embedding_dim=4,

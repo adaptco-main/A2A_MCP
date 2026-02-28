@@ -181,7 +181,8 @@ if [ "$HAS_GH" = "1" ]; then
   GH_VERSION="$(gh --version 2>/dev/null | head -n1 | sed -e 's/^gh version //')"
   # best-effort identity
   GH_AUTH_USER="$(gh api user -q .login 2>/dev/null || true)"
-  # best-effort PR metadata: fetch all fields in one call
+  # best-effort PR metadata (if repo slug is accessible via gh)
+  # Fetch all PR data in one call to reduce network requests.
   {
     read -r PR_URL
     read -r PR_BASE
@@ -189,7 +190,7 @@ if [ "$HAS_GH" = "1" ]; then
     read -r PR_TITLE
     read -r PR_MERGEABLE
     read -r PR_MERGED_AT
-  } < <(gh api "repos/${REPO_SLUG}/pulls/${PR_NUMBER}" --jq '.html_url, .base.ref, .head.ref, .title, .mergeable, .merged_at' 2>/dev/null)
+  } < <(gh api "repos/${REPO_SLUG}/pulls/${PR_NUMBER}" --jq '[.html_url, .base.ref, .head.ref, .title, .mergeable, .merged_at] | .[]' 2>/dev/null)
 fi
 
 ############################################

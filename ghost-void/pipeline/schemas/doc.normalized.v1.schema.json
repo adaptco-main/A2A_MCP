@@ -1,74 +1,13 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "https://docling-pipeline.local/schemas/doc.normalized.v1.schema.json",
-    "title": "Document Normalized v1",
-    "description": "Schema for Docling-parsed and canonicalized documents",
-    "type": "object",
-    "required": [
-        "event",
-        "bundle_id",
-        "doc_id",
-        "pipeline_version",
-        "docling_version",
-        "normalizer_version",
-        "content_hash"
-    ],
-    "properties": {
-        "event": {
-            "type": "string",
-            "const": "doc.normalized.v1"
-        },
-        "bundle_id": {
-            "type": "string",
-            "description": "Unique bundle identifier"
-        },
-        "doc_id": {
-            "type": "string",
-            "pattern": "^sha256:[a-f0-9]{64}$",
-            "description": "SHA-256 hash of raw document content"
-        },
-        "pipeline_version": {
-            "type": "string",
-            "description": "Version of the processing pipeline"
-        },
-        "docling_version": {
-            "type": "string",
-            "description": "Version of IBM Docling parser"
-        },
-        "normalizer_version": {
-            "type": "string",
-            "description": "Version of text normalization policy"
-        },
-        "content_hash": {
-            "type": "string",
-            "pattern": "^[a-f0-9]{64}$",
-            "description": "SHA-256 hash of canonical normalized content"
-        },
-        "ledger_timestamp": {
-            "type": "string",
-            "format": "date-time",
-            "description": "ISO 8601 timestamp when record was written to ledger"
-        },
-        "integrity": {
-            "type": "object",
-            "required": [
-                "sha256_canonical"
-            ],
-            "properties": {
-                "sha256_canonical": {
-                    "type": "string",
-                    "pattern": "^[a-f0-9]{64}$",
-                    "description": "SHA-256 hash of canonical record (excluding integrity field)"
-                },
-                "prev_ledger_hash": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
-                    "pattern": "^[a-f0-9]{64}$",
-                    "description": "Hash of previous ledger record for chain verification"
-                }
-            }
-        }
-    }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Normalized Document",
+  "type": "object",
+  "properties": {
+    "doc_id": { "type": "string" },
+    "pipeline_version": { "type": "string" },
+    "content": { "type": "string" },
+    "metadata": { "type": "object" },
+    "integrity_hash": { "type": "string" }
+  },
+  "required": ["doc_id", "pipeline_version", "content", "integrity_hash"]
 }
