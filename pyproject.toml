@@ -23,8 +23,7 @@ dev = [
     "pytest",
     "pytest-asyncio",
 ]
-
-dependencies = [
+auth = [
     "PyJWT",
 ]
 
