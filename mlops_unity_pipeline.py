@@ -47,6 +47,8 @@ class RLTrainingConfig:
     mlagents_cli: str = "mlagents-learn"
     trainer_config_path: Optional[str] = None
     extra_cli_args: List[str] = field(default_factory=list)
+    training_mode: str = "online"
+    offline_dataset_path: Optional[str] = None
 
 
 @dataclass
@@ -138,6 +140,19 @@ class UnityMLOpsOrchestrator:
         return str(build_dir)
 
     async def train_rl_agent(self, job: TrainingJob, output_dir: Path) -> Dict[str, Any]:
+        mode = job.rl_config.training_mode.lower()
+        if mode not in {"online", "offline", "hybrid"}:
+            raise ValueError("training_mode must be one of: online, offline, hybrid")
+
+        dataset_path: Optional[str] = None
+        if mode in {"offline", "hybrid"}:
+            if not job.rl_config.offline_dataset_path:
+                raise ValueError("offline_dataset_path is required for offline or hybrid training")
+            dataset = Path(job.rl_config.offline_dataset_path)
+            if not dataset.exists():
+                raise FileNotFoundError(f"offline dataset not found: {dataset}")
+            dataset_path = str(dataset.resolve())
+
         run_id = f"{job.rl_config.run_id_prefix}-{job.job_id}-{uuid4().hex[:8]}"
         model_dir = output_dir / "models" / run_id
         model_dir.mkdir(parents=True, exist_ok=True)
@@ -147,6 +162,8 @@ class UnityMLOpsOrchestrator:
             "max_steps": job.rl_config.max_steps,
             "num_envs": job.rl_config.num_envs,
             "time_scale": job.rl_config.time_scale,
+            "training_mode": mode,
+            "offline_dataset_path": dataset_path,
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
         (model_dir / "training_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
