@@ -3,6 +3,9 @@
 
 name: Manual CI (Free - On Demand)
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:  # Manual trigger only - no automatic runs
     inputs:
