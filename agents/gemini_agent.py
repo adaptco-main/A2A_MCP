@@ -38,6 +38,7 @@ class GeminiAgent:
         
         # 3. Create Artifact
         artifact = ModelArtifact(
+        artifact_id=f"gemini-{__import__('uuid').uuid4()}",
             model_id=response["model_used"],
             weights_hash="distilled-lora-context",
             embedding_dim=64, # Matches TensorField default
