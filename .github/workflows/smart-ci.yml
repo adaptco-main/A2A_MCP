@@ -3,6 +3,9 @@
 
 name: Smart CI (Conditional)
 permissions:
+permissions:
+  contents: read
+
   contents: read
 
 on:
