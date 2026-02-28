@@ -36,7 +36,7 @@ except ImportError:
         is_drifting: bool = False
 
     class SupraDriftModel:
-        def calculate_drift(self, velocity: float, steering: float) -> DriftState:
+        def calculate_drift(self, velocity: float, steering: float = 0.0) -> DriftState:
             if velocity <= 0:
                 return DriftState()
             drift_score = min(abs(steering) * velocity / 50.0, 1.0)

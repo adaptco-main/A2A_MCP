@@ -36,6 +36,11 @@ class GhostVoidSpoke(SpokeAdapter):
             "grid_pos": (5, 5),
             "similarity": 0.0
         }
+
+    def __str__(self):
+        if self.process:
+            return f"GhostVoidSpoke: Connected to Engine at {self.binary_path}"
+        return "GhostVoidSpoke: Connected to PhaseSpaceTick (Python Simulation)."
     def _start_subprocess(self):
         """Spawn the C++ engine process."""
         try:
