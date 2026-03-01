@@ -32,34 +32,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="A2A Orchestrator API", version="1.0.0")
 app.include_router(ingress_router)
 app.include_router(actions_router)
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
 app.include_router(workflow_router)
->>>>>>> Stashed changes
-=======
-app.include_router(workflow_router)
->>>>>>> Stashed changes
-=======
-app.include_router(workflow_router)
->>>>>>> Stashed changes
-=======
-app.include_router(workflow_router)
->>>>>>> Stashed changes
-=======
-app.include_router(workflow_router)
->>>>>>> Stashed changes
-=======
-app.include_router(workflow_router)
->>>>>>> Stashed changes
-=======
-app.include_router(workflow_router)
->>>>>>> Stashed changes
 
 
 @app.get("/healthz")
