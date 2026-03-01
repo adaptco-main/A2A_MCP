@@ -4,8 +4,39 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
     Column, String, Text, DateTime, Float, Boolean, JSON, Integer, 
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+    LargeBinary, BigInteger, PrimaryKeyConstraint
+=======
+>>>>>>> 6932ba103d4188564ddd391c3aa1c2413daed0c6
     LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
     LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+=======
+    LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
+>>>>>>> Stashed changes
+=======
+    LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
+>>>>>>> Stashed changes
+=======
+    LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
+>>>>>>> Stashed changes
+=======
+    LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
+>>>>>>> Stashed changes
+=======
+    LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
+>>>>>>> Stashed changes
+>>>>>>> 6932ba103d4188564ddd391c3aa1c2413daed0c6
 )
 from sqlalchemy.orm import declarative_base
 
