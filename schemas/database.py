@@ -6,7 +6,11 @@ from sqlalchemy import (
     Column, String, Text, DateTime, Float, Boolean, JSON, Integer, 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     LargeBinary, BigInteger, PrimaryKeyConstraint
+=======
+    LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
+>>>>>>> Stashed changes
 =======
     LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
 >>>>>>> Stashed changes
