@@ -3,8 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from sqlalchemy import (
-    Column, String, Text, DateTime, Float, Boolean, JSON, Integer, 
-    LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
+    Column, String, Text, DateTime, Float, Boolean, JSON, Integer,
     LargeBinary, BigInteger, PrimaryKeyConstraint, UniqueConstraint, Index, ForeignKey
 )
 from sqlalchemy.orm import declarative_base
@@ -285,7 +284,7 @@ class StructuralGapModel(Base):
     report_id = Column(String, nullable=True)
 
     def __repr__(self):
-        return f"<StructuralGap(id={self.gap_id}, {self.source_component}→{self.target_component})>"
+        return f"<StructuralGap(id={self.gap_id}, {self.source_component}ΓåÆ{self.target_component})>"
 
 
 class TransformerDiffModel(Base):
