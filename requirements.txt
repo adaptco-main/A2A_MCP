@@ -1,13 +1,1 @@
-sqlalchemy
-psycopg2-binary
-pydantic
-pytest
-pytest-asyncio
-python-dotenv
-mcp[cli]
-fastapi
-uvicorn
-httpx
-fastmcp
-requests
-jsonschema
+.[dev,integrations]
