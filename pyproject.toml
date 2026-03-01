@@ -49,5 +49,5 @@ exclude = ["tests*", ".venv*", "node_modules*", "build*", "dist*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-pythonpath = ["src", "."]
+pythonpath = ["src", ".", "ghost-void"]
 addopts = "-q --doctest-modules --ignore=tests/test_a2a_mcp.py --ignore=tests/test_canonical_json.py --ignore=tests/test_drift_gate.py --ignore=pipeline/replay_test.py"
