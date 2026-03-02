@@ -1,0 +1,11 @@
+a2a_mcp
+agents
+app
+core_orchestrator
+drift_suite
+integrations
+mcp_adk
+orchestrator
+prime_directive
+rbac
+schemas
