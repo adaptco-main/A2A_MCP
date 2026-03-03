@@ -2,16 +2,17 @@ sqlalchemy
 psycopg2-binary
 pydantic
 pydantic-settings
-PyJWT
 python-dotenv
 fastapi
 uvicorn
 httpx
 requests
-jsonschema
+jsonschema<5,>=4.18.0
 mcp[cli]
+fastmcp
 numpy>=1.24
 scipy
+PyJWT
 
 [auth]
 
@@ -20,8 +21,8 @@ pytest
 pytest-asyncio
 
 [integrations]
-aiohttp
-pynacl
+aiohttp<4,>=3.8
+pynacl<2,>=1.5
 google-generativeai
 pandas
 matplotlib
