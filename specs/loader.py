@@ -31,7 +31,7 @@ class SpecsLoader:
             )
 
         try:
-            with open(spec_file, "r", encoding="utf-8") as f:
+            with open(spec_file, "r") as f:
                 specs = yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in supra_specs.yaml: {e}")
@@ -53,7 +53,7 @@ class SpecsLoader:
             )
 
         try:
-            with open(criteria_file, "r", encoding="utf-8") as f:
+            with open(criteria_file, "r") as f:
                 criteria = yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in judge_criteria.yaml: {e}")
@@ -75,7 +75,7 @@ class SpecsLoader:
             )
 
         try:
-            with open(map_file, "r", encoding="utf-8") as f:
+            with open(map_file, "r") as f:
                 world_map = yaml.safe_load(f)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in base44_map.yaml: {e}")
@@ -120,11 +120,22 @@ class SpecsLoader:
         presets = tuning.get("presets", {})
         preset = presets.get(preset_name, {})
 
-        # Convert preset weights
+        # Convert preset weights (mapping long names to short internal keys if needed)
         weights = {}
-        for key in ["safety", "spec", "intent", "latency"]:
+        mapping = {
+            "safety": "safety",
+            "spec": "spec",
+            "spec_alignment": "spec",
+            "intent": "intent",
+            "player_intent": "intent",
+            "latency": "latency"
+        }
+        
+        for key in ["safety", "spec", "intent", "latency", "spec_alignment", "player_intent"]:
             weight_key = f"{key}_weight"
-            weights[key] = preset.get(weight_key, 1.0)
+            if weight_key in preset:
+                internal_key = mapping.get(key, key)
+                weights[internal_key] = preset.get(weight_key, 1.0)
 
         return weights
 
