@@ -3,21 +3,23 @@ from __future__ import annotations
 from fastapi import FastAPI, WebSocket
 from starlette.websockets import WebSocketDisconnect
 
+from prime_directive.api.schemas import HealthResponse
+from prime_directive.pipeline.context import PipelineContext
 from prime_directive.pipeline.engine import PipelineEngine
 
 app = FastAPI(title="PRIME_DIRECTIVE")
-_engine = PipelineEngine()
+_engine = PipelineEngine(PipelineContext(run_id="bootstrap"))
 
 
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(**_engine.health())
 
 
 @app.websocket("/ws/pipeline")
 async def pipeline_ws(websocket: WebSocket) -> None:
     await websocket.accept()
+    # Note: Using _engine instead of engine to match local variable name
     await websocket.send_json({"type": "state.transition", "state": _engine.get_state().value})
 
     try:

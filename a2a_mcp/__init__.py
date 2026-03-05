@@ -1,31 +1,42 @@
-"""Core MCP package for shared protocol logic with tenant isolation."""
+"""Core MCP package exports with lazy loading for optional modules."""
 
-from a2a_mcp.mcp_core import MCPCore, MCPResult
+from __future__ import annotations
 
-try:
-    from a2a_mcp.client_token_pipe import (
-        ClientTokenPipe,
-        ClientTokenPipeContext,
-        ContaminationError,
-        InMemoryEventStore,
-    )
-except ModuleNotFoundError:
-    ClientTokenPipe = None
-    ClientTokenPipeContext = None
-    ContaminationError = None
-    InMemoryEventStore = None
+from typing import Any
 
 __all__ = [
     "MCPCore",
     "MCPResult",
+    "ClientTokenPipe",
+    "ClientTokenContext",
+    "ClientTokenPipeContext",
+    "ContaminationError",
+    "InMemoryEventStore",
 ]
 
-if ClientTokenPipe is not None:
-    __all__.extend(
-        [
-            "ClientTokenPipe",
-            "ClientTokenPipeContext",
-            "ContaminationError",
-            "InMemoryEventStore",
-        ]
-    )
+
+def __getattr__(name: str) -> Any:
+    if name in {"MCPCore", "MCPResult"}:
+        from a2a_mcp import mcp_core as _mcp_core
+
+        return getattr(_mcp_core, name)
+
+    if name in {
+        "ClientTokenPipe",
+        "ClientTokenContext",
+        "ClientTokenPipeContext",
+        "ContaminationError",
+        "InMemoryEventStore",
+    }:
+        from a2a_mcp import client_token_pipe as _client_token_pipe
+
+        if name == "ClientTokenPipeContext":
+            return getattr(_client_token_pipe, "ClientTokenContext")
+        return getattr(_client_token_pipe, name)
+
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)
+
