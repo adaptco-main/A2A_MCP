@@ -141,6 +141,7 @@ jobs:
           context: .
           file: ${{ steps.dockerfile.outputs.file }}
           push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: |
             ${{ env.LOCAL_IMAGE }}
           cache-from: type=local,src=/tmp/.buildx-cache

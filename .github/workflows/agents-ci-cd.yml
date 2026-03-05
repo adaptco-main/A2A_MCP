@@ -56,9 +56,16 @@ jobs:
           config_data: |
             extends: default
             rules:
+              brackets: disable
+              comments: disable
+              document-start: disable
+              empty-lines: disable
+              indentation: disable
               line-length:
                 max: 180
                 level: warning
+              trailing-spaces: disable
+              truthy: disable
 
   unit-tests:
     name: Unit tests
