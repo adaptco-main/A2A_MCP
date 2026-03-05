@@ -1,7 +1,12 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
     MONDAY_TOKEN: str = ""
     MONDAY_BOARD_ID: int = 0
     AIRTABLE_API_KEY: str = ""
@@ -14,10 +19,6 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_ENDPOINT: str = ""
     LLM_MODEL: str = ""
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 settings = Settings()
