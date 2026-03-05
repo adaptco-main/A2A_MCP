@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
           registry-url: 'https://registry.npmjs.org'
       - name: Configure @world-os package access
         shell: bash
@@ -69,7 +71,7 @@ jobs:
             print(f"Updated {changed} package manifest(s) for @world-os workspace fallback.")
             PY
           fi
-      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm install --frozen-lockfile --ignore-scripts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm run build

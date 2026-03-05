@@ -78,3 +78,12 @@ Use the smallest command set needed for the files you touched.
 - If a subproject has unique workflows, add a nested `AGENTS.md` in that directory.
 - The nearest `AGENTS.md` to a file takes precedence for that file.
 - Use nested files to document package-specific build/test commands, deployment steps, and local constraints (datasets, infra dependencies, etc.).
+
+<!-- avatar-engine:auto:start -->
+## Avatar-Engine Production Pipeline
+
+- Use `.github/workflows/avatar-engine.yml` as the production artifact pipeline.
+- The scheduled upskill job regenerates `skills/SKILL.md`, syncs docs, and opens/updates a PR automatically.
+- Auto-merge is configured in safe mode only (`gh pr merge --auto --squash`) and depends on green required checks.
+- Secrets are consumed from GitHub Actions secrets only (not plaintext files): `AVATAR_ENGINE_AUTOMATION_PAT`.
+<!-- avatar-engine:auto:end -->
