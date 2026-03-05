@@ -74,9 +74,13 @@ def ingest_worldline_block(worldline_block: dict[str, Any], authorization: str, 
     if repository and claims.get("repository") and claims["repository"] != repository:
         return f"error: repository claim mismatch (request_id={correlation_id})"
 
-    infra = worldline_block.get("infrastructure", {})
+    infra = worldline_block.get("infrastructure")
+    if infra is None:
+        infra = worldline_block.get("infrastructure_agent")
+    if not isinstance(infra, dict):
+        return f"error: missing required fields: infrastructure (request_id={correlation_id})"
     if not infra.get("token_stream"):
-        return f"error: missing token_stream (request_id={correlation_id})"
+        return f"error: missing required fields: token_stream (request_id={correlation_id})"
 
     return (
         f"success: ingested worldline block for {repository or 'unknown-repository'} "
