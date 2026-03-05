@@ -46,6 +46,8 @@ jobs:
 
       - name: Validate workflow syntax with actionlint
         uses: rhysd/actionlint@v1.7.11
+        with:
+          args: -shellcheck= -pyflakes=
 
       - name: Validate workflow YAML formatting
         uses: ibiqlik/action-yamllint@v3

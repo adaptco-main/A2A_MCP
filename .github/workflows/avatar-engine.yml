@@ -45,15 +45,7 @@ jobs:
 
       - name: Validate workflow YAML files
         run: |
-          python - <<'PY'
-          import pathlib
-          import yaml
-
-          for wf in pathlib.Path(".github/workflows").glob("*.y*ml"):
-              with wf.open("r", encoding="utf-8") as handle:
-                  yaml.safe_load(handle)
-          print("Workflow YAML validation complete.")
-          PY
+          python -c "import pathlib,yaml; [yaml.safe_load(p.read_text(encoding='utf-8')) for p in pathlib.Path('.github/workflows').glob('*.y*ml')]; print('Workflow YAML validation complete.')"
 
   quality:
     runs-on: ubuntu-latest
@@ -106,40 +98,7 @@ jobs:
               echo "always-auth=true"
             } >> .npmrc
           else
-            python - <<'PY'
-            import glob
-            import json
-            patterns = [
-                "apps/*/package.json",
-                "packages/*/package.json",
-                "ui/**/package.json",
-                "api/**/package.json",
-                "tools/**/package.json",
-            ]
-            changed = 0
-            for pattern in patterns:
-                for path in glob.glob(pattern, recursive=True):
-                    try:
-                        with open(path, "r", encoding="utf-8") as handle:
-                            data = json.load(handle)
-                    except Exception:
-                        continue
-                    dirty = False
-                    for section in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
-                        deps = data.get(section)
-                        if not isinstance(deps, dict):
-                            continue
-                        for name, value in list(deps.items()):
-                            if name.startswith("@world-os/") and not str(value).startswith("workspace:"):
-                                deps[name] = "workspace:*"
-                                dirty = True
-                    if dirty:
-                        with open(path, "w", encoding="utf-8") as handle:
-                            json.dump(data, handle, indent=2)
-                            handle.write("\n")
-                        changed += 1
-            print(f"Updated {changed} package manifest(s) for workspace fallback.")
-            PY
+            python scripts/rewrite_world_os_workspace_deps.py --repo-root .
           fi
 
       - name: Node install + lint + build
@@ -174,10 +133,14 @@ jobs:
           echo "RECEIPT=$RECEIPT" >> "$GITHUB_ENV"
 
       - name: Optional receipt signing
-        if: ${{ secrets.PIPELINE_SIGNING_KEY != '' && hashFiles('scripts/sign_receipt.py') != '' }}
         env:
           PIPELINE_SIGNING_KEY: ${{ secrets.PIPELINE_SIGNING_KEY }}
-        run: python scripts/sign_receipt.py "$RECEIPT"
+        run: |
+          if [ -n "${PIPELINE_SIGNING_KEY:-}" ] && [ -f scripts/sign_receipt.py ]; then
+            python scripts/sign_receipt.py "$RECEIPT"
+          else
+            echo "Signing key or signer script missing; skipping optional signing."
+          fi
 
       - name: Upload pipeline artifacts
         uses: actions/upload-artifact@v4
