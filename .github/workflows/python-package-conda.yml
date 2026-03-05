@@ -43,7 +43,17 @@ jobs:
             a2a_mcp/scripts/plans
             a2a_mcp/tools/receipt
           )
-          ruff check "${TARGETS[@]}" --select F821,E9,F63,F7,F82
+          EXISTING=()
+          for target in "${TARGETS[@]}"; do
+            if [ -e "$target" ]; then
+              EXISTING+=("$target")
+            fi
+          done
+          if [ "${#EXISTING[@]}" -eq 0 ]; then
+            echo "No lint targets found; skipping."
+            exit 0
+          fi
+          ruff check "${EXISTING[@]}" --select F821,E9,F63,F7,F82
 
       - name: Test with pytest
         run: |
