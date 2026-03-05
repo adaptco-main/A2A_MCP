@@ -456,8 +456,7 @@ def build_projects_graph(roots: Sequence[str], *, scope: str = "agent-mcp") -> d
                 "name": workflow.name,
                 "file_path": workflow.file_path,
                 "triggers": list(workflow.triggers),
-                # NOTE: Intentionally omit raw secrets from persisted artifacts to avoid
-                # clear-text storage of sensitive information.
+                "required_secrets": list(workflow.secrets),
                 "tags": list(workflow.tags),
                 "mcp_a2a_steps": workflow_mcp_steps,
             }
