@@ -113,8 +113,8 @@ jobs:
 
       - name: Validate event log
         run: |
-          jq -e 'any(.event=="ci.step.start" and .step=="build")' events.ndjson >/dev/null
-          jq -e 'any(.event=="ci.step.end"   and .step=="build")' events.ndjson >/dev/null
+          jq -s -e 'any(.[]; .event=="ci.step.start" and .step=="build")' events.ndjson >/dev/null
+          jq -s -e 'any(.[]; .event=="ci.step.end"   and .step=="build")' events.ndjson >/dev/null
 
       - name: Upload events.ndjson
         uses: actions/upload-artifact@v4

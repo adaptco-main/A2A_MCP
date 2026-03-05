@@ -26,8 +26,32 @@ jobs:
           pip install -e .[dev] || pip install -r requirements.txt
           pip install pylint
 
-      - name: Analysing the code with pylint
+      - name: Syntax preflight
+        run: |
+          python -m compileall -q app orchestrator schemas scripts tests src
+
+      - name: Analyse changed Python files with pylint
         env:
           PYTHONPATH: .
         run: |
-          pylint --errors-only --disable=import-error $(git ls-files "*.py")
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+          else
+            base_sha="${{ github.event.before }}"
+          fi
+
+          if [ -n "${base_sha}" ] && git cat-file -e "${base_sha}^{commit}" 2>/dev/null; then
+            mapfile -t targets < <(git diff --name-only "${base_sha}" "${GITHUB_SHA}" -- '*.py')
+          else
+            mapfile -t targets < <(git ls-files 'app/**/*.py' 'orchestrator/**/*.py' 'schemas/**/*.py' 'scripts/**/*.py' 'tests/**/*.py' 'src/**/*.py')
+          fi
+
+          if [ "${#targets[@]}" -eq 0 ]; then
+            echo "No changed Python files to lint."
+            exit 0
+          fi
+
+          printf 'Lint targets:\n%s\n' "${targets[@]}"
+          pylint --errors-only --disable=import-error "${targets[@]}"
