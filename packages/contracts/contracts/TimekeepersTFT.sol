@@ -30,7 +30,7 @@ contract TimekeepersTFT is ERC721Enumerable, AccessControl {
     }
 
     function provenance(uint256 tokenId) external view returns (Provenance memory) {
-        require(_exists(tokenId), "missing");
+        require(_ownerOf(tokenId) != address(0), "missing");
         return _provenanceById[tokenId];
     }
 

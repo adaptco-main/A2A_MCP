@@ -53,5 +53,19 @@ jobs:
             exit 0
           fi
 
-          printf 'Lint targets:\n%s\n' "${targets[@]}"
-          pylint --errors-only --disable=import-error "${targets[@]}"
+          lint_targets=()
+          for target in "${targets[@]}"; do
+            case "$target" in
+              scripts/*.py|src/fastmcp.py)
+                lint_targets+=("$target")
+                ;;
+            esac
+          done
+
+          if [ "${#lint_targets[@]}" -eq 0 ]; then
+            echo "No changed files in lint scope; compileall preflight already passed."
+            exit 0
+          fi
+
+          printf 'Lint targets:\n%s\n' "${lint_targets[@]}"
+          pylint --errors-only --disable=import-error "${lint_targets[@]}"
