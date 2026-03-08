@@ -14,9 +14,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  merge-marker-guard:
+    name: Merge Marker Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.8"
+
+      - name: Fail on unresolved merge markers
+        run: python scripts/check_merge_conflicts.py --root .
+
   behavior:
     name: Behavior Validator
     runs-on: ubuntu-latest
+    needs: merge-marker-guard
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,6 +111,7 @@ jobs:
   workspace-install:
     name: Install Workspace Dependencies
     runs-on: ubuntu-latest
+    needs: merge-marker-guard
     steps:
       - uses: actions/checkout@v4
 
