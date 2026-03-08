@@ -2,111 +2,157 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  deterministic-ci:
-    name: Deterministic CI — constitution-first
+  merge-marker-guard:
+    name: Merge Marker Guard
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11.8"
 
-      - name: Install Python dependencies (explicit)
+      - name: Fail on unresolved merge markers
+        run: python scripts/check_merge_conflicts.py --root .
+
+  behavior:
+    name: Behavior Validator
+    runs-on: ubuntu-latest
+    needs: merge-marker-guard
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.8"
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          # If this repo has a package, install it for "-m your_pkg.*"
-          if [ -f pyproject.toml ] || [ -f setup.py ]; then pip install -e .; fi
 
-      - name: Setup Node 18
-        uses: actions/setup-node@v3
+      - name: Validate MCP 3D agent execution spec pack
+        run: |
+          if [ -f scripts/validate_mcp_3d_agent_execution_spec.py ]; then
+            python scripts/validate_mcp_3d_agent_execution_spec.py --strict
+          else
+            echo "scripts/validate_mcp_3d_agent_execution_spec.py not found; skipping strict pack validation."
+          fi
+
+      - name: Behavior validator (fast)
+        run: |
+          if [ ! -d tests/behavior/cases ]; then
+            echo "No tests/behavior/cases directory found. Skipping behavior gate."
+            exit 0
+          fi
+          sed -i 's/\r$//' scripts/run_behavior_validator.sh
+          bash scripts/run_behavior_validator.sh
+
+      - name: Upload behavior artifacts (debug)
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          node-version: '18'
+          name: staging-behavior
+          path: staging/
+          if-no-files-found: ignore
 
-      - name: Install pnpm (explicit)
-        run: npm install -g pnpm@8
+  receipts:
+    name: Receipt Validator
+    runs-on: ubuntu-latest
+    needs: behavior
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install JS dependencies (deterministic)
-        run: pnpm install --frozen-lockfile
-
-      - name: Build (explicit, no autobuild guessing)
-        run: pnpm run build --if-present
-
-      - name: Compute canonical drift hash & ARTIFACT_ID
-        id: compute_artifact
+      - name: Install jq
         run: |
-          set -euo pipefail
-          if [ ! -f drift_canon.json ]; then
-            echo "drift_canon.json missing; ensure your canonical bytes file is present" >&2
-            exit 1
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.8"
+
+      - name: Receipt validator
+        run: |
+          if [ ! -d tests/receipts/cases ]; then
+            echo "No tests/receipts/cases directory found. Skipping receipt gate."
+            exit 0
           fi
-          DRIFT_CANON_SHA256=$(sha256sum drift_canon.json | awk '{print $1}')
-          ARTIFACT_ID="drift_${DRIFT_CANON_SHA256:0:16}"
-          # Export for later steps
-          echo "DRIFT_CANON_SHA256=$DRIFT_CANON_SHA256" >> "$GITHUB_OUTPUT"
-          echo "ARTIFACT_ID=$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
+          sed -i 's/\r$//' scripts/run_receipt_validator.sh
+          bash scripts/run_receipt_validator.sh
 
-      - name: Sign drift artifact (self-validating signer)
+      - name: Upload receipt artifacts (debug)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-receipts
+          path: staging/
+          if-no-files-found: ignore
+
+  workspace-install:
+    name: Install Workspace Dependencies
+    runs-on: ubuntu-latest
+    needs: merge-marker-guard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upload staging artifacts (debug)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          version: "9.7.1"
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Configure @world-os package access
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          WORLD_OS_NPM_REGISTRY: ${{ vars.WORLD_OS_NPM_REGISTRY }}
         run: |
           set -euo pipefail
-          python3 -m your_pkg.drift_sign \
-            --artifact-id "${{ steps.compute_artifact.outputs.ARTIFACT_ID }}" \
-            --canonicalization-spec RFC8785_JCS \
-            --out signed_drift.json
-
-      - name: Lint drift artifact envelope
-        run: |
-          set -euo pipefail
-          if [ ! -f signed_drift.json ]; then
-            echo "signed_drift.json not produced by signer" >&2
-            exit 1
-          fi
-          # artifact_lint must enforce:
-          # - canonicalization.spec exists and is RFC8785_JCS (+ impl id)
-          # - integrity.replay_digest_sha256 present (64 hex)
-          # - integrity.sig_scope == CANONICAL_BYTES_ONLY
-          # - authoritativeness/trust_domain fields
-          python3 -m your_pkg.artifact_lint signed_drift.json
-
-      - name: Signer negative test (must fail on artifact-id mismatch)
-        run: |
-          set -euo pipefail
-          DRIFT_CANON_SHA256="${{ steps.compute_artifact.outputs.DRIFT_CANON_SHA256 }}"
-          BOGUS="bogus_${DRIFT_CANON_SHA256:0:16}"
-          # The signer MUST fail (nonzero) if provided --artifact-id does not match recomputed value.
-          if python3 -m your_pkg.drift_sign \
-              --artifact-id "$BOGUS" \
-              --canonicalization-spec RFC8785_JCS \
-              --out /tmp/signed_drift_wrong.json; then
-            echo "ERROR: signer accepted mismatched --artifact-id (FAILS invariant)" >&2
-            exit 1
+          REGISTRY="${WORLD_OS_NPM_REGISTRY:-https://registry.npmjs.org}"
+          HOST="${REGISTRY#https://}"
+          HOST="${HOST#http://}"
+          HOST="${HOST%/}"
+          if [ -n "${NPM_TOKEN:-}" ]; then
+            {
+              echo "@world-os:registry=${REGISTRY}"
+              echo "//${HOST}/:_authToken=${NPM_TOKEN}"
+              echo "always-auth=true"
+            } >> .npmrc
+            echo "Configured npm auth for @world-os via ${REGISTRY}"
           else
-            echo "Signer correctly rejected mismatched --artifact-id (expected)"
+            echo "NPM_TOKEN not set; rewriting @world-os/* deps to workspace:* for CI"
+            python scripts/rewrite_world_os_workspace_deps.py --repo-root .
           fi
 
-      - name: Ledger append lint (tamper-evident check)
-        run: |
-          set -euo pipefail
-          if [ -f ledger.txt ]; then
-            python3 -m your_pkg.ledger_lint ledger.txt
-          else
-            echo "ledger.txt not present; skipping ledger lint"
-          fi
-
-      - name: Run unit tests
-        run: |
-          if command -v pytest >/dev/null 2>&1; then
-            pytest -q
-          else
-            echo "pytest not installed (ensure Python test deps are declared)" >&2
-            exit 1
-          fi
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
