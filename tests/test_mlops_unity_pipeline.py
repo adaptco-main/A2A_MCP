@@ -3,7 +3,9 @@ import importlib.util
 import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from datetime import datetime, timedelta, timezone
 
+# Dynamic import to support local execution environments
 module_path = Path(__file__).resolve().parents[1] / 'mlops_unity_pipeline.py'
 spec = importlib.util.spec_from_file_location('mlops_unity_pipeline', module_path)
 mlops = importlib.util.module_from_spec(spec)
@@ -15,6 +17,8 @@ RLTrainingConfig = mlops.RLTrainingConfig
 TrainingJob = mlops.TrainingJob
 UnityAssetSpec = mlops.UnityAssetSpec
 UnityMLOpsOrchestrator = mlops.UnityMLOpsOrchestrator
+TrainingSchedule = getattr(mlops, 'TrainingSchedule', None)
+TrainingScheduler = getattr(mlops, 'TrainingScheduler', None)
 
 
 def test_offline_training_writes_dataset_path() -> None:
@@ -70,3 +74,43 @@ def test_offline_training_requires_dataset() -> None:
 
         assert result.status == "failed"
         assert "offline_dataset_path is required" in (result.error or "")
+
+
+def _schedule() -> TrainingSchedule:
+    return TrainingSchedule(
+        schedule_id="nightly-training",
+        cron_expression="0 2 * * *",
+        asset_specs=[
+            UnityAssetSpec(
+                asset_id="asset-001",
+                name="PatrolAgent",
+                asset_type="behavior",
+                description="Patrol between waypoints",
+            )
+        ],
+        rl_config=RLTrainingConfig(),
+    )
+
+
+def test_is_due_runs_immediately_when_no_checkpoint(tmp_path, monkeypatch):
+    if not TrainingScheduler: return
+    monkeypatch.chdir(tmp_path)
+    scheduler = TrainingScheduler(UnityMLOpsOrchestrator())
+    schedule = _schedule()
+
+    now = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
+
+    assert scheduler._is_due(schedule, now) is True
+
+
+def test_is_due_respects_checkpoint_after_first_run(tmp_path, monkeypatch):
+    if not TrainingScheduler: return
+    monkeypatch.chdir(tmp_path)
+    scheduler = TrainingScheduler(UnityMLOpsOrchestrator())
+    schedule = _schedule()
+
+    now = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
+    assert scheduler._is_due(schedule, now) is True
+
+    before_next_cron = now + timedelta(hours=1)
+    assert scheduler._is_due(schedule, before_next_cron) is False

@@ -1,5 +1,9 @@
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
 redis==5.2.0
+<<<<<<< HEAD
 python-multipart==0.0.22
+=======
+python-multipart==0.0.12
+>>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
 pydantic==2.10.0

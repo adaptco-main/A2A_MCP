@@ -1,11 +1,16 @@
 {
 <<<<<<< HEAD
+<<<<<<< HEAD
   "$schema": "https://adk.io/schemas/v0/gate_policy.schema.json",
   "gate_id": "ad048f68-cdf6-46ac-b528-d63752ad79f5",
 =======
   "$schema": "../../../../adk/schemas/gate_policy.schema.json",
   "gate_id": "de72b97c-29c5-4d20-8327-17bf549268e7",
 >>>>>>> 4bf7736cec939ba8771f9f681f687e22e047dd4e
+=======
+  "$schema": "https://adk.io/schemas/v0/gate_policy.schema.json",
+  "gate_id": "ad048f68-cdf6-46ac-b528-d63752ad79f5",
+>>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
   "allowed_roles": [
     "coder",
     "architect",
@@ -28,4 +33,8 @@
     }
   ],
   "enforcement_level": "strict"
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
