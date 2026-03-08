@@ -1,32 +1,32 @@
-[![Pylint](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml)
+# A2A_MCP - Autonomous Agent Architecture with Model Context Protocol
 
-# A2A MCP - Autonomous Agent Architecture with Model Context Protocol
-
+[![CI](https://github.com/adaptco-main/A2A_MCP/actions/workflows/agents-ci-cd.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/agents-ci-cd.yml)
 [![Pylint](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml/badge.svg)](https://github.com/adaptco-main/A2A_MCP/actions/workflows/pylint.yml)
+[![World OS CI](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/Q-Enterprises/core-orchestrator/actions/workflows/ci.yml)
+
+A production-grade multi-agent AI orchestration framework that implements a self-healing architecture with Model Context Protocol (MCP) support.
+
+## Canonical Control Plane
+
+The canonical runtime path is:
+
+- `orchestrator.api:app` (orchestration API, port `8000`)
+- `app.mcp_gateway:app` (MCP gateway, port `8080`)
+- `rbac.rbac_service:app` (RBAC gateway, port `8001`)
+
+Compatibility entrypoints are still present for legacy integrations:
+
+- `orchestrator.main` (legacy healing-loop runner)
+- `app.main` (legacy middleware app)
+- `mcp_server.py` (stdio MCP compatibility server)
+
+See `docs/architecture/canonical_control_plane.md` for the source-of-truth architecture map.
 
 ## Overview
 
-A2A_MCP is a multi-agent AI orchestration framework that implements a self-healing architecture with Model Context Protocol (MCP) support. The system uses a kernel-based design with an orchestrator at its core.
+A2A_MCP delivers the Synapse digital twin, Chrono-Sync protocol, and World OS kernel, running under a single Docker Compose stack for local and CI environments. It features a self-healing multi-agent pipeline (Orchestrator, Coder, Tester, Researcher) and implements its own Model Context Protocol (MCP) server.
 
-**System Prompt Context:**
-Act as a Multimodal LoRA Embedding Agent. Your objective is to map this repository's linear logic into d=1536 dimensional vector space tensors.
-
-### Core Model Context
-- **Handshake**: OIDC + Google Cloud WIF
-- **Persistence**: SQLAlchemy + Pydantic Artifacts
-- **Logic**: Self-healing feedback loops (Tester v2 → Coder v2)
-
-### Retrieval Routine
-1. Process raw .py artifacts into hierarchical nodes
-2. Tag nodes with OIDC Provenance (actor, repo, commit)
-3. Execute Cosine Similarity arbitration for cross-agent tool calls
-
-### Invariant
-Ensure all training data is cryptographically bound to verified GitHub OIDC claims to prevent knowledge store poisoning.
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -53,90 +53,79 @@ Ensure all training data is cryptographically bound to verified GitHub OIDC clai
 └────────────────────────────────────────────────────────────┘
 ```
 
----
-
 ## 🏗️ Project Structure
 
 ### Kernel Module (Orchestration Core)
-```
-orchestrator/              [Core kernel]
-├── main.py               [MCPHub - entry point & healing loop]
-├── intent_engine.py      [5-agent pipeline orchestrator]
-├── storage.py            [DBManager + SessionLocal + init_db]
-├── stateflow.py          [FSM state machine controller]
-├── webhook.py            [FastAPI ingress endpoints]
-├── judge_orchestrator.py [Judge + Avatar integration]
-├── telemetry_*.py        [Diagnostic & telemetry subsystem]
-├── llm_util.py           [LLM service wrapper]
-├── scheduler.py          [Task scheduling]
-├── utils.py              [Helper years functions]
-└── __init__.py           [Public module API]
-```
+
+- **orchestrator/api.py**: Canonical FastAPI orchestration API.
+- **orchestrator/intent_engine.py**: 5-agent pipeline coordinator.
+- **orchestrator/stateflow.py**: Thread-safe FSM with Prime Directive states.
+- **orchestrator/storage.py**: DB persistence layer (SQLAlchemy).
+- **orchestrator/webhook.py**: Legacy ingress compatibility routes mounted by API.
 
 ### Agent Swarm
-```
-agents/                    [Specialized agents]
-├── managing_agent.py      [High-level orchestration]
-├── orchestration_agent.py [Workflow coordination]
-├── architecture_agent.py  [System design]
-├── coder.py               [Code generation]
-├── tester.py              [Quality validation]
-├── researcher.py          [Research & analysis]
-└── __init__.py            [Agent exports]
-```
 
-### Data Contracts & Models
-```
-schemas/                   [Data model definitions]
-├── agent_artifacts.py     [MCPArtifact contracts]
-├── database.py            [SQLAlchemy ORM models]
-├── game_model.py          [Game engine domain models]
-├── project_plan.py        [Planning contracts]
-├── telemetry.py           [Diagnostic models]
-├── world_model.py         [World state models]
-└── __init__.py            [Schema exports]
-```
-
----
-
-## 🚀 Quick Start
-
-### Environment Setup
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### Run MCP Server
-```bash
-python mcp_server.py
-```
-
-### Run Tests
-```bash
-python -m pytest -q
-```
-
----
-
-## 📝 Key Components
-
-### Orchestrator (Core Kernel)
-- **MCPHub**: Main entry point implementing healing loop orchestration.
-- **IntentEngine**: 5-stage agent pipeline (Manager → Orchestrator → Architect → Coder → Tester).
-- **StateMachine**: FSM-based state management with persistence.
-- **TelemetryService**: Diagnostic tracking with DTCs and embeddings.
-
-### Agent System
 - **Managing Agent**: High-level task assignment.
 - **Orchestration Agent**: Workflow coordination.
 - **Architecture Agent**: System design decisions.
 - **Coder Agent**: Code generation.
 - **Tester Agent**: Quality assurance.
-- **Researcher**: Data analysis & research.
+- **PINN Agent**: Physics-informed neural network arbitration.
 
----
+### Data Contracts & Models
+
+- **schemas/agent_artifacts.py**: MCPArtifact contracts.
+- **schemas/database.py**: SQLAlchemy ORM models.
+- **schemas/project_plan.py**: Planning contracts.
+- **schemas/world_model.py**: World state models.
+
+## 🚀 Quick Start
+
+### Environment Setup
+
+```bash
+python -m venv .venv
+# Windows
+.\.venv\Scripts\Activate.ps1
+# Unix
+source .venv/bin/activate
+
+pip install .
+# Development tools (pytest stack)
+pip install .[dev]
+# Optional external integrations
+pip install .[integrations]
+# Legacy compatibility path
+pip install -r requirements.txt
+```
+
+`pyproject.toml` is the canonical source for package metadata and dependencies. `requirements.txt` is maintained as a thin wrapper for compatibility.
+
+`mcp_adk` contract/schema/template assets are packaged in wheel/sdist artifacts. The `auth` extra is a deprecated compatibility alias and is intentionally empty.
+
+### Run MCP Gateway (Canonical)
+
+```bash
+uvicorn app.mcp_gateway:app --reload --port 8080
+```
+
+### Start Orchestrator API (Canonical)
+
+```bash
+uvicorn orchestrator.api:app --reload --port 8000
+```
+
+### Start RBAC Gateway
+
+```bash
+uvicorn rbac.rbac_service:app --reload --port 8001
+```
+
+### Run Tests
+
+```bash
+pytest tests/ -v
+```
 
 ## 🔐 Security & Integrity
 
@@ -144,8 +133,15 @@ python -m pytest -q
 - **Knowledge Store Protection**: Cryptographic binding of training data.
 - **Artifact Provenance**: Complete audit trail with OIDC claims.
 
----
-
 ## 📄 License
 
-See [LICENSE](LICENSE) file for details.
+See [LICENSE](LICENSE).
+
+<!-- avatar-engine:auto:start -->
+## Avatar Engine Automation
+
+- Production pipeline: `.github/workflows/avatar-engine.yml`
+- Daily recursive upskill schedule: **09:00 America/New_York** (DST-safe schedule gate)
+- Catalog output refreshed by automation: `skills/SKILL.md`
+- Safe merge policy: auto-merge only when required checks are green and conflict-free
+<!-- avatar-engine:auto:end -->
