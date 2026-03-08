@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-"""Judge module for multi-criteria decision analysis."""
+"""Multi-criteria decision analysis (MCDA) for agent judgment."""
 
 from judge.decision import (
     JudgmentModel,
@@ -14,10 +13,3 @@ __all__ = [
     "DecisionCriteria",
     "CriteriaType",
 ]
-=======
-"""Multi-criteria decision analysis (MCDA) for agent judgment."""
-
-from judge.decision import JudgmentModel, DecisionCriteria, ActionScore
-
-__all__ = ["JudgmentModel", "DecisionCriteria", "ActionScore"]
->>>>>>> origin/main

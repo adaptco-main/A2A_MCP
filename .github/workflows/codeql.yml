@@ -1,0 +1,50 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '20 14 * * 1'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 18 (explicit for deterministic build)
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install pnpm (explicit)
+        run: npm install -g pnpm@8
+
+      - name: Install JS dependencies (deterministic)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (explicit, no autobuild)
+        run: pnpm run build --if-present
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      # Autobuild intentionally removed. Using explicit install/build above prevents
+      # CodeQL from guessing and avoids nondeterministic build paths.
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3

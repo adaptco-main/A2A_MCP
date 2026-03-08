@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  deterministic-ci:
+    name: Deterministic CI — constitution-first
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies (explicit)
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # If this repo has a package, install it for "-m your_pkg.*"
+          if [ -f pyproject.toml ] || [ -f setup.py ]; then pip install -e .; fi
+
+      - name: Setup Node 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install pnpm (explicit)
+        run: npm install -g pnpm@8
+
+      - name: Install JS dependencies (deterministic)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (explicit, no autobuild guessing)
+        run: pnpm run build --if-present
+
+      - name: Compute canonical drift hash & ARTIFACT_ID
+        id: compute_artifact
+        run: |
+          set -euo pipefail
+          if [ ! -f drift_canon.json ]; then
+            echo "drift_canon.json missing; ensure your canonical bytes file is present" >&2
+            exit 1
+          fi
+          DRIFT_CANON_SHA256=$(sha256sum drift_canon.json | awk '{print $1}')
+          ARTIFACT_ID="drift_${DRIFT_CANON_SHA256:0:16}"
+          # Export for later steps
+          echo "DRIFT_CANON_SHA256=$DRIFT_CANON_SHA256" >> "$GITHUB_OUTPUT"
+          echo "ARTIFACT_ID=$ARTIFACT_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Sign drift artifact (self-validating signer)
+        run: |
+          set -euo pipefail
+          python3 -m your_pkg.drift_sign \
+            --artifact-id "${{ steps.compute_artifact.outputs.ARTIFACT_ID }}" \
+            --canonicalization-spec RFC8785_JCS \
+            --out signed_drift.json
+
+      - name: Lint drift artifact envelope
+        run: |
+          set -euo pipefail
+          if [ ! -f signed_drift.json ]; then
+            echo "signed_drift.json not produced by signer" >&2
+            exit 1
+          fi
+          # artifact_lint must enforce:
+          # - canonicalization.spec exists and is RFC8785_JCS (+ impl id)
+          # - integrity.replay_digest_sha256 present (64 hex)
+          # - integrity.sig_scope == CANONICAL_BYTES_ONLY
+          # - authoritativeness/trust_domain fields
+          python3 -m your_pkg.artifact_lint signed_drift.json
+
+      - name: Signer negative test (must fail on artifact-id mismatch)
+        run: |
+          set -euo pipefail
+          DRIFT_CANON_SHA256="${{ steps.compute_artifact.outputs.DRIFT_CANON_SHA256 }}"
+          BOGUS="bogus_${DRIFT_CANON_SHA256:0:16}"
+          # The signer MUST fail (nonzero) if provided --artifact-id does not match recomputed value.
+          if python3 -m your_pkg.drift_sign \
+              --artifact-id "$BOGUS" \
+              --canonicalization-spec RFC8785_JCS \
+              --out /tmp/signed_drift_wrong.json; then
+            echo "ERROR: signer accepted mismatched --artifact-id (FAILS invariant)" >&2
+            exit 1
+          else
+            echo "Signer correctly rejected mismatched --artifact-id (expected)"
+          fi
+
+      - name: Ledger append lint (tamper-evident check)
+        run: |
+          set -euo pipefail
+          if [ -f ledger.txt ]; then
+            python3 -m your_pkg.ledger_lint ledger.txt
+          else
+            echo "ledger.txt not present; skipping ledger lint"
+          fi
+
+      - name: Run unit tests
+        run: |
+          if command -v pytest >/dev/null 2>&1; then
+            pytest -q
+          else
+            echo "pytest not installed (ensure Python test deps are declared)" >&2
+            exit 1
+          fi
