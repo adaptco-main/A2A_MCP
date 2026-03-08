@@ -58,7 +58,7 @@ class ArchitectureAgent:
             self.db.save_artifact(artifact)
 
             # Register in WorldModel via PINN
-            self.pinn.ingest_artifact(
+            await self.pinn.ingest_artifact(
                 artifact_id=artifact.artifact_id,
                 content=arch_content,
                 parent_id=plan.plan_id,

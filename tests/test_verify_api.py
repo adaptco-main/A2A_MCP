@@ -15,17 +15,6 @@ class FakeConn:
         return self.rows
 
 
-class FakeDB:
-    def __init__(self, conn):
-        self.conn = conn
-
-    async def __aenter__(self):
-        return self.conn
-
-    async def __aexit__(self, exc_type, exc, tb):
-        return False
-
-
 class FakeStore:
     def __init__(self, events):
         self.events = events
@@ -38,7 +27,7 @@ def _app_with(events):
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[get_tenant_id] = lambda: "tenant-a"
-    app.dependency_overrides[get_db_connection] = lambda: FakeDB(FakeConn([]))
+    app.dependency_overrides[get_db_connection] = lambda: FakeConn([])
     app.dependency_overrides[get_event_store] = lambda: FakeStore(events)
     return app
 
@@ -51,7 +40,7 @@ def test_verify_endpoint_returns_409_on_integrity_conflict():
         state=State.RUNNING.value,
         payload={"x": 1},
         hash_prev=None,
-        hash_current=compute_lineage(None, {"x": 1}),
+        hash_current=compute_lineage(None, State.RUNNING.value, {"x": 1}),
     )
     tampered = Event(
         id=2,
@@ -60,7 +49,7 @@ def test_verify_endpoint_returns_409_on_integrity_conflict():
         state=State.FINALIZED.value,
         payload={"x": 3},
         hash_prev=first.hash_current,
-        hash_current=compute_lineage(first.hash_current, {"x": 2}),
+        hash_current=compute_lineage(first.hash_current, State.FINALIZED.value, {"x": 2}),
     )
 
     client = TestClient(_app_with([first, tampered]))
@@ -80,7 +69,7 @@ def test_verify_endpoint_returns_200_when_valid():
         state=State.RUNNING.value,
         payload={"x": 1},
         hash_prev=None,
-        hash_current=compute_lineage(None, {"x": 1}),
+        hash_current=compute_lineage(None, State.RUNNING.value, {"x": 1}),
     )
     second = Event(
         id=2,
@@ -89,7 +78,7 @@ def test_verify_endpoint_returns_200_when_valid():
         state=State.FINALIZED.value,
         payload={"x": 2},
         hash_prev=first.hash_current,
-        hash_current=compute_lineage(first.hash_current, {"x": 2}),
+        hash_current=compute_lineage(first.hash_current, State.FINALIZED.value, {"x": 2}),
     )
 
     client = TestClient(_app_with([first, second]))
@@ -99,3 +88,18 @@ def test_verify_endpoint_returns_200_when_valid():
     payload = response.json()
     assert payload["valid"] is True
     assert payload["hash_head"] == second.hash_current
+
+
+def test_verify_endpoint_returns_503_when_database_url_not_configured(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    app = FastAPI()
+    app.include_router(router)
+
+    client = TestClient(app)
+    response = client.get("/v1/executions/exec-1/verify", headers={"x-tenant-id": "tenant-a"})
+
+    assert response.status_code == 503
+    # Note: In the implementation, if DATABASE_URL is missing, it raises HTTPException(503, detail="DATABASE_URL is not configured")
+    # But the test code above had "Database connection dependency is not configured". I'll align them.
+    assert response.json()["detail"] == "DATABASE_URL is not configured"

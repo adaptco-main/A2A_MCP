@@ -1,9 +1,2 @@
-sqlalchemy
-psycopg2-binary
-pydantic
-pytest
-pytest-asyncio
-python-dotenv
-mcp[cli]
-fastmcp
-requests
+# Compatibility wrapper: canonical dependencies are defined in pyproject.toml.
+.[dev,integrations]
