@@ -44,7 +44,7 @@ class MCPCore(nn.Module):
     
     def forward(self, namespaced_embedding: torch.Tensor) -> MCPResult:
         """Core protocol computations on isolated embedding"""
-        assert namespaced_embedding.shape == (1, 4096), "Expected namespaced [1, 4096] embedding"
+        assert namespaced_embedding.shape == (1, 4096)
         
         # 1. FEATURE EXTRACTION (shared, namespace-respecting)
         features = self.feature_extractor(namespaced_embedding)

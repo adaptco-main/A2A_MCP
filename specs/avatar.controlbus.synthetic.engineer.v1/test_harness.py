@@ -3,7 +3,7 @@ from .bytesampler_adapter import sample_covering_tree, digest_jcs
 
 def assert_eq(a: Any, b: Any, msg: str):
     if a != b:
-        raise AssertionError(f"{msg}\n- Expected: {b}\n- Got: {a}")
+        raise AssertionError(f"{msg}")
 
 
 def test_replay(seed_sha256: str, input_descriptor: Dict[str, Any]) -> None:
@@ -75,6 +75,18 @@ def main() -> None:
     test_bifurcation_fork_tags()
     print("OK: control plane harness tests passed")
 
+def main():
+    try:
+        test_replay()
+        test_bifurcation()
+        test_multimodel_ensemble()
+        test_vvl_record_creation()
+        print("\nAll harness tests passed!")
+
+    except AssertionError as e:
+        print(f"\nTEST FAILED: {e}")
+
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

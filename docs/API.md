@@ -8,13 +8,31 @@ The Orchestrator Hub provides a unified interface for triggering multi-agent wor
 
 `POST /orchestrate`
 
-Triggers the full **ManagingAgent → OrchestrationAgent → ArchitectureAgent → CoderAgent → TesterAgent** pipeline for a given query.
+Triggers the full **ManagingAgent → OrchestrationAgent → ArchitectureAgent → CoderAgent → TesterAgent** pipeline.
+Supports both legacy query mode and Option-B JSON body mode.
 
-**Parameters:**
+**Authorization:**
+- `Authorization: Bearer <token>` required unless `AUTH_DISABLED=true` in non-production.
+
+**Query Parameters (legacy mode):**
 
 | Name | Type | In | Description |
 | :--- | :--- | :--- | :--- |
 | `user_query` | `string` | Query | The natural language task for the agents to perform. |
+| `requester` | `string` | Query | Optional requester override. |
+| `max_healing_retries` | `int` | Query | Optional range `1..10`, default `3`. |
+
+**JSON Body (Option-B mode):**
+
+| Name | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `command` | `string` | Yes | One of `!run`, `!triage`, `!deploy` (or without `!`). |
+| `args` | `string \| null` | No | Additional command text. |
+| `slack.channel_id` | `string` | No | Slack channel for server ack/result reply. |
+| `slack.thread_ts` | `string \| null` | No | Slack thread timestamp for threaded responses. |
+
+**Headers (Option-B mode):**
+- `X-Idempotency-Key` (optional): repeat-safe response replay key.
 
 **Example Request:**
 
@@ -29,6 +47,18 @@ curl -X 'POST' \
 ```json
 {
   "status": "A2A Workflow Complete",
+  "run_id": "run-2b31f2aa-7f12-47f7-9af3-cc6f0a8e56e0",
+  "routing_decision": {
+    "operation": "triage",
+    "selected_agent": "claude_agent",
+    "model_string": "claude-sonnet-4-20250514",
+    "weight_pct": 35.0,
+    "routing_table_record_id": "rec123",
+    "candidate_count": 3
+  },
+  "airtable_record_id": "recRun123",
+  "slack_post_status": "sent",
+  "trace_id": "4ba89152-df89-467c-a0e0-1b52d87a3f58",
   "success": true,
   "pipeline_results": {
     "plan_id": "plan-abc123",
@@ -40,11 +70,24 @@ curl -X 'POST' \
 }
 ```
 
+**Structured Option-B error (503):**
+
+```json
+{
+  "detail": {
+    "error_code": "OPTB_MISSING_AIRTABLE_PAT",
+    "message": "missing AIRTABLE_PAT (or AIRTABLE_API_KEY)",
+    "trace_id": "4ba89152-df89-467c-a0e0-1b52d87a3f58"
+  }
+}
+```
+
 ---
 
-### 2. Plan Ingress
+### 2. Plan Ingress Endpoints
 
-`POST /plans/ingress`
+- `POST /plans/ingress`
+- `POST /plans/{plan_id}/ingress`
 
 Triggers a plan state-machine transition via the Stateflow FSM. Used for webhook-driven plan orchestration.
 
@@ -84,7 +127,7 @@ curl -X 'POST' \
 
 ---
 
-### 2. MCP Compatibility Tool Call
+### 3. MCP Compatibility Tool Call
 
 `POST /tools/call`
 
@@ -118,21 +161,13 @@ Invokes an MCP tool through the HTTP compatibility surface.
 }
 ```
 
-Canonical operator walkthrough:
-- See `docs/REALTIME_AGENT_CONFIGURATION_RUNBOOK.md` for local + remote setup, validation, and troubleshooting.
+---
 
-### 3. Native MCP Streamable HTTP
+### 4. Native MCP Streamable HTTP
 
 `POST /mcp`
 
 Native FastMCP endpoint for streamable HTTP clients.
-
-### 4. Plan Ingress Endpoints
-
-- `POST /plans/ingress`
-- `POST /plans/{plan_id}/ingress`
-
-Schedules plan ingress for stateflow execution.
 
 ---
 
