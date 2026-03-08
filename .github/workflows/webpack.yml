@@ -27,7 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -36,8 +35,6 @@ jobs:
         run: |
           if [ -f webpack.config.js ] || [ -f webpack.config.cjs ] || [ -f webpack.config.mjs ]; then
             npx webpack
-          elif grep -q '"build":' package.json; then
-            pnpm run build
           else
-            echo "No webpack config or build script found; skipping build."
+            echo "No webpack config found; skipping webpack build."
           fi
