@@ -49,8 +49,6 @@ def test_verify_fails_when_payload_mutates_after_hashing() -> None:
     assert result.reason == "Hash mismatch at event_id=2"
 
 
-
-
 def test_verify_fails_when_state_mutates_after_hashing() -> None:
     tenant_id = "tenant-a"
     execution_id = "exec-1"
