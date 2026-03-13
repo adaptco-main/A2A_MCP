@@ -42,6 +42,7 @@ logs/
 *.log
 coverage/
 .nyc_output/
+runtime/rbac/*.local.json
 
 # Agent temp files
 tmpclaude-*
@@ -71,6 +72,12 @@ fixtures/*.json
 !fixtures/plan_release_candidate_input.json
 *.qcap
 
+# Firebase debug logs
+firebase-debug.log
+
 # CIE smoke artifacts
 runtime/cie_v1_smoke.log.jsonl
 *.egg-info/
+
+# OfficeDocker MCP node_modules (broken pnpm symlinks on Windows)
+OfficeDocker/**/node_modules/

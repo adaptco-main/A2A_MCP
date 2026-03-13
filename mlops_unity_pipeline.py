@@ -1,13 +1,15 @@
 """Autonomous Unity MLOps pipeline for code generation, build, RL training, and model registration.
 
-This module provides a production-oriented orchestration surface that can be used as-is
-or subclassed to integrate with specific LLM providers, Unity project layouts, and cloud
-registries.
+The module exposes composable dataclasses plus orchestration classes for single-run jobs
+and cron-style 24/7 scheduling. Default build/training operations are intentionally safe
+placeholders so the pipeline can execute in non-Unity CI environments and be progressively
+replaced with project-specific Unity + ML-Agents commands.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -47,6 +49,10 @@ class RLTrainingConfig:
     mlagents_cli: str = "mlagents-learn"
     trainer_config_path: Optional[str] = None
     extra_cli_args: List[str] = field(default_factory=list)
+    training_mode: str = "online"
+    offline_dataset_path: Optional[str] = None
+    token_alignment_slices: int = 5
+    merkle_seed: str = "0x1984_Q9"
 
 
 @dataclass
@@ -138,19 +144,72 @@ class UnityMLOpsOrchestrator:
         return str(build_dir)
 
     async def train_rl_agent(self, job: TrainingJob, output_dir: Path) -> Dict[str, Any]:
+        mode = job.rl_config.training_mode.lower()
+        if mode not in {"online", "offline", "hybrid"}:
+            raise ValueError("training_mode must be one of: online, offline, hybrid")
+        if job.rl_config.token_alignment_slices < 1:
+            raise ValueError("token_alignment_slices must be >= 1")
+
+        dataset_path: Optional[str] = None
+        if mode in {"offline", "hybrid"}:
+            if not job.rl_config.offline_dataset_path:
+                raise ValueError("offline_dataset_path is required for offline or hybrid training")
+            dataset = Path(job.rl_config.offline_dataset_path)
+            if not dataset.exists():
+                raise FileNotFoundError(f"offline dataset not found: {dataset}")
+            dataset_path = str(dataset.resolve())
+
         run_id = f"{job.rl_config.run_id_prefix}-{job.job_id}-{uuid4().hex[:8]}"
         model_dir = output_dir / "models" / run_id
         model_dir.mkdir(parents=True, exist_ok=True)
+
+        alignment_report = self._run_nested_alignment_drill(job)
+        merkle_hash = self._compute_merkle_hash(job, alignment_report)
 
         summary = {
             "algorithm": job.rl_config.algorithm,
             "max_steps": job.rl_config.max_steps,
             "num_envs": job.rl_config.num_envs,
             "time_scale": job.rl_config.time_scale,
+            "training_mode": mode,
+            "offline_dataset_path": dataset_path,
+            "token_alignment_slices": job.rl_config.token_alignment_slices,
+            "merkle_seed": job.rl_config.merkle_seed,
+            "merkle_hash": merkle_hash,
+            "nested_alignment_report": alignment_report,
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
         (model_dir / "training_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-        return {"model_path": str(model_dir), "run_id": run_id, "metrics": {"simulated_reward": 0.91}}
+        return {
+            "model_path": str(model_dir),
+            "run_id": run_id,
+            "metrics": {
+                "simulated_reward": 0.91,
+                "alignment_stability": alignment_report["stability_score"],
+                "merkle_hash": merkle_hash,
+            },
+        }
+
+    def _run_nested_alignment_drill(self, job: TrainingJob) -> Dict[str, Any]:
+        slices = job.rl_config.token_alignment_slices
+        per_slice = [round(1.0 - (idx / (slices * 20)), 4) for idx in range(slices)]
+        stability_score = round(sum(per_slice) / len(per_slice), 4)
+        return {
+            "slices": slices,
+            "per_slice_alignment": per_slice,
+            "stability_score": stability_score,
+        }
+
+    def _compute_merkle_hash(self, job: TrainingJob, alignment_report: Dict[str, Any]) -> str:
+        digest_input = {
+            "seed": job.rl_config.merkle_seed,
+            "asset_id": job.asset_spec.asset_id,
+            "algorithm": job.rl_config.algorithm,
+            "max_steps": job.rl_config.max_steps,
+            "alignment": alignment_report,
+        }
+        canonical = json.dumps(digest_input, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(canonical).hexdigest()
 
     async def register_model_in_vertex(self, job: TrainingJob, result: TrainingResult, output_dir: Path) -> str:
         if not self.vertex_project:
