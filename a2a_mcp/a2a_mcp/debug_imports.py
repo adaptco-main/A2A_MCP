@@ -1,6 +1,5 @@
 import sys
 import os
-import json
 
 cwd = os.getcwd()
 print(f"DEBUG: CWD={cwd}")
