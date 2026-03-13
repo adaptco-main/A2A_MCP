@@ -10,7 +10,6 @@ import sys
 import unicodedata
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any
 
 import yaml
 
@@ -114,16 +113,6 @@ def normalize_origin_url(url: str) -> str:
 
 
 def gpg_detached_sign(input_path: Path, sig_out: Path) -> None:
-    cmd = [
-        "gpg",
-        "--batch",
-        "--yes",
-        "--armor",
-        "--detach-sign",
-        "--output",
-        str(sig_out),
-        str(input_path),
-    ]
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     # You might want to log result.stdout or result.stderr if needed
 
