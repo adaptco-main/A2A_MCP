@@ -6,6 +6,7 @@ __pycache__/
 # Environments
 .env
 .env.*
+!.env.automation.example
 .venv
 env/
 venv/
@@ -81,3 +82,8 @@ runtime/cie_v1_smoke.log.jsonl
 
 # OfficeDocker MCP node_modules (broken pnpm symlinks on Windows)
 OfficeDocker/**/node_modules/
+
+# Local nested repos / worktrees
+worktrees/
+OfficeDocker/gemini-95/Telegram Desktop/Parker_Map/
+OfficeDocker/gemini-95/Telegram Desktop/core-orchestrator/

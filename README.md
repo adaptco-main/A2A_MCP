@@ -127,6 +127,22 @@ uvicorn rbac.rbac_service:app --reload --port 8001
 pytest tests/ -v
 ```
 
+### Automation Environment
+
+For browser or desktop automations, use the dedicated simulator/runtime stack:
+
+```powershell
+Copy-Item .env.automation.example .env.automation
+.\scripts\automation_runtime.ps1 -Action up -Build
+```
+
+This starts:
+
+- Runtime API: `http://localhost:8010/healthz`
+- Simulator frontend: `http://localhost:4173`
+
+The automation stack uses `app.multi_client_api:app`, so the simulator can register a client, build runtime scenarios, request RAG context, export LoRA datasets, and verify lineage without the full unified stack.
+
 ## 🔐 Security & Integrity
 
 - **OIDC Authentication**: GitHub OpenID Connect provider integration.
