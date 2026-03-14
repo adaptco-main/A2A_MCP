@@ -21,6 +21,8 @@ Compatibility entrypoints are still present for legacy integrations:
 - `mcp_server.py` (stdio MCP compatibility server)
 
 See `docs/architecture/canonical_control_plane.md` for the source-of-truth architecture map.
+See `docs/architecture/mcp_extension_route_map.mmd` for the companion Mermaid route diagram.
+See `docs/architecture/mcp_extension_route_map.md` for the end-to-end route and extension seam map.
 
 ## Overview
 

@@ -19,6 +19,9 @@ build/
 out/
 tmp/
 temp/
+node_modules/
+frontend/node_modules/
+chatgpt-app/node_modules/
 
 # IDEs
 .vscode/
@@ -44,6 +47,8 @@ logs/
 coverage/
 .nyc_output/
 runtime/rbac/*.local.json
+data/events/
+data/vector_lake/snapshot.json
 
 # Agent temp files
 tmpclaude-*

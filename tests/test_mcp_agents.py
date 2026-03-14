@@ -1,11 +1,11 @@
 # tests/test_mcp_agents.py
 import asyncio
 import pytest
+from unittest.mock import patch
 
 pytest.importorskip("fastmcp", reason="Skipping due to rpds-py C-extension environment issue")
 from fastmcp import Client
-from knowledge_ingestion import app_ingest
-from unittest.mock import patch
+from scripts.knowledge_ingestion import app_ingest
 
 @pytest.fixture
 def mock_snapshot():
@@ -21,7 +21,7 @@ async def test_ingestion_with_valid_handshake(mock_snapshot):
     mock_claims = {"repository": "adaptco/A2A_MCP", "actor": "github-actions"}
     
     # Mock the OIDC verification to simulate a successful A2A handshake
-    with patch("scripts.knowledge_ingestion.verify_bearer_token", return_value=mock_claims):
+    with patch("knowledge_ingestion.verify_github_oidc_token", return_value=mock_claims):
         client = Client(app_ingest)
         try:
             async with client:
