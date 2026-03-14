@@ -40,6 +40,7 @@ textarea {
   min-height: 100vh;
 }
 
+<<<<<<< HEAD
 .app-shell {
   min-height: 100vh;
 }
@@ -101,6 +102,8 @@ textarea {
   padding-bottom: 36px;
 }
 
+=======
+>>>>>>> origin/main
 .shell {
   width: min(1500px, calc(100vw - 32px));
   margin: 0 auto;
@@ -419,11 +422,14 @@ textarea {
   margin: 8px 0;
 }
 
+<<<<<<< HEAD
 .avatar-card.is-selected {
   border-color: rgba(131, 240, 211, 0.36);
   box-shadow: inset 0 0 0 1px rgba(131, 240, 211, 0.18);
 }
 
+=======
+>>>>>>> origin/main
 .artifact-grid {
   margin-top: 14px;
 }
@@ -462,10 +468,13 @@ textarea {
   background: rgba(255, 255, 255, 0.03);
 }
 
+<<<<<<< HEAD
 .empty-state.compact {
   min-height: 160px;
 }
 
+=======
+>>>>>>> origin/main
 pre {
   margin: 12px 0 0;
   padding: 14px;
@@ -481,6 +490,7 @@ pre {
   line-height: 1.55;
 }
 
+<<<<<<< HEAD
 .simulator-shell {
   width: min(1500px, calc(100vw - 32px));
   margin: 0 auto;
@@ -687,6 +697,9 @@ pre {
 
 @media (max-width: 1180px) {
   .simulator-layout,
+=======
+@media (max-width: 1180px) {
+>>>>>>> origin/main
   .hero-panel,
   .workspace-grid {
     grid-template-columns: 1fr;
@@ -698,6 +711,7 @@ pre {
 }
 
 @media (max-width: 760px) {
+<<<<<<< HEAD
   .shell-nav,
   .shell {
     width: min(100vw - 20px, 100%);
@@ -705,6 +719,10 @@ pre {
 
   .shell,
   .simulator-shell {
+=======
+  .shell {
+    width: min(100vw - 20px, 100%);
+>>>>>>> origin/main
     padding-top: 16px;
   }
 
@@ -713,6 +731,7 @@ pre {
     padding: 18px;
   }
 
+<<<<<<< HEAD
   .simulator-header,
   .simulator-overlay,
   .simulator-actions,
@@ -726,12 +745,17 @@ pre {
     height: 620px;
   }
 
+=======
+>>>>>>> origin/main
   .field-grid,
   .field-grid.three-up {
     grid-template-columns: 1fr;
   }
 
+<<<<<<< HEAD
   .shell-nav,
+=======
+>>>>>>> origin/main
   .panel-header,
   .section-header,
   .source-strip-header {

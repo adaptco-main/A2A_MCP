@@ -6,9 +6,21 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+<<<<<<< HEAD
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
+=======
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from orchestrator.capsule_store import (
+    append_capsule_hybrid,
+    init_capsule_mirror_db,
+)
+>>>>>>> origin/main
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_QUBE_DIR = ROOT / "capsules" / "doctrine" / "capsule.patentDraft.qube.v1"
@@ -16,6 +28,11 @@ DEFAULT_CAPSULE_PATH = DEFAULT_QUBE_DIR / "capsule.patentDraft.qube.v1.json"
 DEFAULT_EXPORT_PATH = DEFAULT_QUBE_DIR / "capsule.export.qubePatent.v1.request.json"
 DEFAULT_LEDGER_PATH = DEFAULT_QUBE_DIR / "ledger.jsonl"
 DEFAULT_P3L_SOURCE = ROOT / "capsules" / "doctrine" / "raci.plan.v1.1" / "raci.plan.v1.1.json"
+<<<<<<< HEAD
+=======
+DEFAULT_MIRROR_DB = ROOT / ".out" / "capsules.db"
+DEFAULT_ARCHIVE_DIR = ROOT / ".out" / "archives"
+>>>>>>> origin/main
 
 DEFAULT_STAGE_TS = "2025-09-19T04:46:00Z"
 DEFAULT_SEAL_TS = "2025-09-19T04:48:30Z"
@@ -154,10 +171,22 @@ def _write_capsule(
     epoch: str,
     issuer: str,
     policy: str,
+<<<<<<< HEAD
 ) -> str:
     p3l_sha = _compute_p3l_sha(p3l_source)
     body = {
         "capsule_id": capsule_id,
+=======
+    db_conn: Optional[Any] = None,
+    archive_dir: Optional[Path] = None,
+) -> str:
+    p3l_sha = _compute_p3l_sha(p3l_source)
+    # Prepare lineage according to CapsuleStore expectations
+    # (input_hash, rule30_seed, env_version)
+    body = {
+        "state_id": capsule_id,
+        "agent_reasoning": f"QUBE patent draft stage for {capsule_id}",
+>>>>>>> origin/main
         "qube": {
             "p3l_ref": p3l_ref,
             "sr_gate": sr_gate,
@@ -169,6 +198,13 @@ def _write_capsule(
             },
         },
         "lineage": {
+<<<<<<< HEAD
+=======
+            "digest_id": "", # Will be filled if mirroring
+            "input_hash": p3l_sha.replace("sha256:", ""),
+            "rule30_seed": "default-seed",
+            "env_version": "1.0",
+>>>>>>> origin/main
             "qonledge_ref": qonledge_ref,
             "scrollstream": scrollstream,
         },
@@ -183,6 +219,15 @@ def _write_capsule(
             "policy": policy,
         },
     }
+<<<<<<< HEAD
+=======
+
+    if db_conn and archive_dir:
+        from orchestrator.capsule_store import recompute_lineage_digest
+        body["lineage"]["digest_id"] = recompute_lineage_digest(body["lineage"])
+        append_capsule_hybrid(db_conn, str(archive_dir), body)
+
+>>>>>>> origin/main
     capsule_path.parent.mkdir(parents=True, exist_ok=True)
     with capsule_path.open("w") as handle:
         json.dump(body, handle, indent=2)
@@ -225,6 +270,18 @@ def stage(args: argparse.Namespace) -> None:
     ledger_path = Path(args.ledger_path)
     p3l_source = Path(args.p3l_source)
 
+<<<<<<< HEAD
+=======
+    db_conn = None
+    archive_dir = None
+    if args.mirror_db:
+        db_path = Path(args.mirror_db)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        db_conn = init_capsule_mirror_db(str(db_path))
+        archive_dir = Path(args.archive_dir)
+        archive_dir.mkdir(parents=True, exist_ok=True)
+
+>>>>>>> origin/main
     ticket_hash = _write_capsule(
         capsule_id=args.capsule_id,
         capsule_path=capsule_path,
@@ -241,6 +298,11 @@ def stage(args: argparse.Namespace) -> None:
         epoch=args.epoch,
         issuer=args.issuer,
         policy=args.policy,
+<<<<<<< HEAD
+=======
+        db_conn=db_conn,
+        archive_dir=archive_dir,
+>>>>>>> origin/main
     )
 
     entries = _load_ledger(ledger_path)
@@ -595,6 +657,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Overwrite any existing capsule.staged ledger entry.",
     )
+<<<<<<< HEAD
+=======
+    stage_parser.add_argument(
+        "--mirror-db",
+        default=str(DEFAULT_MIRROR_DB),
+        help="Path to the SQLite capsule mirror database (default: %(default)s).",
+    )
+    stage_parser.add_argument(
+        "--archive-dir",
+        default=str(DEFAULT_ARCHIVE_DIR),
+        help="Directory to store archived capsule JSON files (default: %(default)s).",
+    )
+>>>>>>> origin/main
 
     seal_parser = subparsers.add_parser(
         "seal",

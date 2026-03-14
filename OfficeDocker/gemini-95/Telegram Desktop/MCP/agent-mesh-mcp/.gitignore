@@ -1,4 +1,5 @@
 node_modules/
+<<<<<<< HEAD
 dist/
 .turbo/
 *.tsbuildinfo
@@ -10,3 +11,5 @@ __pycache__/
 .pytest_cache/
 services/digital-twin-sidecar/data/twin_state.json
 services/digital-twin-sidecar/data/embedding_store.npz
+=======
+>>>>>>> origin/main

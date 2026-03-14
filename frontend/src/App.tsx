@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { startTransition, useEffect, useState } from 'react'
 import './App.css'
 import SimulatorPage from './components/SimulatorPage'
@@ -66,6 +67,14 @@ function App() {
         {view === 'simulator' ? <SimulatorPage /> : <MainPage />}
       </main>
     </div>
+=======
+import './App.css'
+import MainPage from './pages/MainPage'
+
+function App() {
+  return (
+    <MainPage />
+>>>>>>> origin/main
   )
 }
 

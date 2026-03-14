@@ -20,13 +20,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+<<<<<<< HEAD
       packages: write
+=======
+      pull-requests: read
+>>>>>>> origin/main
       id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+<<<<<<< HEAD
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -74,6 +79,17 @@ jobs:
 
       - name: Initialize artifact workspace
         run: mkdir -p artifacts
+=======
+          submodules: false # Prevents the 'A2A_MCP' submodule error
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Go Tidy
+        run: go mod tidy
+>>>>>>> origin/main
 
       - name: Lint OpenAPI specification
         if: steps.spec.outputs.spec != ''
@@ -147,6 +163,7 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
+<<<<<<< HEAD
       - name: Finalize Docker layer cache
         if: steps.dockerfile.outputs.file != ''
         run: |
@@ -216,16 +233,60 @@ jobs:
             echo "signature_path=verification/image.sig" >> "$GITHUB_OUTPUT"
             echo "signature_name=image.sig" >> "$GITHUB_OUTPUT"
             has_any=true
+=======
+      - name: Install trivy
+        run: |
+          sudo apt-get install wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Analyze code
+        id: analyze
+        uses: ./
+        with:
+          diff-file: ${{ steps.changed-files.outputs.all_changed_files }}
+
+      - name: Verify analysis outputs
+        id: verification
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+          IMAGE_NAME: ${{ steps.analyze.outputs.image }} # Fixed reference from build-image to analyze
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p verification
+          has_any_true=false
+
+          if [ -f cosign.sig ]; then
+            cp cosign.sig verification/image.sig
+            echo "signature_path=verification/image.sig" >> $GITHUB_OUTPUT
+            echo "signature_name=image.sig" >> $GITHUB_OUTPUT
+            has_any_true=true
+>>>>>>> origin/main
           fi
 
           if [ -f cosign.cert ]; then
             cp cosign.cert verification/image.pem
+<<<<<<< HEAD
             echo "certificate_path=verification/image.pem" >> "$GITHUB_OUTPUT"
             echo "certificate_name=image.pem" >> "$GITHUB_OUTPUT"
             has_any=true
           fi
 
           echo "has_artifacts=$has_any" >> "$GITHUB_OUTPUT"
+=======
+            echo "certificate_path=verification/image.pem" >> $GITHUB_OUTPUT
+            echo "certificate_name=image.pem" >> $GITHUB_OUTPUT
+            has_any_true=true
+          fi
+
+          echo "has_artifacts=$has_any_true" >> $GITHUB_OUTPUT
+>>>>>>> origin/main
 
       - name: Upload verification artifacts
         if: steps.verification.outputs.has_artifacts == 'true'
@@ -234,8 +295,13 @@ jobs:
           name: verification-artifacts
           path: verification
 
+<<<<<<< HEAD
       - name: Create GitHub release
         id: create_release
+=======
+      - name: Create Github release
+        id: create_release # Added missing ID
+>>>>>>> origin/main
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.verification.outputs.has_artifacts == 'true'
         uses: actions/create-release@v1
         env:
@@ -245,41 +311,72 @@ jobs:
           release_name: Release ${{ github.run_number }}
           body: |
             Automated release for commit ${{ github.sha }}.
+<<<<<<< HEAD
             - Container image digest: ${{ steps.build-image.outputs.digest || 'not-built' }}
+=======
+            - Container image digest: ${{ steps.analyze.outputs.digest || 'not-built' }}
+>>>>>>> origin/main
           draft: false
           prerelease: false
 
       - name: Upload OpenAPI spec to release
+<<<<<<< HEAD
         if: steps.create_release.outputs.upload_url != '' && steps.verification.outputs.spec_path != ''
+=======
+        if: steps.create_release.outputs.upload_url != '' && steps.analyze.outputs.spec_path != ''
+>>>>>>> origin/main
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
+<<<<<<< HEAD
           asset_path: ${{ steps.verification.outputs.spec_path }}
           asset_name: ${{ steps.verification.outputs.spec_name }}
           asset_content_type: application/yaml
 
       - name: Upload OpenAPI diff to release
         if: steps.create_release.outputs.upload_url != '' && steps.verification.outputs.diff_path != ''
+=======
+          asset_path: ${{ steps.analyze.outputs.spec_path }} # Reference analyze step outputs
+          asset_name: spec.yaml
+          asset_content_type: application/yaml
+
+      - name: Upload OpenAPI diff to release
+        if: steps.create_release.outputs.upload_url != '' && steps.analyze.outputs.diff_path != ''
+>>>>>>> origin/main
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
+<<<<<<< HEAD
           asset_path: ${{ steps.verification.outputs.diff_path }}
           asset_name: ${{ steps.verification.outputs.diff_name }}
           asset_content_type: text/plain
 
       - name: Upload SBOM to release
         if: steps.create_release.outputs.upload_url != '' && steps.verification.outputs.sbom_path != ''
+=======
+          asset_path: ${{ steps.analyze.outputs.diff_path }} # Reference analyze step outputs
+          asset_name: diff.txt
+          asset_content_type: text/plain
+
+      - name: Upload SBOM to release
+        if: steps.create_release.outputs.upload_url != '' && steps.analyze.outputs.sbom_path != ''
+>>>>>>> origin/main
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
+<<<<<<< HEAD
           asset_path: ${{ steps.verification.outputs.sbom_path }}
           asset_name: ${{ steps.verification.outputs.sbom_name }}
+=======
+          asset_path: ${{ steps.analyze.outputs.sbom_path }} # Reference analyze step outputs
+          asset_name: sbom.json
+>>>>>>> origin/main
           asset_content_type: application/json
 
       - name: Upload Cosign signature to release

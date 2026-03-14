@@ -1,3 +1,12 @@
+<<<<<<< HEAD
+=======
+# Base44 World Map Configuration
+# 4x4 macro grid × 3 altitude layers = 48 cells
+# Usable cells: 0-43 (44-47 reserved for system)
+# Version: 1.0.0
+# Last Updated: 2026-02-12
+
+>>>>>>> origin/main
 world:
   title: Supra Driver World
   theme: Urban -> Highway -> Alpine progression
@@ -25,6 +34,7 @@ layers:
     cells: 32-43
     difficulty: hard
     description: Mountain roads, hairpin turns, scenic viewpoints
+<<<<<<< HEAD
 zones:
   '0':
     grid_pos:
@@ -39,6 +49,19 @@ zones:
       - 50
       - 50
       - 5
+=======
+
+# ========== GROUND LAYER (0-15) ==========
+zones:
+  '0':
+    grid_pos: [0, 0]
+    layer: 0
+    name: Downtown Central
+    description: Busiest urban intersection, heavy traffic
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 5]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -50,6 +73,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 35
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '1':
@@ -65,6 +89,22 @@ zones:
       - 50
       - 50
       - 5
+=======
+    hazards:
+      - pedestrian_crossing
+      - traffic_lights
+      - parked_cars
+    obstacle_density: high
+
+  '1':
+    grid_pos: [1, 0]
+    layer: 0
+    name: Main Street East
+    description: Commercial corridor, moderate traffic
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 5]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -76,6 +116,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 40
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '2':
@@ -85,6 +126,19 @@ zones:
     layer: 0
     name: Riverside District
     description: Riverside District (Layer 0)
+=======
+    hazards:
+      - delivery_trucks
+      - bus_stops
+      - construction
+    obstacle_density: medium
+
+  '2':
+    grid_pos: [2, 0]
+    layer: 0
+    name: Riverside District
+    description: Scenic waterfront, light traffic
+>>>>>>> origin/main
     difficulty_rating: 1
     spawn_points:
       primary:
@@ -97,8 +151,37 @@ zones:
       E: false
       W: false
     connections:
+<<<<<<< HEAD
       N: null
       S: null
+=======
+      N: 6
+      S: 14
+      E: 3
+      W: 1
+    zone_speed_limit_mph: 45
+    hazards:
+      - scenic_pedestrians
+      - cyclists
+    obstacle_density: medium
+
+  '3':
+    grid_pos: [3, 0]
+    layer: 0
+    name: Harbor Industrial
+    description: Port area, heavy trucks, industrial
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 5]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 7
+      S: 15
+>>>>>>> origin/main
       E: null
       W: null
     zone_speed_limit_mph: 45
@@ -128,6 +211,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 30
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '4':
@@ -143,6 +227,22 @@ zones:
       - 50
       - 50
       - 5
+=======
+    hazards:
+      - heavy_traffic
+      - industrial_equipment
+      - tight_alleys
+    obstacle_density: medium
+
+  '4':
+    grid_pos: [0, 1]
+    layer: 0
+    name: Downtown North
+    description: Upper downtown, mixed commercial/residential
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 5]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -154,6 +254,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 35
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '5':
@@ -169,6 +270,21 @@ zones:
       - 50
       - 50
       - 5
+=======
+    hazards:
+      - traffic_lights
+      - narrow_streets
+    obstacle_density: medium
+
+  '5':
+    grid_pos: [1, 1]
+    layer: 0
+    name: Market District
+    description: Central market, pedestrian-heavy
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 5]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -180,6 +296,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 25
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '6':
@@ -195,6 +312,22 @@ zones:
       - 50
       - 50
       - 5
+=======
+    hazards:
+      - heavy_pedestrian_traffic
+      - vendor_stalls
+      - narrow_passages
+    obstacle_density: medium
+
+  '6':
+    grid_pos: [2, 1]
+    layer: 0
+    name: Park Avenue
+    description: Tree-lined avenue, moderate traffic
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -206,6 +339,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 45
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '7':
@@ -221,6 +355,21 @@ zones:
       - 50
       - 50
       - 5
+=======
+    hazards:
+      - cyclists
+      - pedestrians_in_park
+    obstacle_density: medium
+
+  '7':
+    grid_pos: [3, 1]
+    layer: 0
+    name: Civic Center
+    description: Government buildings, organized layout
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -232,6 +381,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 35
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '8':
@@ -247,6 +397,115 @@ zones:
       - 50
       - 50
       - 5
+=======
+    hazards:
+      - ceremonial_traffic
+    obstacle_density: medium
+
+  '8':
+    grid_pos: [0, 2]
+    layer: 0
+    name: University District
+    description: Campus area, light to moderate traffic
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+      S: 4
+      E: 9
+      W: null
+    zone_speed_limit_mph: 40
+    hazards:
+      - students_crossing
+      - bike_paths
+    obstacle_density: medium
+
+  '9':
+    grid_pos: [1, 2]
+    layer: 0
+    name: Residential Valley
+    description: Suburban homes, quiet streets
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+      S: 5
+      E: 10
+      W: 8
+    zone_speed_limit_mph: 40
+    hazards:
+      - parked_cars
+      - children_playing
+    obstacle_density: medium
+
+  '10':
+    grid_pos: [2, 2]
+    layer: 0
+    name: Lakeside Residential
+    description: Peaceful lakeside homes, scenic
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+      S: 6
+      E: 11
+      W: 9
+    zone_speed_limit_mph: 40
+    hazards:
+      - cyclists_on_lakeshore
+    obstacle_density: medium
+
+  '11':
+    grid_pos: [3, 2]
+    layer: 0
+    name: Hillside Ascent
+    description: Uphill residential, sloped terrain
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 5]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+      S: 7
+      E: null
+      W: 10
+    zone_speed_limit_mph: 45
+    hazards:
+      - steep_grade
+      - switchbacks
+    obstacle_density: medium
+
+  '12':
+    grid_pos: [0, 3]
+    layer: 0
+    name: Industrial Park
+    description: Factories, warehouses, large lots
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -362,6 +621,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 50
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '13':
@@ -377,12 +637,384 @@ zones:
       - 50
       - 50
       - 5
+=======
+    hazards:
+      - large_trucks
+      - loading_docks
+    obstacle_density: medium
+
+  '13':
+    grid_pos: [1, 3]
+    layer: 0
+    name: Parking District
+    description: Large parking lots, minimal traffic
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
     wasd_blocking:
       N: false
       S: false
       E: false
       W: false
     connections:
+      N: 1
+      S: null
+      E: 14
+      W: 12
+    zone_speed_limit_mph: 45
+    hazards:
+      - parked_cars
+    obstacle_density: medium
+
+  '14':
+    grid_pos: [2, 3]
+    layer: 0
+    name: Airport Access
+    description: Airport road, straight corridor
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 2
+      S: null
+      E: 15
+      W: 13
+    zone_speed_limit_mph: 55
+    hazards:
+      - airport_traffic
+    obstacle_density: medium
+
+  '15':
+    grid_pos: [3, 3]
+    layer: 0
+    name: Dockside Avenue
+    description: Final urban zone before highways
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 5]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 3
+      S: null
+      E: null
+      W: 14
+    zone_speed_limit_mph: 50
+    hazards:
+      - dock_traffic
+    obstacle_density: medium
+
+# ========== ELEVATED LAYER (16-31) ==========
+  '16':
+    grid_pos: [0, 0]
+    layer: 1
+    name: North Freeway On-Ramp
+    description: Entry to elevated highway from downtown
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 20
+      S: null
+      E: 17
+      W: null
+    zone_speed_limit_mph: 60
+    hazards:
+      - merging_traffic
+      - sharp_turn
+    obstacle_density: medium
+
+  '17':
+    grid_pos: [1, 0]
+    layer: 1
+    name: North Highway Stretch
+    description: Open highway, moderate traffic
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 50]
+>>>>>>> origin/main
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+<<<<<<< HEAD
+=======
+      N: 21
+      S: null
+      E: 18
+      W: 16
+    zone_speed_limit_mph: 70
+    hazards:
+      - lane_changes
+    obstacle_density: medium
+
+  '18':
+    grid_pos: [2, 0]
+    layer: 1
+    name: North Mountain Approach
+    description: Freeway beginning to elevate, views
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 22
+      S: null
+      E: 19
+      W: 17
+    zone_speed_limit_mph: 65
+    hazards:
+      - elevation_gain
+      - sharp_curves
+    obstacle_density: medium
+
+  '19':
+    grid_pos: [3, 0]
+    layer: 1
+    name: North Pass Gate
+    description: Mountain pass entrance, scenic overlook
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+      S: null
+      E: null
+      W: 18
+    zone_speed_limit_mph: 55
+    hazards:
+      - hairpin_turn
+      - steep_grade
+    obstacle_density: medium
+
+  '20':
+    grid_pos: [0, 1]
+    layer: 1
+    name: West Highway Loop
+    description: Curved freeway section, moderate traffic
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 24
+      S: 16
+      E: 21
+      W: null
+    zone_speed_limit_mph: 70
+    hazards:
+      - moderate_curves
+    obstacle_density: medium
+
+  '21':
+    grid_pos: [1, 1]
+    layer: 1
+    name: Central Interchange
+    description: Major freeway intersection, complex merging
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 25
+      S: 17
+      E: 22
+      W: 20
+    zone_speed_limit_mph: 65
+    hazards:
+      - multiple_merge_points
+      - split_lanes
+    obstacle_density: medium
+
+  '22':
+    grid_pos: [2, 1]
+    layer: 1
+    name: East Elevated Curve
+    description: Scenic elevated curve with views
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 26
+      S: 18
+      E: 23
+      W: 21
+    zone_speed_limit_mph: 70
+    hazards:
+      - sustained_curve
+    obstacle_density: medium
+
+  '23':
+    grid_pos: [3, 1]
+    layer: 1
+    name: East Mountain Transition
+    description: Freeway begins steep climb into mountains
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+      S: 19
+      E: null
+      W: 22
+    zone_speed_limit_mph: 60
+    hazards:
+      - steep_climb
+      - hairpin_turn
+    obstacle_density: medium
+
+  '24':
+    grid_pos: [0, 2]
+    layer: 1
+    name: West Elevated Descent
+    description: Freeway descends from elevated sections
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 28
+      S: 20
+      E: 25
+      W: null
+    zone_speed_limit_mph: 65
+    hazards:
+      - steep_descent
+    obstacle_density: medium
+
+  '25':
+    grid_pos: [1, 2]
+    layer: 1
+    name: Central Elevated Plateau
+    description: High-elevation freeway, moderate curves
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 29
+      S: 21
+      E: 26
+      W: 24
+    zone_speed_limit_mph: 70
+    hazards:
+      - altitude_effects
+      - moderate_curves
+    obstacle_density: medium
+
+  '26':
+    grid_pos: [2, 2]
+    layer: 1
+    name: East Elevated Peak
+    description: Highest elevated freeway zone, scenic
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+      S: 22
+      E: 27
+      W: 25
+    zone_speed_limit_mph: 65
+    hazards:
+      - altitude
+      - thin_air
+    obstacle_density: medium
+
+  '27':
+    grid_pos: [3, 2]
+    layer: 1
+    name: East Final Ascent
+    description: Last freeway stretch before mountain summit
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+      S: 23
+      E: null
+      W: 26
+    zone_speed_limit_mph: 55
+    hazards:
+      - steep_grade
+      - hairpin_turns
+    obstacle_density: medium
+
+  '28':
+    grid_pos: [0, 3]
+    layer: 1
+    name: West Highway End
+    description: Freeway terminus, view point
+    difficulty_rating: 1
+    spawn_points:
+      primary: [50, 50, 50]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+>>>>>>> origin/main
       N: null
       S: null
       E: null
@@ -468,6 +1100,7 @@ zones:
     zone_speed_limit_mph: 60
     hazards: []
     obstacle_density: medium
+<<<<<<< HEAD
   '17':
     grid_pos:
     - 1
@@ -481,6 +1114,17 @@ zones:
       - 50
       - 50
       - 50
+=======
+
+  '29':
+    grid_pos: [1, 3]
+    layer: 1
+    name: Central Highway Terminus
+    description: Mid-point access to mountains
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -488,6 +1132,7 @@ zones:
       W: false
     connections:
       N: null
+<<<<<<< HEAD
       S: null
       E: null
       W: null
@@ -507,6 +1152,24 @@ zones:
       - 50
       - 50
       - 50
+=======
+      S: 25
+      E: 30
+      W: 28
+    zone_speed_limit_mph: 60
+    hazards:
+      - elevation_transition
+    obstacle_density: medium
+
+  '30':
+    grid_pos: [2, 3]
+    layer: 1
+    name: East Highway Terminus
+    description: Eastern freeway end, mountain gate
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -514,6 +1177,7 @@ zones:
       W: false
     connections:
       N: null
+<<<<<<< HEAD
       S: null
       E: null
       W: null
@@ -533,6 +1197,24 @@ zones:
       - 50
       - 50
       - 50
+=======
+      S: 26
+      E: 31
+      W: 29
+    zone_speed_limit_mph: 60
+    hazards:
+      - mountain_transition
+    obstacle_density: medium
+
+  '31':
+    grid_pos: [3, 3]
+    layer: 1
+    name: East Final Pass
+    description: Final freeway zone, summit approach
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 50]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -544,6 +1226,7 @@ zones:
       E: null
       W: null
     zone_speed_limit_mph: 55
+<<<<<<< HEAD
     hazards: []
     obstacle_density: medium
   '20':
@@ -871,6 +1554,214 @@ zones:
       - 50
       - 50
       - 95
+=======
+    hazards:
+      - thin_air
+      - steep_terrain
+    obstacle_density: medium
+
+# ========== AERIAL LAYER (32-43) ==========
+  '32':
+    grid_pos: [0, 0]
+    layer: 2
+    name: North Summit Road
+    description: Alpine road, extreme curves, thin air
+    difficulty_rating: 4
+    spawn_points:
+      primary: [50, 50, 95]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 36
+      S: null
+      E: 33
+      W: null
+    zone_speed_limit_mph: 40
+    hazards:
+      - hairpin_turns
+      - cliff_edges
+      - thin_air
+    obstacle_density: medium
+
+  '33':
+    grid_pos: [1, 0]
+    layer: 2
+    name: North Alpine Ridge
+    description: Scenic alpine road, moderate curves
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 95]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 37
+      S: null
+      E: 34
+      W: 32
+    zone_speed_limit_mph: 45
+    hazards:
+      - sharp_curves
+      - altitude
+    obstacle_density: medium
+
+  '34':
+    grid_pos: [2, 0]
+    layer: 2
+    name: North Alpine Pass
+    description: Mountain pass through peaks
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 95]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 38
+      S: null
+      E: 35
+      W: 33
+    zone_speed_limit_mph: 50
+    hazards:
+      - hairpin_turn
+      - cliff_edge
+    obstacle_density: medium
+
+  '35':
+    grid_pos: [3, 0]
+    layer: 2
+    name: North Summit Peak
+    description: Highest point on map, scenic endpoint
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 95]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 39
+      S: null
+      E: null
+      W: 34
+    zone_speed_limit_mph: 40
+    hazards:
+      - extreme_altitude
+      - thin_air
+      - cliff_edges
+    obstacle_density: medium
+
+  '36':
+    grid_pos: [0, 1]
+    layer: 2
+    name: West Alpine Descent
+    description: Descending alpine road
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 95]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 40
+      S: 32
+      E: 37
+      W: null
+    zone_speed_limit_mph: 45
+    hazards:
+      - steep_descent
+      - curves
+    obstacle_density: medium
+
+  '37':
+    grid_pos: [1, 1]
+    layer: 2
+    name: Central Alpine Valley
+    description: Alpine valley between peaks
+    difficulty_rating: 2
+    spawn_points:
+      primary: [50, 50, 95]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 41
+      S: 33
+      E: 38
+      W: 36
+    zone_speed_limit_mph: 50
+    hazards:
+      - curves
+    obstacle_density: medium
+
+  '38':
+    grid_pos: [2, 1]
+    layer: 2
+    name: East Alpine Peak
+    description: Eastern summit with views
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 95]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 42
+      S: 34
+      E: 39
+      W: 37
+    zone_speed_limit_mph: 50
+    hazards:
+      - sharp_turns
+      - altitude
+    obstacle_density: medium
+
+  '39':
+    grid_pos: [3, 1]
+    layer: 2
+    name: East Summit Road
+    description: Alpine road approaching eastern peak
+    difficulty_rating: 3
+    spawn_points:
+      primary: [50, 50, 95]
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: 43
+      S: 35
+      E: null
+      W: 38
+    zone_speed_limit_mph: 45
+    hazards:
+      - steep_climb
+      - curves
+    obstacle_density: medium
+
+  '40':
+    grid_pos: [0, 2]
+    layer: 2
+    name: West Alpine High Peak
+    description: High-altitude western ridge
+    difficulty_rating: 4
+    spawn_points:
+      primary: [50, 50, 95]
     wasd_blocking:
       N: false
       S: false
@@ -878,6 +1769,32 @@ zones:
       W: false
     connections:
       N: null
+      S: 36
+      E: 41
+      W: null
+    zone_speed_limit_mph: 40
+    hazards:
+      - cliff_edges
+      - extreme_curves
+    obstacle_density: medium
+
+  '41':
+    grid_pos: [1, 2]
+    layer: 2
+    name: Central Alpine Summit
+    description: Central mountain summit
+    difficulty_rating: 4
+    spawn_points:
+      primary: [50, 50, 95]
+>>>>>>> origin/main
+    wasd_blocking:
+      N: false
+      S: false
+      E: false
+      W: false
+    connections:
+      N: null
+<<<<<<< HEAD
       S: null
       E: null
       W: null
@@ -1131,6 +2048,25 @@ zones:
       - 50
       - 50
       - 95
+=======
+      S: 37
+      E: 42
+      W: 40
+    zone_speed_limit_mph: 40
+    hazards:
+      - extreme_altitude
+      - hairpin_turns
+    obstacle_density: medium
+
+  '42':
+    grid_pos: [2, 2]
+    layer: 2
+    name: East Alpine High Peak
+    description: High-altitude eastern ridge
+    difficulty_rating: 4
+    spawn_points:
+      primary: [50, 50, 95]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -1138,6 +2074,7 @@ zones:
       W: false
     connections:
       N: null
+<<<<<<< HEAD
       S: null
       E: null
       W: null
@@ -1157,6 +2094,25 @@ zones:
       - 50
       - 50
       - 95
+=======
+      S: 38
+      E: 43
+      W: 41
+    zone_speed_limit_mph: 40
+    hazards:
+      - cliff_edges
+      - thin_air
+    obstacle_density: medium
+
+  '43':
+    grid_pos: [3, 2]
+    layer: 2
+    name: Final Summit Plateau
+    description: Last high-altitude zone
+    difficulty_rating: 4
+    spawn_points:
+      primary: [50, 50, 95]
+>>>>>>> origin/main
     wasd_blocking:
       N: false
       S: false
@@ -1166,6 +2122,7 @@ zones:
       N: null
       S: null
       E: null
+<<<<<<< HEAD
       W: null
     zone_speed_limit_mph: 45
     hazards: []
@@ -1183,3 +2140,11 @@ reserved_zones:
   '47':
     name: Spectator Room
     description: Reserved for spectator mode
+=======
+      W: 42
+    zone_speed_limit_mph: 35
+    hazards:
+      - extreme_precision_required
+      - cliff_edges
+    obstacle_density: medium
+>>>>>>> origin/main

@@ -12,6 +12,7 @@ from app.mcp_tooling import TELEMETRY
 
 from drift_suite.drift_metrics import ks_statistic
 
+<<<<<<< HEAD
 
 @dataclass
 class LightweightMCPResult:
@@ -53,6 +54,12 @@ class DeterministicMCPCore:
             },
             execution_hash=execution_hash,
         )
+=======
+try:  # pragma: no cover - import guarded for lightweight test environments
+    import torch
+except ModuleNotFoundError:  # pragma: no cover
+    torch = None
+>>>>>>> origin/main
 
 
 class ClientNotFound(KeyError):
@@ -286,6 +293,7 @@ class MultiClientMCPRouter:
 
     def _get_mcp_core(self) -> Any:
         if self.mcp_core is None:
+<<<<<<< HEAD
             if os.getenv("A2A_ROUTER_CORE", "numpy").strip().lower() == "torch":
                 import torch
                 from mcp_core import MCPCore
@@ -293,6 +301,11 @@ class MultiClientMCPRouter:
                 self.mcp_core = ("torch", torch, MCPCore())
             else:
                 self.mcp_core = ("numpy", None, DeterministicMCPCore())
+=======
+            from mcp_core import MCPCore
+
+            self.mcp_core = MCPCore()
+>>>>>>> origin/main
         return self.mcp_core
 
     async def register_client(self, api_key: str, quota: int = 1_000_000) -> str:
@@ -325,8 +338,11 @@ class MultiClientMCPRouter:
         pipe = self.pipelines.get(client_key)
         if pipe is None:
             raise ClientNotFound(f"Client {client_key} not registered")
+        if torch is None:
+            raise RuntimeError("torch is required to process MCP requests in multi-client router")
 
         mcp_token = await pipe.ingress(np.asarray(tokens, dtype=float))
+<<<<<<< HEAD
         core_kind, torch_module, core = self._get_mcp_core()
 
         if core_kind == "torch":
@@ -334,6 +350,13 @@ class MultiClientMCPRouter:
             mcp_result = core(mcp_token_tensor)
         else:
             mcp_result = core(mcp_token)
+=======
+        mcp_core = self._get_mcp_core()
+
+        # Reshape to (1, 4096) for the MCPCore model
+        mcp_token_tensor = torch.from_numpy(mcp_token.reshape(1, -1)).float()
+        mcp_result = mcp_core(mcp_token_tensor)
+>>>>>>> origin/main
         return await pipe.egress(mcp_result)
 
     def register_handshake(

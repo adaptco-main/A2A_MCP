@@ -3,12 +3,16 @@ from orchestrator.storage import DBManager
 from orchestrator.llm_util import LLMService
 from agents.coder import CoderAgent
 from agents.tester import TesterAgent
+<<<<<<< HEAD
 from agents.gemini_agent import GeminiAgent
 from middleware.runtime import AgenticRuntime
+=======
+>>>>>>> origin/main
 
 class MCPHub:
     def __init__(self):
         self.db = DBManager()
+<<<<<<< HEAD
         self.runtime = AgenticRuntime()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
@@ -61,6 +65,10 @@ if __name__ == "__main__":
     hub = MCPHub()
     asyncio.run(hub.run_healing_loop("Fix connection string in storage.py"))
 
+=======
+        self.coder = CoderAgent()
+        self.tester = TesterAgent()
+>>>>>>> origin/main
 
     async def run_healing_loop(self, task_description: str, max_retries=3):
         """
