@@ -53,6 +53,8 @@ class ManagingAgent:
                 "constraints_count": str(len(["Act as a project-management planner.", "Return output as a numbered task list that is easy to parse line-by-line."]))
             },
         )
+        # Fix: Change inner double quotes to single quotes to fix f-string syntax
+        print(f"Constraints: {', '.join(prompt_intent.workflow_constraints)}")
 
         # Convert PromptIntent to string for LLMService compatibility
         prompt_str = (
