@@ -3,18 +3,16 @@ from orchestrator.storage import DBManager
 from orchestrator.llm_util import LLMService
 from agents.coder import CoderAgent
 from agents.tester import TesterAgent
-=======
-        origin/main
-        main
+from agents.gemini_agent import GeminiAgent
+from middleware.runtime import AgenticRuntime
 
 class MCPHub:
     def __init__(self):
         self.db = DBManager()
+        self.runtime = AgenticRuntime()
         self.coder = CoderAgent()
         self.tester = TesterAgent()
-=======
-        origin/main
-        main
+        self.gemini = GeminiAgent(runtime=self.runtime)
 
     async def run_healing_loop(self, task_description: str, max_retries=3):
         """
@@ -47,6 +45,17 @@ class MCPHub:
 
         print("!! Max retries reached. Human intervention required.")
         return None
+
+    async def run_gemini_rag(self, task_goal: str, query_vector=None, knowledge_base: dict = None):
+        """
+        Phase 8: Orchestrate Gemini Model Cluster for RAG-based LoRA distillation.
+        Results are emitted via AgenticRuntime (and dual-written to FossilChain).
+        """
+        return await self.gemini.distill_context_for_lora(
+            task_goal=task_goal,
+            query_vector=query_vector or [],
+            knowledge_base=knowledge_base or {}
+        )
 
 if __name__ == "__main__":
     hub = MCPHub()

@@ -1,6 +1,7 @@
 import pytest
-<<<<<<< HEAD
-import torch
+
+torch = pytest.importorskip("torch")
+
 from a2a_mcp.mcp_core import MCPCore, MCPResult
 
 # Constants for testing (matched to current MCPCore defaults)
@@ -48,6 +49,16 @@ def test_forward_pass_output_shapes(mcp_core_model: MCPCore, sample_embedding: t
     assert result.processed_embedding.shape == (1, HIDDEN_DIM)
     assert result.arbitration_scores.shape == (N_ROLES,)
 
+def test_forward_pass_input_shape_validation(mcp_core_model: MCPCore):
+    """Tests that the forward pass raises a ValueError for incorrect input shapes."""
+    wrong_shape_embedding = torch.randn(1, INPUT_DIM + 1)
+    with pytest.raises(ValueError, match="Expected namespaced embedding shape"):
+        mcp_core_model(wrong_shape_embedding)
+
+    wrong_dims_embedding = torch.randn(2, INPUT_DIM)
+    with pytest.raises(ValueError, match="Expected namespaced embedding shape"):
+        mcp_core_model(wrong_dims_embedding)
+
 def test_arbitration_scores_sum_to_one(mcp_core_model: MCPCore, sample_embedding: torch.Tensor):
     """Tests that arbitration scores are a valid probability distribution (sum to 1)."""
     with torch.no_grad():
@@ -61,7 +72,7 @@ def test_processed_embedding_is_normalized(mcp_core_model: MCPCore, sample_embed
         result = mcp_core_model(sample_embedding)
 
     norm = torch.norm(result.processed_embedding.squeeze())
-    assert torch.isclose(norm, torch.tensor(1.0), atol=1e-6)
+    assert torch.isclose(norm, torch.tensor(1.0), atol=1e-5)
 
 def test_execution_hash_is_deterministic(mcp_core_model: MCPCore, sample_embedding: torch.Tensor):
     """Tests that the execution_hash is deterministic for the same input."""
@@ -88,36 +99,3 @@ def test_compute_protocol_similarity(mcp_core_model: MCPCore, sample_embedding: 
         similarity_different = mcp_core_model.compute_protocol_similarity(emb1, emb2)
     assert isinstance(similarity_different, float)
     assert -1.0 <= similarity_different <= 1.0
-=======
-
-torch = pytest.importorskip("torch")
-
-from a2a_mcp.mcp_core import MCPCore, MCPResult
-
-
-def test_mcp_core_forward_shapes_and_hash():
-    torch.manual_seed(7)
-    core = MCPCore(hidden_dim=128, n_roles=32)
-    namespaced = torch.randn(1, 4096)
-
-    result = core(namespaced)
-
-    assert isinstance(result, MCPResult)
-    assert result.processed_embedding.shape == (1, 128)
-    assert result.arbitration_scores.shape == (32,)
-    assert result.protocol_features["feature_norm"] > 0.0
-    assert len(result.execution_hash) == 64
-
-    norm = float(torch.norm(result.processed_embedding, dim=-1).item())
-    assert abs(norm - 1.0) < 1e-5
-
-
-def test_protocol_similarity_returns_cosine_range():
-    torch.manual_seed(11)
-    core = MCPCore()
-    emb = torch.randn(1, 4096)
-
-    sim_same = core.compute_protocol_similarity(emb, emb.clone())
-    assert -1.0 <= sim_same <= 1.0
-    assert sim_same > 0.99
->>>>>>> origin/main

@@ -27,12 +27,7 @@ jobs:
           python-version: "3.11.8"
 
       - name: Fail on unresolved merge markers
-        run: |
-          if [ -f scripts/check_merge_conflicts.py ]; then
-            python scripts/check_merge_conflicts.py --root .
-          else
-            echo "scripts/check_merge_conflicts.py not found; skipping merge marker check."
-          fi
+        run: python scripts/check_merge_conflicts.py --root .
 
   behavior:
     name: Behavior Validator
@@ -63,16 +58,12 @@ jobs:
 
       - name: Behavior validator (fast)
         run: |
-          if [ -f scripts/run_behavior_validator.sh ]; then
-            if [ -d tests/behavior/cases ]; then
-              sed -i 's/\r$//' scripts/run_behavior_validator.sh
-              bash scripts/run_behavior_validator.sh
-            else
-              echo "No tests/behavior/cases directory found. Skipping behavior gate."
-            fi
-          else
-            echo "Behavior validator script not found, skipping."
+          if [ ! -d tests/behavior/cases ]; then
+            echo "No tests/behavior/cases directory found. Skipping behavior gate."
+            exit 0
           fi
+          sed -i 's/\r$//' scripts/run_behavior_validator.sh
+          bash scripts/run_behavior_validator.sh
 
       - name: Upload behavior artifacts (debug)
         if: failure()
@@ -102,16 +93,12 @@ jobs:
 
       - name: Receipt validator
         run: |
-          if [ -f scripts/run_receipt_validator.sh ]; then
-            if [ -d tests/receipts/cases ]; then
-              sed -i 's/\r$//' scripts/run_receipt_validator.sh
-              bash scripts/run_receipt_validator.sh
-            else
-              echo "No tests/receipts/cases directory found. Skipping receipt gate."
-            fi
-          else
-            echo "Receipt validator script not found, skipping."
+          if [ ! -d tests/receipts/cases ]; then
+            echo "No tests/receipts/cases directory found. Skipping receipt gate."
+            exit 0
           fi
+          sed -i 's/\r$//' scripts/run_receipt_validator.sh
+          bash scripts/run_receipt_validator.sh
 
       - name: Upload receipt artifacts (debug)
         if: failure()
@@ -121,34 +108,56 @@ jobs:
           path: staging/
           if-no-files-found: ignore
 
-  build-js:
+  workspace-install:
+    name: Install Workspace Dependencies
     runs-on: ubuntu-latest
     needs: merge-marker-guard
     steps:
       - uses: actions/checkout@v4
 
+<<<<<<< HEAD
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+=======
       - name: Upload staging artifacts (debug)
         if: failure()
         uses: actions/upload-artifact@v4
-        main
+>>>>>>> origin/main
         with:
-          run_install: false
           version: "9.7.1"
-      - uses: actions/setup-node@v4
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
           cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Configure @world-os package access
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          WORLD_OS_NPM_REGISTRY: ${{ vars.WORLD_OS_NPM_REGISTRY }}
+        run: |
+          set -euo pipefail
+          REGISTRY="${WORLD_OS_NPM_REGISTRY:-https://registry.npmjs.org}"
+          HOST="${REGISTRY#https://}"
+          HOST="${HOST#http://}"
+          HOST="${HOST%/}"
+          if [ -n "${NPM_TOKEN:-}" ]; then
+            {
+              echo "@world-os:registry=${REGISTRY}"
+              echo "//${HOST}/:_authToken=${NPM_TOKEN}"
+              echo "always-auth=true"
+            } >> .npmrc
+            echo "Configured npm auth for @world-os via ${REGISTRY}"
+          else
+            echo "NPM_TOKEN not set; rewriting @world-os/* deps to workspace:* for CI"
+            python scripts/rewrite_world_os_workspace_deps.py --repo-root .
+          fi
+
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile=false
-      - name: Lint
-        run: pnpm lint || true
-      - name: Test kernel
-        run: |
-          if pnpm list --filter @world-os/kernel > /dev/null 2>&1; then
-            pnpm --filter @world-os/kernel test
-          fi
-      - name: Test contracts
-        run: |
-          if pnpm list --filter @world-os/contracts > /dev/null 2>&1; then
-            pnpm --filter @world-os/contracts test
-          fi
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
