@@ -53,7 +53,10 @@ class GameEngine:
                 obj = self.world_renderer.scene.get_object(obj_dict["id"])
                 if obj:
                     self.scene.add_object(obj)
-            except:
+            except Exception as e:
+                # Consider adding logging here to be aware of potential issues
+                # import logging
+                # logging.warning(f"Could not recreate object from dict: {e}")
                 pass
 
         # Add avatar representations
@@ -71,6 +74,13 @@ class GameEngine:
         """Mirror world renderer zone specs into the typed game model."""
         for zone_id, renderer in self.world_renderer.zone_renderers.items():
             zone_data = renderer.zone_data
+            obstacle_density = zone_data.get("obstacle_density", 0.0)
+            if isinstance(obstacle_density, str):
+                obstacle_density = {
+                    "low": 0.2,
+                    "medium": 0.5,
+                    "high": 0.8,
+                }.get(obstacle_density.lower(), 0.0)
             self.game_model.register_zone(
                 ZoneSpec(
                     zone_id=zone_id,

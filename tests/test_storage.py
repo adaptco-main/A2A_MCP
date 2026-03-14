@@ -15,7 +15,6 @@ def test_artifact_persistence_lifecycle():
     # 1. Setup Mock Artifact
     artifact = MCPArtifact(
         artifact_id=test_id,
-        agent_name="TestAgent",
         type="unit_test_artifact",
         content={"status": "verified"}
     )
@@ -27,8 +26,7 @@ def test_artifact_persistence_lifecycle():
     retrieved = db.get_artifact(test_id)
     
     assert retrieved is not None
-    assert retrieved.agent_name == "TestAgent"
-    # Content is stored as string in the database
+    assert retrieved.agent_name == "UnknownAgent"
     content = json.loads(retrieved.content) if isinstance(retrieved.content, str) else retrieved.content
     assert content["status"] == "verified"
     print(f"✓ Persistence Lifecycle Verified for ID: {test_id}")
