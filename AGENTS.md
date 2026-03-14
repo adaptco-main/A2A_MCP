@@ -33,6 +33,13 @@ Artifacts written by the command:
 ## Build and test commands
 Use the smallest command set needed for the files you touched.
 
+### Local automation runtime (Docker compose helper)
+- Start (with build): `.\scripts\automation_runtime.ps1 -Action up -Build`
+- Validate prerequisites/config: `.\scripts\automation_runtime.ps1 -Action validate`
+- Health check: `.\scripts\automation_runtime.ps1 -Action health`
+- Stop runtime: `.\scripts\automation_runtime.ps1 -Action down`
+- Prerequisite: Docker Compose plugin required; Docker Desktop running for `up`, `down`, and `health`.
+
 ### Python environment
 - Install dependencies: `pip install -r requirements.txt`
 - Editable install (optional): `pip install -e .`
