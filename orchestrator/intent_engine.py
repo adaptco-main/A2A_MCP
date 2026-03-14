@@ -6,7 +6,7 @@ import asyncio
 import logging
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Optional
 
 from agents.architecture_agent import ArchitectureAgent
 from agents.coder import CoderAgent
@@ -17,6 +17,8 @@ from orchestrator.storage import PlanStatePersistence
 from orchestrator.vector_gate import VectorGate, VectorGateDecision
 from schemas.agent_artifacts import MCPArtifact
 from schemas.project_plan import PlanAction, ProjectPlan
+from orchestrator.judge_orchestrator import JudgeOrchestrator
+from orchestrator.notifier import WhatsAppNotifier, send_pipeline_completion_notification
 
 logger = logging.getLogger(__name__)
 
@@ -78,12 +80,12 @@ class IntentEngine:
         max_healing_retries: int = 2,
     ) -> PipelineResult:
         """Run the full Managing -> Orchestrator -> Architect -> Coder -> Tester flow."""
-        result = self._initialize_pipeline_result(description, requester)
+        result = self._initialize_pipeline_result(user_intent, project_name)
 
-        plan = await self._create_plan(description, requester)
+        plan = await self._create_plan(user_intent, project_name)
         result.plan = plan
 
-        blueprint = await self._create_blueprint(plan, requester)
+        blueprint = await self._create_blueprint(plan, project_name)
         result.blueprint = blueprint
 
         arch_artifacts = await self._generate_architecture(blueprint)
