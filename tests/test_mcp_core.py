@@ -1,17 +1,19 @@
 import pytest
-<<<<<<< HEAD
-import torch
+
+torch = pytest.importorskip("torch")
+
 from a2a_mcp.mcp_core import MCPCore, MCPResult
 
-# Constants for testing
-INPUT_DIM = 128
-HIDDEN_DIM = 64
-N_ROLES = 16
+# Constants for testing (matched to current MCPCore defaults)
+INPUT_DIM = 4096
+HIDDEN_DIM = 128
+N_ROLES = 32
 
 @pytest.fixture(scope="module")
 def mcp_core_model():
     """Provides a reusable instance of MCPCore for testing."""
-    model = MCPCore(input_dim=INPUT_DIM, hidden_dim=HIDDEN_DIM, n_roles=N_ROLES)
+    torch.manual_seed(42)
+    model = MCPCore(hidden_dim=HIDDEN_DIM, n_roles=N_ROLES)
     model.eval()  # Set the model to evaluation mode for consistent results
     return model
 
@@ -22,7 +24,6 @@ def sample_embedding():
 
 def test_mcp_core_initialization(mcp_core_model: MCPCore):
     """Tests if the MCPCore model initializes with the correct parameters."""
-    assert mcp_core_model.input_dim == INPUT_DIM
     assert mcp_core_model.hidden_dim == HIDDEN_DIM
     assert mcp_core_model.n_roles == N_ROLES
     assert isinstance(mcp_core_model.feature_extractor, torch.nn.Sequential)
@@ -71,7 +72,7 @@ def test_processed_embedding_is_normalized(mcp_core_model: MCPCore, sample_embed
         result = mcp_core_model(sample_embedding)
 
     norm = torch.norm(result.processed_embedding.squeeze())
-    assert torch.isclose(norm, torch.tensor(1.0), atol=1e-6)
+    assert torch.isclose(norm, torch.tensor(1.0), atol=1e-5)
 
 def test_execution_hash_is_deterministic(mcp_core_model: MCPCore, sample_embedding: torch.Tensor):
     """Tests that the execution_hash is deterministic for the same input."""
@@ -91,43 +92,10 @@ def test_compute_protocol_similarity(mcp_core_model: MCPCore, sample_embedding: 
     with torch.no_grad():
         similarity_same = mcp_core_model.compute_protocol_similarity(emb1, emb1.clone())
     assert isinstance(similarity_same, float)
-    assert pytest.approx(similarity_same, 1.0)
+    assert similarity_same > 0.99
 
     # Similarity with a different embedding should be between -1 and 1
     with torch.no_grad():
         similarity_different = mcp_core_model.compute_protocol_similarity(emb1, emb2)
     assert isinstance(similarity_different, float)
     assert -1.0 <= similarity_different <= 1.0
-=======
-
-torch = pytest.importorskip("torch")
-
-from a2a_mcp.mcp_core import MCPCore, MCPResult
-
-
-def test_mcp_core_forward_shapes_and_hash():
-    torch.manual_seed(7)
-    core = MCPCore(hidden_dim=128, n_roles=32)
-    namespaced = torch.randn(1, 4096)
-
-    result = core(namespaced)
-
-    assert isinstance(result, MCPResult)
-    assert result.processed_embedding.shape == (1, 128)
-    assert result.arbitration_scores.shape == (32,)
-    assert result.protocol_features["feature_norm"] > 0.0
-    assert len(result.execution_hash) == 64
-
-    norm = float(torch.norm(result.processed_embedding, dim=-1).item())
-    assert abs(norm - 1.0) < 1e-5
-
-
-def test_protocol_similarity_returns_cosine_range():
-    torch.manual_seed(11)
-    core = MCPCore()
-    emb = torch.randn(1, 4096)
-
-    sim_same = core.compute_protocol_similarity(emb, emb.clone())
-    assert -1.0 <= sim_same <= 1.0
-    assert sim_same > 0.99
->>>>>>> origin/main

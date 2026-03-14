@@ -1,8 +1,11 @@
 name: Prime Directive Pipeline CI
 
+<<<<<<< HEAD
 permissions:
   contents: read
 
+=======
+>>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
 on:
   pull_request:
     branches: [ main ]
