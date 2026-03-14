@@ -3,9 +3,12 @@
 
 name: Smart CI (Conditional)
 
+<<<<<<< HEAD
 permissions:
   contents: read
 
+=======
+>>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
 on:
   push:
     branches:
