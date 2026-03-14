@@ -17,10 +17,9 @@
         "@types/react": "^18.3.3",
         "@types/react-dom": "^18.3.0",
         "@vitejs/plugin-react": "^4.3.1",
-<<<<<<< HEAD
-        "vite": "^7.3.1"
-=======
         "vite": "^5.4.1"
->>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
+=======
+        origin/main
+        main
     }
 }

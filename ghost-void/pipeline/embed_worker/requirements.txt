@@ -1,8 +1,7 @@
-<<<<<<< HEAD
-torch==2.8.0
-=======
 torch==2.5.1
->>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
+=======
+origin/main
+main
 sentence-transformers==3.3.1
 redis==5.2.0
 qdrant-client==1.12.1

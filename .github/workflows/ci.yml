@@ -126,7 +126,11 @@ jobs:
     needs: merge-marker-guard
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+
+      - name: Upload staging artifacts (debug)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        main
         with:
           run_install: false
           version: "9.7.1"

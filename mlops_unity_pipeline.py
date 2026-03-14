@@ -9,6 +9,7 @@ replaced with project-specific Unity + ML-Agents commands.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import os
@@ -22,6 +23,12 @@ from urllib import request
 from uuid import uuid4
 
 from croniter import croniter
+
+from orchestrator.capsule_store import (
+    append_capsule_hybrid,
+    init_capsule_mirror_db,
+    recompute_lineage_digest,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +57,11 @@ class RLTrainingConfig:
     extra_cli_args: List[str] = field(default_factory=list)
     training_mode: str = "online"
     offline_dataset_path: Optional[str] = None
+<<<<<<< HEAD
+=======
+    token_alignment_slices: int = 5
+    merkle_seed: str = "0x1984_Q9"
+>>>>>>> origin/main
 
 
 @dataclass
@@ -94,11 +106,22 @@ class UnityMLOpsOrchestrator:
         llm_provider: Optional[Any] = None,
         vertex_project: Optional[str] = None,
         vertex_region: Optional[str] = None,
+        mirror_db: Optional[str] = None,
+        archive_dir: Optional[str] = None,
     ) -> None:
         self.unity_executable = unity_executable
         self.llm_provider = llm_provider
         self.vertex_project = vertex_project or os.getenv("VERTEX_PROJECT")
         self.vertex_region = vertex_region or os.getenv("VERTEX_REGION", "us-central1")
+        self.mirror_db = mirror_db
+        self.archive_dir = archive_dir
+        self._db_conn = None
+        if self.mirror_db:
+            db_path = Path(self.mirror_db)
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            self._db_conn = init_capsule_mirror_db(str(db_path))
+            if self.archive_dir:
+                Path(self.archive_dir).mkdir(parents=True, exist_ok=True)
 
     async def execute_training_job(self, job: TrainingJob) -> TrainingResult:
         result = TrainingResult(job_id=job.job_id, status="running")
@@ -117,12 +140,47 @@ class UnityMLOpsOrchestrator:
                 result.vertex_model_resource = await self.register_model_in_vertex(job, result, base_dir)
 
             result.status = "completed"
+
+            if self._db_conn and self.archive_dir:
+                self._persist_as_capsule(job, result)
+
             return result
         except Exception as exc:  # noqa: BLE001
             LOGGER.exception("Training job failed: %s", job.job_id)
             result.status = "failed"
             result.error = str(exc)
             return result
+
+    def _persist_as_capsule(self, job: TrainingJob, result: TrainingResult) -> None:
+        # Create a deterministic input hash for the lineage
+        input_data = {
+            "asset_id": job.asset_spec.asset_id,
+            "rl_config": asdict(job.rl_config),
+            "project_path": job.project_path,
+        }
+        input_hash = hashlib.sha256(
+            json.dumps(input_data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+
+        lineage = {
+            "digest_id": "",
+            "input_hash": input_hash,
+            "rule30_seed": job.rl_config.merkle_seed,
+            "env_version": "unity-mlops-v1",
+        }
+        lineage["digest_id"] = recompute_lineage_digest(lineage)
+
+        capsule = {
+            "state_id": job.job_id,
+            "agent_reasoning": f"Unity MLOps training completion for {job.asset_spec.name}",
+            "lineage": lineage,
+            "job": asdict(job),
+            "result": asdict(result),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        append_capsule_hybrid(self._db_conn, self.archive_dir, capsule)
+        LOGGER.info("Training result persisted as capsule: %s", job.job_id)
 
     async def generate_unity_code(self, job: TrainingJob, output_dir: Path) -> str:
         script_body = self._generate_csharp(job.asset_spec)
@@ -144,6 +202,11 @@ class UnityMLOpsOrchestrator:
         mode = job.rl_config.training_mode.lower()
         if mode not in {"online", "offline", "hybrid"}:
             raise ValueError("training_mode must be one of: online, offline, hybrid")
+<<<<<<< HEAD
+=======
+        if job.rl_config.token_alignment_slices < 1:
+            raise ValueError("token_alignment_slices must be >= 1")
+>>>>>>> origin/main
 
         dataset_path: Optional[str] = None
         if mode in {"offline", "hybrid"}:
@@ -152,11 +215,18 @@ class UnityMLOpsOrchestrator:
             dataset = Path(job.rl_config.offline_dataset_path)
             if not dataset.exists():
                 raise FileNotFoundError(f"offline dataset not found: {dataset}")
+<<<<<<< HEAD
             dataset_path = str(dataset.resolve())
+=======
+            dataset_path = dataset.resolve().as_posix()
+>>>>>>> origin/main
 
         run_id = f"{job.rl_config.run_id_prefix}-{job.job_id}-{uuid4().hex[:8]}"
         model_dir = output_dir / "models" / run_id
         model_dir.mkdir(parents=True, exist_ok=True)
+
+        alignment_report = self._run_nested_alignment_drill(job)
+        merkle_hash = self._compute_merkle_hash(job, alignment_report)
 
         summary = {
             "algorithm": job.rl_config.algorithm,
@@ -165,10 +235,46 @@ class UnityMLOpsOrchestrator:
             "time_scale": job.rl_config.time_scale,
             "training_mode": mode,
             "offline_dataset_path": dataset_path,
+<<<<<<< HEAD
+=======
+            "token_alignment_slices": job.rl_config.token_alignment_slices,
+            "merkle_seed": job.rl_config.merkle_seed,
+            "merkle_hash": merkle_hash,
+            "nested_alignment_report": alignment_report,
+>>>>>>> origin/main
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
         (model_dir / "training_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-        return {"model_path": str(model_dir), "run_id": run_id, "metrics": {"simulated_reward": 0.91}}
+        return {
+            "model_path": str(model_dir),
+            "run_id": run_id,
+            "metrics": {
+                "simulated_reward": 0.91,
+                "alignment_stability": alignment_report["stability_score"],
+                "merkle_hash": merkle_hash,
+            },
+        }
+
+    def _run_nested_alignment_drill(self, job: TrainingJob) -> Dict[str, Any]:
+        slices = job.rl_config.token_alignment_slices
+        per_slice = [round(1.0 - (idx / (slices * 20)), 4) for idx in range(slices)]
+        stability_score = round(sum(per_slice) / len(per_slice), 4)
+        return {
+            "slices": slices,
+            "per_slice_alignment": per_slice,
+            "stability_score": stability_score,
+        }
+
+    def _compute_merkle_hash(self, job: TrainingJob, alignment_report: Dict[str, Any]) -> str:
+        digest_input = {
+            "seed": job.rl_config.merkle_seed,
+            "asset_id": job.asset_spec.asset_id,
+            "algorithm": job.rl_config.algorithm,
+            "max_steps": job.rl_config.max_steps,
+            "alignment": alignment_report,
+        }
+        canonical = json.dumps(digest_input, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return hashlib.sha256(canonical).hexdigest()
 
     async def register_model_in_vertex(self, job: TrainingJob, result: TrainingResult, output_dir: Path) -> str:
         if not self.vertex_project:

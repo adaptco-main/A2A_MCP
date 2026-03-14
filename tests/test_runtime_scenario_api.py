@@ -151,3 +151,30 @@ def test_verify_endpoint_returns_409_on_tampered_execution() -> None:
     response = client.get(f"/a2a/executions/{execution_id}/verify")
     assert response.status_code == 409
     assert response.json()["detail"]["valid"] is False
+
+
+<<<<<<< HEAD
+def test_runtime_api_emits_local_dev_cors_headers() -> None:
+    get_router.cache_clear()
+    get_runtime_service.cache_clear()
+    client = TestClient(app)
+
+    response = client.options(
+        "/mcp/register?api_key=cors-key",
+        headers={
+            "Origin": "http://127.0.0.1:4173",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:4173"
+=======
+def test_runtime_api_healthz_endpoint() -> None:
+    client = TestClient(app)
+
+    response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+>>>>>>> origin/main

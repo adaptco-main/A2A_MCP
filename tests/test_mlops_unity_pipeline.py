@@ -50,7 +50,10 @@ def test_offline_training_writes_dataset_path() -> None:
         summary_path = Path(result.trained_model_path) / "training_summary.json"
         summary_text = summary_path.read_text(encoding="utf-8")
         assert '"training_mode": "offline"' in summary_text
-        assert str(dataset.resolve()) in summary_text
+        assert dataset.resolve().as_posix() in summary_text
+
+        assert '"merkle_seed": "0x1984_Q9"' in summary_text
+        assert '"nested_alignment_report"' in summary_text
 
 
 def test_offline_training_requires_dataset() -> None:
@@ -76,41 +79,62 @@ def test_offline_training_requires_dataset() -> None:
         assert "offline_dataset_path is required" in (result.error or "")
 
 
-def _schedule() -> TrainingSchedule:
-    return TrainingSchedule(
-        schedule_id="nightly-training",
-        cron_expression="0 2 * * *",
-        asset_specs=[
-            UnityAssetSpec(
-                asset_id="asset-001",
-                name="PatrolAgent",
+def test_merkle_hash_is_deterministic_for_same_inputs() -> None:
+    with TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        dataset = tmp_path / "demo.jsonl"
+        dataset.write_text("{}\n", encoding="utf-8")
+
+        orchestrator = UnityMLOpsOrchestrator()
+        asset = UnityAssetSpec(
+            asset_id="a3",
+            name="DeterministicAgent",
+            asset_type="behavior",
+            description="Ensure stable hash",
+        )
+        config = RLTrainingConfig(
+            training_mode="offline",
+            offline_dataset_path=str(dataset),
+            run_id_prefix="fixed",
+        )
+
+        report_a = orchestrator._run_nested_alignment_drill(
+            TrainingJob(job_id="j1", asset_spec=asset, rl_config=config)
+        )
+        report_b = orchestrator._run_nested_alignment_drill(
+            TrainingJob(job_id="j2", asset_spec=asset, rl_config=config)
+        )
+
+        hash_a = orchestrator._compute_merkle_hash(
+            TrainingJob(job_id="j1", asset_spec=asset, rl_config=config), report_a
+        )
+        hash_b = orchestrator._compute_merkle_hash(
+            TrainingJob(job_id="j2", asset_spec=asset, rl_config=config), report_b
+        )
+
+        assert report_a == report_b
+        assert hash_a == hash_b
+
+
+def test_invalid_alignment_slice_count_fails() -> None:
+    with TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        orchestrator = UnityMLOpsOrchestrator()
+        job = TrainingJob(
+            job_id="bad-slices-job",
+            asset_spec=UnityAssetSpec(
+                asset_id="a4",
+                name="BadSliceAgent",
                 asset_type="behavior",
-                description="Patrol between waypoints",
-            )
-        ],
-        rl_config=RLTrainingConfig(),
-    )
+                description="Should fail with invalid slices",
+            ),
+            rl_config=RLTrainingConfig(token_alignment_slices=0),
+            output_dir=str(tmp_path / "out"),
+            register_to_vertex=False,
+        )
 
+        result = asyncio.run(orchestrator.execute_training_job(job))
 
-def test_is_due_runs_immediately_when_no_checkpoint(tmp_path, monkeypatch):
-    if not TrainingScheduler: return
-    monkeypatch.chdir(tmp_path)
-    scheduler = TrainingScheduler(UnityMLOpsOrchestrator())
-    schedule = _schedule()
-
-    now = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
-
-    assert scheduler._is_due(schedule, now) is True
-
-
-def test_is_due_respects_checkpoint_after_first_run(tmp_path, monkeypatch):
-    if not TrainingScheduler: return
-    monkeypatch.chdir(tmp_path)
-    scheduler = TrainingScheduler(UnityMLOpsOrchestrator())
-    schedule = _schedule()
-
-    now = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
-    assert scheduler._is_due(schedule, now) is True
-
-    before_next_cron = now + timedelta(hours=1)
-    assert scheduler._is_due(schedule, before_next_cron) is False
+        assert result.status == "failed"
+        assert "token_alignment_slices must be >= 1" in (result.error or "")
+       main

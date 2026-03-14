@@ -12,38 +12,34 @@ from enum import Enum
 class AgentLifecycleState(str, Enum):
     """Simulated state space for agent lifecycle."""
     INIT = "INIT"
-<<<<<<< HEAD
-    HANDSHAKE = "HANDSHAKE"
 =======
->>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
+        origin/main
+        main
     EMBEDDING = "EMBEDDING"
     RAG_QUERY = "RAG_QUERY"
     LORA_ADAPT = "LORA_ADAPT"
     HEALING = "HEALING"
     CONVERGED = "CONVERGED"
-<<<<<<< HEAD
-    MERGE_CONFLICT = "MERGE_CONFLICT"
 =======
->>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
+        origin/main
+        main
     FAILED = "FAILED"
 
 
 # Valid state transitions
 STATE_TRANSITIONS: Dict[AgentLifecycleState, List[AgentLifecycleState]] = {
-<<<<<<< HEAD
-    AgentLifecycleState.HANDSHAKE: [AgentLifecycleState.INIT, AgentLifecycleState.FAILED],
 =======
->>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
+        origin/main
+        main
     AgentLifecycleState.INIT: [AgentLifecycleState.EMBEDDING],
     AgentLifecycleState.EMBEDDING: [AgentLifecycleState.RAG_QUERY, AgentLifecycleState.FAILED],
     AgentLifecycleState.RAG_QUERY: [AgentLifecycleState.LORA_ADAPT, AgentLifecycleState.FAILED],
     AgentLifecycleState.LORA_ADAPT: [AgentLifecycleState.HEALING, AgentLifecycleState.FAILED],
     AgentLifecycleState.HEALING: [AgentLifecycleState.CONVERGED, AgentLifecycleState.LORA_ADAPT, AgentLifecycleState.FAILED],
     AgentLifecycleState.CONVERGED: [],  # Terminal
-<<<<<<< HEAD
-    AgentLifecycleState.MERGE_CONFLICT: [AgentLifecycleState.HEALING, AgentLifecycleState.FAILED],
 =======
->>>>>>> 2ef5dcd4d2103df903d3c2a9f2a5143ed5567e8d
+        origin/main
+        main
     AgentLifecycleState.FAILED: [AgentLifecycleState.INIT],  # Rollback to INIT
 }
 
