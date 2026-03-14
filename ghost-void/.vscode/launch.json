@@ -85,6 +85,19 @@
                 "AUTO_TICK": "true",
                 "PHASE_DUMP": "pixel_vector"
             }
+        },
+        {
+            "name": "Python: Remote Attach (Docker)",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMapping": {
+                "/app": "${workspaceFolder}"
+            },
+            "justMyCode": false
         }
     ],
     "compounds": [
