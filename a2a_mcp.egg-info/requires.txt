@@ -3,6 +3,7 @@ psycopg2-binary
 pydantic
 pydantic-settings
 PyJWT
+PyYAML
 python-dotenv
 fastapi
 uvicorn
@@ -12,6 +13,7 @@ jsonschema
 mcp[cli]
 numpy>=1.24
 scipy
+croniter
 
 [auth]
 

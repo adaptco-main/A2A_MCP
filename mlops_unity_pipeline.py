@@ -209,7 +209,7 @@ class UnityMLOpsOrchestrator:
             dataset = Path(job.rl_config.offline_dataset_path)
             if not dataset.exists():
                 raise FileNotFoundError(f"offline dataset not found: {dataset}")
-            dataset_path = str(dataset.resolve())
+            dataset_path = dataset.resolve().as_posix()
 
         run_id = f"{job.rl_config.run_id_prefix}-{job.job_id}-{uuid4().hex[:8]}"
         model_dir = output_dir / "models" / run_id
