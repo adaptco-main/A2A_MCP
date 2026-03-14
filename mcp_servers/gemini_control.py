@@ -190,7 +190,7 @@ async def list_ui_sites() -> dict:
 @app.get("/", summary="MCP control layer index")
 async def index() -> dict:
     snap = _load_snapshot(VECTOR_LAKE_DIR / "snapshot.json")
-    items = snap.get("artifacts", snap.get("vectors", []))
+    items = _snapshot_items(snap)
     return {
         "service": "Gemini OS MCP Control Layer",
         "version": "1.0.0",

@@ -75,7 +75,6 @@ run_embed() {
   python - <<'PYEOF'
 import sys, json, pathlib, hashlib, datetime, glob
 
-REPO_ROOT = pathlib.Path(sys.argv[0]).resolve().parents[1] if len(sys.argv) > 0 else pathlib.Path(".")
 REPO_ROOT = pathlib.Path(".")
 OUT = pathlib.Path("data/vector_lake")
 OUT.mkdir(parents=True, exist_ok=True)
@@ -147,6 +146,8 @@ import sys, pathlib
 root = pathlib.Path(".")
 failures = []
 
+if list(root.glob("*.patch")):
+    failures.append("Found committed .patch files in repo root")
 if not (root / "orchestrator").exists():
     failures.append("orchestrator/ directory missing — canonical control plane broken")
 if (root / ".venv").exists():
