@@ -46,46 +46,70 @@ def get_best_agent(task_instruction: str) -> str:
             
     return "agent:frontier.endpoint.gpt" # Default fallback
 
-def trigger_recursive_decomposition(parent_id: str, sub_tasks_str: str):
-    db = DBManager()
+def run_lifecycle(parent_id: str, sub_tasks_str: str):
+    print(f"--- RecursiveActionHandler Lifecycle Start [{parent_id}] ---")
+    
+    # PHASE 1: SAMPLE - Ingest objective and initialize state
+    print("[1/5] SAMPLE: Ingesting task list and parent context...")
     sub_tasks = [t.strip() for t in sub_tasks_str.split(",") if t.strip()]
-    
-    print(f"🌌 RecursiveActionHandler: Decomposing {parent_id} into {len(sub_tasks)} tasks...")
-    
-    child_artifacts = []
-    
+    state = {
+        "parent_id": parent_id,
+        "input_count": len(sub_tasks),
+        "start_time": datetime.now(timezone.utc).isoformat()
+    }
+
+    # PHASE 2: RESOLVE - Query relevant tools (Mocked for this standalone script)
+    print("[2/5] RESOLVE: Identifying routing tools and agent registries...")
+    tools = ["get_best_agent", "db_save_artifact"]
+
+    # PHASE 3: PLAN - Construct a DAG of tool calls
+    print("[3/5] PLAN: Mapping sub-tasks to specialized agent skills...")
+    plan = []
     for i, task_text in enumerate(sub_tasks):
         agent_id = get_best_agent(task_text)
+        plan.append({
+            "sequence": i + 1,
+            "task": task_text,
+            "agent": agent_id
+        })
+
+    # PHASE 4: EXECUTE - Invoke tools and save artifacts
+    print("[4/5] EXECUTE: Triggering decomposition and persisting artifacts...")
+    db = DBManager()
+    child_artifacts = []
+    for item in plan:
         child_id = f"task-{uuid.uuid4().hex[:8]}"
-        
         artifact_data = {
             "artifact_id": child_id,
             "correlation_id": parent_id,
             "type": "sub_task",
-            "content": task_text,
+            "content": item["task"],
             "metadata": {
-                "assigned_agent": agent_id,
-                "sequence": i + 1,
+                "assigned_agent": item["agent"],
+                "sequence": item["sequence"],
                 "depth": 1,
                 "status": "PENDING",
                 "generated_at": datetime.now(timezone.utc).isoformat()
             }
         }
-        
-        # If we have the real MCPArtifact class, wrap it
-        try:
-            from schemas.agent_artifacts import MCPArtifact
-            artifact = MCPArtifact(**artifact_data)
-        except ImportError:
-            artifact = artifact_data
+        db.save_artifact(artifact_data)
+        child_artifacts.append(artifact_data)
+        print(f"  [+] {child_id} -> {item['agent']}")
 
-        db.save_artifact(artifact)
-        child_artifacts.append(artifact)
-        print(f"  [+] Child {i+1}: {child_id} -> {agent_id} | '{task_text[:40]}...'")
-
-    # Update parent task state (In a full system this would call stateflow.py)
-    print(f"🏁 Parent {parent_id} transitioned to AWAITING_CHILDREN.")
+    # PHASE 5: VERIFY - Validate tool outputs and emit VVLRecord
+    print("[5/5] VERIFY: Validating decomposition integrity and emitting VVLRecord...")
+    vvl_record = {
+        "entry_type": "recursive_decomposition",
+        "parent_id": parent_id,
+        "child_count": len(child_artifacts),
+        "status": "SUCCESS" if len(child_artifacts) == state["input_count"] else "BIFURCATION",
+        "vvl_hash": uuid.uuid4().hex, # Mock hash
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
     
+    # In a full system, this would be saved to the VVL ledger
+    print(f"VVLRecord Emitted: {json.dumps(vvl_record, indent=2)}")
+    print(f"--- Lifecycle Complete: Parent {parent_id} -> AWAITING_CHILDREN ---")
     return child_artifacts
 
 def main():
@@ -96,7 +120,7 @@ def main():
     args = parser.parse_args()
     
     try:
-        trigger_recursive_decomposition(args.parent_task_id, args.sub_tasks)
+        run_lifecycle(args.parent_task_id, args.sub_tasks)
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)

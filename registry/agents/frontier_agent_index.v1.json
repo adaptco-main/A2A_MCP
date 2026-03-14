@@ -1,47 +1,44 @@
 {
   "version": "v1",
-<<<<<<< HEAD
-  "generated_at": "2026-03-05T13:10:17Z",
-=======
   "generated_at": "2026-03-13T23:42:36Z",
->>>>>>> origin/main
   "sources": {
     "agent_registry": "registry/agents/agent_registry.json",
     "expert_catalog": "registry/experts/expert_catalog.v1.json",
     "rbac_models": "rbac/models.py"
   },
-<<<<<<< HEAD
-  "frontier_agent_count": 4,
-  "mcp_tool_count": 10,
-  "mcp_tools": [
-=======
-  "frontier_agent_count": 5,
-  "mcp_tool_count": 12,
+  "frontier_agent_count": 6,
+  "mcp_tool_count": 25,
   "mcp_tools": [
     "build_local_world_foundation_model",
->>>>>>> origin/main
     "embed_dispatch_batch",
     "embed_lookup",
     "embed_status",
     "embed_submit",
-<<<<<<< HEAD
-=======
     "get_coding_agent_avatar_cast",
->>>>>>> origin/main
     "get_runtime_assignment",
     "ingest_avatar_token_stream",
     "ingest_repository_data",
     "list_runtime_assignments",
     "route_a2a_intent",
-    "submit_runtime_assignment"
+    "submit_runtime_assignment",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_get_ai_model_guidance",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_get_agent_model_code_sample",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_list_foundry_models",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_agent_as_server",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_add_agent_debug",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_get_tracing_code_gen_best_practices",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_get_evaluation_code_gen_best_practices",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_evaluation_agent_runner_best_practices",
+    "ms-windows-ai-studio.windows-ai-studio/aitk_evaluation_planner",
+    "ms-python.python/getPythonEnvironmentInfo",
+    "ms-python.python/getPythonExecutableCommand",
+    "ms-python.python/installPythonPackage",
+    "ms-python.python/configurePythonEnvironment"
   ],
-<<<<<<< HEAD
-=======
   "workspace_preferences": {
     "memory_anchors": [],
     "memory_anchor_count": 0
   },
->>>>>>> origin/main
   "agents": [
     {
       "agent_id": "agent:frontier.endpoint.gpt",
@@ -70,8 +67,6 @@
       "provider": "ollama",
       "model_family": "llama",
       "card_ref": "registry/agents/frontier_agent_cards.v1.json#agent:frontier.ollama.llama"
-<<<<<<< HEAD
-=======
     },
     {
       "agent_id": "agent:frontier.reviewer",
@@ -79,7 +74,13 @@
       "provider": "endpoint",
       "model_family": "gpt",
       "card_ref": "registry/agents/frontier_agent_cards.v1.json#agent:frontier.reviewer"
->>>>>>> origin/main
+    },
+    {
+      "agent_id": "agent:antigravity.v1",
+      "role": "expert",
+      "provider": "vertex",
+      "model_family": "gemini",
+      "card_ref": "registry/agents/frontier_agent_cards.v1.json#agent:antigravity.v1"
     }
   ]
 }

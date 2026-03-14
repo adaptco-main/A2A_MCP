@@ -15,32 +15,21 @@
 			"detail": "Builds the Jurassic Pixels unit verification test using MSVC cl.exe with debug info."
 		},
 		{
-			"type": "docker-build",
+			"type": "shell",
 			"label": "docker-build",
-			"platform": "python",
-			"dockerBuild": {
-				"tag": "ghostvoid:latest",
-				"dockerfile": "${workspaceFolder}/Dockerfile",
-				"context": "${workspaceFolder}",
-				"pull": true
-			}
+			"command": "docker build --pull -t ghostvoid:latest -f ${workspaceFolder}/Dockerfile ${workspaceFolder}",
+			"group": "build",
+			"detail": "Builds the Docker image using the Docker CLI."
 		},
 		{
-			"type": "docker-run",
+			"type": "shell",
 			"label": "docker-run: debug",
 			"dependsOn": [
 				"docker-build"
 			],
-			"python": {
-				"args": [
-					"toolquest.semantic.embedding_pipeline:app",
-					"--host",
-					"0.0.0.0",
-					"--port",
-					"8000"
-				],
-				"module": "uvicorn"
-			}
+			"command": "docker compose -f ${workspaceFolder}/compose.debug.yaml up",
+			"group": "build",
+			"detail": "Runs the container with debugpy attached on port 5678 for remote debugging."
 		}
 	]
 }
